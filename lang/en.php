@@ -1,0 +1,32 @@
+<?php
+// English (ອັງກິດ)
+$lang = array(
+    "dashboard" => "Dashboard",
+    "bookings" => "Room Booking",
+    "check_in" => "Check-in",
+    "check_out" => "Check-out",
+    "pos" => "POS System",
+    "stock" => "Stock Management",
+    "accounting" => "Accounting",
+    "customers" => "Customers",
+    "settings" => "System Settings",
+    "reports" => "Reports",
+    "employees" => "Employees",
+    "package" => "Usage Package",
+    "language" => "Language",
+    "logout" => "Logout",
+    "add_stock" => "Add Stock",
+    "stock_report" => "Stock Report",
+    "expense_categories" => "Expense Categories",
+    "hotel_info" => "Hotel Info",
+    "room_types" => "Room Types",
+    "users" => "User Management",
+    "housekeeping" => "Features",
+    "room_usage_history" => "Room Usage History",
+    "revenue_from_room_usage" => "Room Usage Revenue",
+    "revenue_expenses" => "Revenue & Expenses",
+    "revenue_from_bookings" => "Booking Revenue",
+    "employee_info" => "Employee Info",
+    "employee_report" => "Employee Report",
+);
+?>

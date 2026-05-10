@@ -1,0 +1,32 @@
+<?php
+// ພາສາລາວ (Lao)
+$lang = array(
+    "dashboard" => "ໜ້າຫຼັກ",
+    "bookings" => "ການຈອງຫ້ອງ",
+    "check_in" => "Check-in",
+    "check_out" => "Check-out",
+    "pos" => "POS ຂາຍອາຫານ",
+    "stock" => "ຈັດການສະຕ໋ອກສິນຄ້າ",
+    "accounting" => "ບັນຊີ",
+    "customers" => "ລູກຄ້າ",
+    "settings" => "ການຕັ້ງຄ່າລະບົບ",
+    "reports" => "ລາຍງານ",
+    "employees" => "ຂໍ້ມູນພະນັກງານ",
+    "package" => "ແພັກເກັດການນຳໃຊ້",
+    "language" => "ພາສາ",
+    "logout" => "ອອກຈາກລະບົບ",
+    "add_stock" => "ເພີ່ມສະຕ໊ອກສິນຄ້າ",
+    "stock_report" => "ລາຍງານສະຕ໊ອກສິນຄ້າ",
+    "expense_categories" => "ປະເພດລາຍຈ່າຍ",
+    "hotel_info" => "ຂໍ້ມູນໂຮງແຮມ",
+    "room_types" => "ຂໍ້ມູນຫ້ອງພັກ",
+    "users" => "ຈັດການຜູ້ໃຊ້",
+    "housekeeping" => "ຄຸນສົມບັດ",
+    "room_usage_history" => "ປະຫວັດການເປີດຫ້ອງ",
+    "revenue_from_room_usage" => "ລາຍຮັບຈາກການເປີດຫ້ອງ",
+    "revenue_expenses" => "ລາຍຮັບ-ລາຍຈ່າຍ",
+    "revenue_from_bookings" => "ລາຍຮັບຈາກການຈອງ",
+    "employee_info" => "ບັນທຶກຂໍ້ມູນພະນັກງານ",
+    "employee_report" => "ລາຍງານຂໍ້ມູນພະນັກງານ",
+);
+?>

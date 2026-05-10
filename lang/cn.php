@@ -1,0 +1,32 @@
+<?php
+// 中文 (Chinese)
+$lang = array(
+    "dashboard" => "仪表板",
+    "bookings" => "房间预订",
+    "check_in" => "入住",
+    "check_out" => "退房",
+    "pos" => "餐饮POS系统",
+    "stock" => "库存管理",
+    "accounting" => "财务管理",
+    "customers" => "客户管理",
+    "settings" => "系统设置",
+    "reports" => "报告",
+    "employees" => "员工管理",
+    "package" => "使用套餐",
+    "language" => "语言",
+    "logout" => "退出登录",
+    "add_stock" => "添加库存",
+    "stock_report" => "库存报告",
+    "expense_categories" => "支出类别",
+    "hotel_info" => "酒店信息",
+    "room_types" => "房间类型",
+    "users" => "用户管理",
+    "housekeeping" => "功能特性",
+    "room_usage_history" => "开房记录",
+    "revenue_from_room_usage" => "开房收入",
+    "revenue_expenses" => "收支明细",
+    "revenue_from_bookings" => "预订收入",
+    "employee_info" => "员工信息",
+    "employee_report" => "员工报告",
+);
+?>
