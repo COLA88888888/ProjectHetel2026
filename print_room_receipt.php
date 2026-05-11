@@ -1,0 +1,198 @@
+<?php
+session_start();
+require_once 'config/db.php';
+
+if (!isset($_GET['booking_id'])) {
+    die("Booking not found.");
+}
+
+$booking_id = $_GET['booking_id'];
+
+// Fetch settings
+$stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM settings");
+$settings = $stmtSettings->fetchAll(PDO::FETCH_KEY_PAIR);
+$hotel_name = $settings['hotel_name'] ?? 'Hotel System';
+$hotel_phone = $settings['hotel_phone'] ?? '';
+$hotel_address = $settings['hotel_address'] ?? '';
+$footer_text = $settings['receipt_footer'] ?? 'Thank you!';
+$tax_percent = (float)($settings['tax_percent'] ?? 0);
+
+// Fetch default currency
+$stmtCur = $pdo->query("SELECT * FROM currency WHERE is_default = 1 LIMIT 1");
+$default_currency = $stmtCur->fetch();
+$currency_symbol = $default_currency['symbol'] ?? '₭';
+
+// Fetch Booking details
+$stmt = $pdo->prepare("
+    SELECT b.*, r.room_number, r.room_type 
+    FROM bookings b 
+    JOIN rooms r ON b.room_id = r.id 
+    WHERE b.id = ?
+");
+$stmt->execute([$booking_id]);
+$booking = $stmt->fetch();
+
+if (!$booking) {
+    die("Booking details not found.");
+}
+
+// Fetch Room Services (Food/Drink)
+$svcStmt = $pdo->prepare("SELECT * FROM room_services WHERE booking_id = ?");
+$svcStmt->execute([$booking_id]);
+$services = $svcStmt->fetchAll();
+
+$subtotal = $booking['total_price'] + $booking['food_charge'];
+$tax_amount = round($subtotal * ($tax_percent / 100));
+$grand_total = $subtotal + $tax_amount;
+$final_payable = $grand_total - $booking['deposit_amount'];
+?>
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <title>ໃບບິນຄ່າທີ່ພັກ - #BK-<?php echo $booking_id; ?></title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans Lao', sans-serif; font-size: 13px; margin: 0; padding: 20px; color: #000; }
+        .receipt { width: 80mm; margin: 0 auto; background: #fff; padding: 5px; }
+        .header { text-align: center; margin-bottom: 15px; }
+        .hotel-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
+        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; }
+        .item-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+        .item-table th { border-bottom: 1px dashed #000; text-align: left; padding: 5px 0; }
+        .item-table td { padding: 4px 0; vertical-align: top; }
+        .text-right { text-align: right !important; }
+        .total-section { margin-top: 10px; font-weight: bold; font-size: 14px; }
+        .footer { text-align: center; margin-top: 25px; font-size: 11px; font-style: italic; }
+        
+        @media print {
+            body { padding: 0; margin: 0; }
+            .receipt { width: 100%; padding: 0; }
+            .no-print { display: none; }
+        }
+        
+        .btn-print {
+            display: block;
+            width: 80mm;
+            margin: 20px auto;
+            padding: 10px;
+            background: #007bff;
+            color: #fff;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print" style="text-align: center; margin-top: 10px;">
+    <button onclick="window.print()" class="btn-print" style="border: none; cursor: pointer; display: inline-block;">ພິມໃບບິນ (Print)</button>
+    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">ປິດໜ້າຕ່າງນີ້</button>
+</div>
+
+<div class="receipt">
+    <div class="header">
+        <div class="hotel-name"><?php echo htmlspecialchars($hotel_name); ?></div>
+        <div style="font-size: 10px;"><?php echo htmlspecialchars($hotel_address); ?></div>
+        <div style="font-size: 10px;">Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
+        <div class="divider"></div>
+        <div style="font-weight: bold; font-size: 14px;">ໃບບິນຄ່າທີ່ພັກ (INVOICE)</div>
+    </div>
+
+    <div class="info-row">
+        <span>ເລກທີບິນ:</span>
+        <span>#BK-<?php echo str_pad($booking_id, 5, '0', STR_PAD_LEFT); ?></span>
+    </div>
+    <div class="info-row">
+        <span>ລູກຄ້າ:</span>
+        <span><?php echo htmlspecialchars($booking['customer_name']); ?></span>
+    </div>
+    <div class="info-row">
+        <span>ຫ້ອງ:</span>
+        <span><?php echo htmlspecialchars($booking['room_number']); ?> (<?php echo htmlspecialchars($booking['room_type']); ?>)</span>
+    </div>
+    <div class="info-row">
+        <span>ເຂົ້າ:</span>
+        <span><?php echo date('d/m/Y', strtotime($booking['check_in_date'])); ?></span>
+    </div>
+    <div class="info-row">
+        <span>ອອກ:</span>
+        <span><?php echo date('d/m/Y', strtotime($booking['check_out_date'])); ?></span>
+    </div>
+
+    <table class="item-table">
+        <thead>
+            <tr>
+                <th>ລາຍການ</th>
+                <th class="text-right">ລວມ</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>ຄ່າຫ້ອງພັກ</td>
+                <td class="text-right"><?php echo number_format($booking['total_price']); ?></td>
+            </tr>
+            <?php if(count($services) > 0): ?>
+                <tr>
+                    <td colspan="2" style="font-weight:bold; padding-top:8px;">ຄ່າບໍລິການ/ອາຫານ:</td>
+                </tr>
+                <?php foreach($services as $s): ?>
+                <tr>
+                    <td style="padding-left: 10px;"><?php echo htmlspecialchars($s['item_name']); ?> (x<?php echo $s['qty']; ?>)</td>
+                    <td class="text-right"><?php echo number_format($s['total_price']); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </tbody>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="total-section">
+        <div class="info-row" style="font-weight: normal; font-size: 12px;">
+            <span>ລວມຍ່ອຍ:</span>
+            <span><?php echo number_format($subtotal); ?></span>
+        </div>
+        <?php if($tax_percent > 0): ?>
+        <div class="info-row" style="font-weight: normal; font-size: 12px;">
+            <span>ພາສີ (<?php echo $tax_percent; ?>%):</span>
+            <span><?php echo number_format($tax_amount); ?></span>
+        </div>
+        <?php endif; ?>
+        <div class="info-row">
+            <span>ລວມທັງໝົດ:</span>
+            <span><?php echo number_format($grand_total); ?></span>
+        </div>
+        <?php if($booking['deposit_amount'] > 0): ?>
+        <div class="info-row" style="font-weight: normal; font-size: 12px; color: green;">
+            <span>ຫັກມັດຈຳແລ້ວ:</span>
+            <span>- <?php echo number_format($booking['deposit_amount']); ?></span>
+        </div>
+        <?php endif; ?>
+        <div class="info-row" style="border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; font-size: 16px; color: red;">
+            <span>ຍອດຈ່າຍຕົວຈິງ:</span>
+            <span><?php echo number_format($final_payable); ?> <?php echo $currency_symbol; ?></span>
+        </div>
+    </div>
+
+    <div class="info-row" style="margin-top: 15px;">
+        <span>ວິທີຊຳລະ:</span>
+        <span><?php echo htmlspecialchars($booking['payment_method'] ?? 'ເງິນສົດ'); ?></span>
+    </div>
+
+    <div class="footer">
+        <?php echo nl2br(htmlspecialchars($footer_text)); ?>
+    </div>
+</div>
+
+<script>
+    window.onload = function() {
+        window.print();
+    }
+</script>
+
+</body>
+</html>

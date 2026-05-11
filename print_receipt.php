@@ -1,0 +1,177 @@
+<?php
+session_start();
+require_once 'config/db.php';
+
+if (!isset($_GET['bill_id'])) {
+    die("Invoice not found.");
+}
+
+$bill_id = $_GET['bill_id'];
+
+// Fetch settings for hotel info
+$stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM settings");
+$settings = [];
+while($row = $stmtSettings->fetch()) {
+    $settings[$row['setting_key']] = $row['setting_value'];
+}
+$tax_percent = (float)($settings['tax_percent'] ?? 0);
+
+// Fetch default currency
+$stmtCur = $pdo->query("SELECT * FROM currency WHERE is_default = 1 LIMIT 1");
+$default_currency = $stmtCur->fetch();
+$currency_symbol = $default_currency['symbol'] ?? '₭';
+$currency_code = $default_currency['currency_code'] ?? 'LAK';
+
+$hotel_name = $settings['hotel_name'] ?? 'Hotel System';
+$hotel_phone = $settings['hotel_phone'] ?? '';
+$hotel_address = $settings['hotel_address'] ?? '';
+$footer_text = $settings['receipt_footer'] ?? 'Thank you!';
+
+// Fetch order items
+$stmt = $pdo->prepare("SELECT o.*, p.prod_name, p.sprice 
+                       FROM orders o 
+                       JOIN products p ON o.prod_id = p.prod_id 
+                       WHERE o.bill_id = ?");
+$stmt->execute([$bill_id]);
+$items = $stmt->fetchAll();
+
+if (!$items) {
+    die("No items found for this invoice.");
+}
+
+$total = 0;
+$date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
+?>
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <title>ໃບບິນຮັບເງິນ - <?php echo $bill_id; ?></title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans Lao', sans-serif; font-size: 14px; margin: 0; padding: 20px; color: #000; }
+        .receipt { width: 80mm; margin: 0 auto; background: #fff; padding: 10px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .hotel-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+        .divider { border-top: 1px dashed #000; margin: 10px 0; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+        .item-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+        .item-table th { border-bottom: 1px dashed #000; text-align: left; padding: 5px 0; }
+        .item-table td { padding: 5px 0; vertical-align: top; }
+        .text-right { text-align: right !important; }
+        .total-section { margin-top: 10px; font-weight: bold; font-size: 16px; }
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; font-style: italic; }
+        
+        @media print {
+            body { padding: 0; margin: 0; }
+            .receipt { width: 100%; padding: 0; }
+            .no-print { display: none; }
+        }
+        
+        .btn-print {
+            display: block;
+            width: 80mm;
+            margin: 20px auto;
+            padding: 10px;
+            background: #28a745;
+            color: #fff;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print" style="text-align: center; margin-top: 10px;">
+    <button onclick="window.print()" class="btn-print" style="border: none; cursor: pointer; display: inline-block;">ພິມໃບບິນ (Print)</button>
+    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">ປິດໜ້າຕ່າງນີ້</button>
+</div>
+
+<div class="receipt">
+    <div class="header">
+        <div class="hotel-name"><?php echo htmlspecialchars($hotel_name); ?></div>
+        <div style="font-size: 11px;"><?php echo htmlspecialchars($hotel_address); ?></div>
+        <div style="font-size: 11px;">Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
+        <div class="divider"></div>
+        <div style="font-weight: bold; font-size: 15px;">ໃບບິນຮັບເງິນ (RECEIPT)</div>
+    </div>
+
+    <div class="info-row">
+        <span>ເລກທີບິນ:</span>
+        <span><?php echo $bill_id; ?></span>
+    </div>
+    <div class="info-row">
+        <span>ວັນທີ:</span>
+        <span><?php echo $date; ?></span>
+    </div>
+
+    <table class="item-table">
+        <thead>
+            <tr>
+                <th>ລາຍການ</th>
+                <th class="text-right">ຈຳນວນ</th>
+                <th class="text-right">ລວມ</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach($items as $item): 
+                $qty = (int)$item['o_qty'];
+                $price = (float)$item['sprice'];
+                $subtotal = $qty * $price;
+                $total += $subtotal;
+            ?>
+            <tr>
+                <td>
+                    <?php echo htmlspecialchars($item['prod_name']); ?><br>
+                    <small><?php echo number_format($price); ?> x <?php echo $qty; ?></small>
+                </td>
+                <td class="text-right"><?php echo $qty; ?></td>
+                <td class="text-right"><?php echo number_format($subtotal); ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="total-section">
+        <div class="info-row">
+            <span>ລວມຍ່ອຍ (Subtotal):</span>
+            <span><?php echo number_format($total); ?></span>
+        </div>
+        <?php if($tax_percent > 0): 
+            $tax_amount = round($total * ($tax_percent / 100));
+            $grand_total = $total + $tax_amount;
+        ?>
+            <div class="info-row" style="font-weight: normal; font-size: 13px;">
+                <span>ພາສີ (Tax <?php echo $tax_percent; ?>%):</span>
+                <span><?php echo number_format($tax_amount); ?></span>
+            </div>
+            <div class="info-row" style="font-size: 17px; margin-top: 5px;">
+                <span>ລວມທັງໝົດ:</span>
+                <span><?php echo number_format($grand_total); ?> <?php echo $currency_symbol; ?></span>
+            </div>
+        <?php else: ?>
+            <div class="info-row" style="font-size: 17px; margin-top: 5px;">
+                <span>ລວມທັງໝົດ:</span>
+                <span><?php echo number_format($total); ?> <?php echo $currency_symbol; ?></span>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <div class="footer">
+        <?php echo nl2br(htmlspecialchars($footer_text)); ?>
+    </div>
+</div>
+
+<script>
+    // Auto print when page loads
+    window.onload = function() {
+        window.print();
+    }
+</script>
+
+</body>
+</html>

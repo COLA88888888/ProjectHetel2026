@@ -74,9 +74,37 @@ switch ($period) {
         break;
 }
 
+// Fetch Room Type Revenue for the selected period
+$roomTypeLabels = [];
+$roomTypeRevenue = [];
+
+$typeQuery = "SELECT r.room_type, SUM(b.total_price + COALESCE(b.food_charge, 0)) as total 
+              FROM bookings b 
+              JOIN rooms r ON b.room_id = r.id 
+              WHERE b.status IN ('Completed', 'Checked In') ";
+
+if ($period == 'daily') {
+    $typeQuery .= "AND DATE(b.check_in_date) >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) ";
+} elseif ($period == 'weekly') {
+    $typeQuery .= "AND DATE(b.check_in_date) >= DATE_SUB(CURDATE(), INTERVAL 8 WEEK) ";
+} elseif ($period == 'monthly') {
+    $typeQuery .= "AND DATE(b.check_in_date) >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) ";
+} elseif ($period == 'yearly') {
+    $typeQuery .= "AND DATE(b.check_in_date) >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR) ";
+}
+
+$typeQuery .= "GROUP BY r.room_type ORDER BY total DESC";
+$stmtType = $pdo->query($typeQuery);
+while ($row = $stmtType->fetch()) {
+    $roomTypeLabels[] = $row['room_type'];
+    $roomTypeRevenue[] = (float)$row['total'];
+}
+
 header('Content-Type: application/json');
 echo json_encode([
     'labels' => $labels,
     'roomData' => $roomData,
-    'posData' => $posData
+    'posData' => $posData,
+    'roomTypeLabels' => $roomTypeLabels,
+    'roomTypeData' => $roomTypeRevenue
 ]);

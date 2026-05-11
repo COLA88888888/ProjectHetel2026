@@ -8,7 +8,8 @@ $default_keys = [
     'hotel_phone' => '020 00000000',
     'hotel_address' => 'ນະຄອນຫຼວງວຽງຈັນ',
     'receipt_footer' => 'ຂໍຂອບໃຈທີ່ໃຊ້ບໍລິການ!',
-    'hotel_logo' => ''
+    'hotel_logo' => '',
+    'tax_percent' => '0'
 ];
 
 foreach ($default_keys as $key => $val) {
@@ -30,12 +31,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
     $hotel_phone = trim($_POST['hotel_phone']);
     $hotel_address = trim($_POST['hotel_address']);
     $receipt_footer = trim($_POST['receipt_footer']);
+    $tax_percent = (float)$_POST['tax_percent'];
+    $currency_id = (int)$_POST['currency_id'];
 
     // Update text settings
     $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'hotel_name'")->execute([$hotel_name]);
     $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'hotel_phone'")->execute([$hotel_phone]);
     $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'hotel_address'")->execute([$hotel_address]);
     $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'receipt_footer'")->execute([$receipt_footer]);
+    $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'tax_percent'")->execute([$tax_percent]);
+
+    // Update Default Currency
+    $pdo->query("UPDATE currency SET is_default = 0");
+    $pdo->prepare("UPDATE currency SET is_default = 1 WHERE id = ?")->execute([$currency_id]);
 
     // Handle Logo Upload
     if (isset($_FILES['hotel_logo']) && $_FILES['hotel_logo']['error'] == 0) {
@@ -61,6 +69,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
     $_SESSION['success'] = "ບັນທຶກການຕັ້ງຄ່າສຳເລັດແລ້ວ!";
     header("Location: settings.php");
     exit();
+}
+
+// Fetch all currencies
+$stmtCur = $pdo->query("SELECT * FROM currency ORDER BY id ASC");
+$currencies = $stmtCur->fetchAll();
+
+// Get current default currency
+$default_currency = null;
+foreach($currencies as $c) {
+    if($c['is_default'] == 1) $default_currency = $c;
 }
 ?>
 <!DOCTYPE html>
@@ -163,6 +181,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
                             <label class="col-sm-3 col-form-label text-right">ຂໍ້ຄວາມທ້າຍໃບຮັບເງິນ</label>
                             <div class="col-sm-9">
                                 <input type="text" name="receipt_footer" class="form-control" value="<?php echo htmlspecialchars($settings_data['receipt_footer'] ?? ''); ?>" placeholder="ຕົວຢ່າງ: ຂໍຂອບໃຈທີ່ໃຊ້ບໍລິການ ໂອກາດໜ້າເຊີນໃໝ່">
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h5 class="mb-3 text-info"><i class="fas fa-coins"></i> ຕັ້ງຄ່າການເງິນ ແລະ ພາສີ</h5>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label text-right">ສະກຸນເງິນຫຼັກ <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <select name="currency_id" class="form-control" required>
+                                    <?php foreach($currencies as $c): ?>
+                                        <option value="<?php echo $c['id']; ?>" <?php echo ($c['is_default'] == 1) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($c['currency_name']); ?> (<?php echo htmlspecialchars($c['symbol']); ?>) - <?php echo $c['currency_code']; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="text-muted">ສະກຸນເງິນທີ່ທ່ານເລືອກຈະຖືກໃຊ້ສະແດງຜົນທັງລະບົບ.</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label text-right">ອັດຕາພາສີ (%)</label>
+                            <div class="col-sm-9">
+                                <div class="input-group">
+                                    <input type="number" name="tax_percent" class="form-control" value="<?php echo htmlspecialchars($settings_data['tax_percent'] ?? '0'); ?>" step="0.01" min="0">
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <small class="text-muted">ພາສີຈະຖືກນຳໄປຄິດໄລ່ໃນໃບບິນ POS.</small>
                             </div>
                         </div>
 

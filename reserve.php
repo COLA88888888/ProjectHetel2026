@@ -109,6 +109,9 @@ $reservations = $stmtReserved->fetchAll();
             .room-card h4 { font-size: 1rem; }
         }
     </style>
+    <script>
+        if (window.top === window.self) { window.location.href = 'menu_admin.php'; }
+    </script>
 </head>
 <body>
 
@@ -343,6 +346,20 @@ $reservations = $stmtReserved->fetchAll();
 <script src="plugins/jquery/jquery.min.js"></script>
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
+
+<?php if(isset($_SESSION['print_booking'])): ?>
+    <script>
+        var printUrl = 'print_room_receipt.php?booking_id=<?php echo $_SESSION['print_booking']; ?>';
+        
+        // Hidden iframe print
+        var printFrame = document.createElement('iframe');
+        printFrame.style.display = 'none';
+        printFrame.src = printUrl;
+        document.body.appendChild(printFrame);
+        
+        <?php unset($_SESSION['print_booking']); ?>
+    </script>
+<?php endif; ?>
 
 <script>
 $(document).ready(function() {

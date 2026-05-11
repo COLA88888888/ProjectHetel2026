@@ -39,12 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
     $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Occupied')");
     
     if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount])) {
+        $booking_id = $pdo->lastInsertId();
         // Update room status to Occupied
         $updateRoom = $pdo->prepare("UPDATE rooms SET status = 'Occupied' WHERE id = ?");
         $updateRoom->execute([$room_id]);
         
         $_SESSION['success'] = "ດຳເນີນການ Check-in ເຂົ້າພັກສຳເລັດແລ້ວ!";
-        header("Location: walkin.php"); // Redirect back to walkin or a booking list
+        $_SESSION['print_booking'] = $booking_id;
+        header("Location: walkin.php");
         exit();
     } else {
         $error = "ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກຂໍ້ມູນ!";

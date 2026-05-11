@@ -3,7 +3,7 @@ session_start();
 require_once 'config/db.php';
 
 // Handle Checkout
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkout_pos'])) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['checkout_pos']) || isset($_POST['cart_prod_id']))) {
     if (!empty($_POST['cart_prod_id'])) {
         $prod_ids = $_POST['cart_prod_id'];
         $qtys = $_POST['cart_qty'];
@@ -11,20 +11,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkout_pos'])) {
         
         $pdo->beginTransaction();
         try {
+            // Get current tax percent
+            $stmtTax = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
+            $tax_p = (float)($stmtTax->fetchColumn() ?: 0);
+
+            $bill_id = 'INV-' . date('YmdHis') . rand(10, 99);
             for ($i = 0; $i < count($prod_ids); $i++) {
                 $pid = (int)$prod_ids[$i];
                 $q = (int)$qtys[$i];
                 $p = (float)$prices[$i];
-                $total_amount = $q * $p;
+                $subtotal = $q * $p;
+                $item_tax = round($subtotal * ($tax_p / 100));
+                $total_with_tax = $subtotal + $item_tax;
                 
-                $stmt = $pdo->prepare("INSERT INTO orders (prod_id, o_qty, amount, o_date) VALUES (?, ?, ?, CURDATE())");
-                $stmt->execute([$pid, $q, $total_amount]);
+                $stmt = $pdo->prepare("INSERT INTO orders (bill_id, prod_id, o_qty, amount, o_date) VALUES (?, ?, ?, ?, CURDATE())");
+                $stmt->execute([$bill_id, $pid, $q, $total_with_tax]);
                 
                 $upd = $pdo->prepare("UPDATE products SET qty = qty - ? WHERE prod_id = ?");
                 $upd->execute([$q, $pid]);
             }
             $pdo->commit();
-            $_SESSION['success'] = "ຊຳລະເງິນສຳເລັດແລ້ວ!";
+            $_SESSION['print_bill'] = $bill_id;
+            header("Location: pos.php?status=success");
+            exit();
         } catch (Exception $e) {
             $pdo->rollBack();
             $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ: " . $e->getMessage();
@@ -41,6 +50,16 @@ $products = $stmt->fetchAll();
 // Fetch categories
 $stmtCat = $pdo->query("SELECT * FROM product_categories ORDER BY name ASC");
 $categories = $stmtCat->fetchAll();
+
+// Fetch settings
+$stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM settings");
+$settings = $stmtSettings->fetchAll(PDO::FETCH_KEY_PAIR);
+$tax_percent = (float)($settings['tax_percent'] ?? 0);
+
+// Fetch default currency
+$stmtCur = $pdo->query("SELECT * FROM currency WHERE is_default = 1 LIMIT 1");
+$default_currency = $stmtCur->fetch();
+$currency_symbol = $default_currency['symbol'] ?? '₭';
 
 // Group products by category for counting
 $catCounts = [];
@@ -60,6 +79,9 @@ foreach ($products as $p) {
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        if (window.top === window.self) { window.location.href = 'menu_admin.php'; }
+    </script>
     <style>
         body { font-family: 'Noto Sans Lao', sans-serif; background-color: #f8f9fa; padding: 10px; }
         
@@ -154,13 +176,26 @@ foreach ($products as $p) {
 <body>
 
 <div class="container-fluid">
-    <?php if(isset($_SESSION['success'])): ?>
+    <?php if(isset($_GET['status']) && $_GET['status'] == 'success' && isset($_SESSION['print_bill'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'success', title: 'ສຳເລັດ', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 2000 });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ຊຳລະເງິນສຳເລັດ!',
+                    text: 'ທ່ານຕ້ອງການພິມໃບບິນຫຼືບໍ່?',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="fas fa-print"></i> ພິມໃບບິນ',
+                    cancelButtonText: 'ປິດ'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.open('print_receipt.php?bill_id=<?php echo $_SESSION['print_bill']; ?>', '_blank');
+                    }
+                });
             });
         </script>
-    <?php unset($_SESSION['success']); endif; ?>
+    <?php unset($_SESSION['print_bill']); endif; ?>
 
     <div class="row mb-2">
         <div class="col-12">
@@ -208,7 +243,7 @@ foreach ($products as $p) {
                     <div class="row" id="productList">
                         <?php foreach($products as $p): ?>
                             <div class="col-xl-3 col-lg-4 col-md-6 col-4 mb-3 product-item" data-category="<?php echo htmlspecialchars($p['category']); ?>">
-                                <div class="card product-card shadow-sm h-100" onclick="addToCart(<?php echo $p['prod_id']; ?>, '<?php echo htmlspecialchars(addslashes($p['prod_name'])); ?>', <?php echo $p['sprice']; ?>, <?php echo $p['qty']; ?>)">
+                                <div class="card product-card shadow-sm h-100" onclick="addToCart(<?php echo $p['prod_id']; ?>, '<?php echo htmlspecialchars(addslashes($p['prod_name'])); ?>', <?php echo $p['sprice']; ?>, <?php echo $p['qty']; ?>, '<?php echo $p['image']; ?>')">
                                     <!-- Category Label -->
                                     <span class="cat-label"><?php echo htmlspecialchars($p['category'] ?: 'ອື່ນໆ'); ?></span>
                                     <!-- Stock Badge -->
@@ -227,8 +262,8 @@ foreach ($products as $p) {
                                         </div>
                                     <?php endif; ?>
                                     <div class="card-body text-center">
-                                        <div class="product-name"><?php echo htmlspecialchars($p['prod_name']); ?></div>
-                                        <div class="product-price mt-1"><?php echo number_format($p['sprice']); ?> ₭</div>
+                                        <div class="product-name text-truncate"><?php echo htmlspecialchars($p['prod_name']); ?></div>
+                                        <div class="product-price mt-1"><?php echo number_format($p['sprice']); ?> <?php echo $currency_symbol; ?></div>
                                         <div class="product-stock">ເຫຼືອ: <?php echo number_format($p['qty']); ?></div>
                                     </div>
                                 </div>
@@ -258,10 +293,20 @@ foreach ($products as $p) {
                         <p class="mb-0">ກົດສິນຄ້າເພື່ອເພີ່ມ</p>
                     </div>
                 </div>
-                <div class="card-footer bg-white" style="border-radius: 0 0 4px 4px;">
-                    <div class="d-flex justify-content-between align-items-center mb-3 px-2">
-                        <span class="font-weight-bold" style="font-size: 1rem;">ລວມທັງໝົດ:</span>
-                        <span class="font-weight-bold text-danger" style="font-size: 1.3rem;"><span id="cartTotal">0</span> ₭</span>
+                <div class="card-footer bg-white border-top" style="border-radius: 0 0 4px 4px;">
+                    <div class="px-2 mb-2">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">ລວມຍ່ອຍ:</span>
+                            <span class="font-weight-bold"><span id="cartSubtotal">0</span> <?php echo $currency_symbol; ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">ພາສີ (<?php echo $tax_percent; ?>%):</span>
+                            <span class="font-weight-bold text-info"><span id="cartTax">0</span> <?php echo $currency_symbol; ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                            <span class="font-weight-bold text-dark" style="font-size: 1.1rem;">ລວມທັງໝົດ:</span>
+                            <span class="font-weight-bold text-danger" style="font-size: 1.4rem;"><span id="cartTotal">0</span> <?php echo $currency_symbol; ?></span>
+                        </div>
                     </div>
                     <form action="" method="post" id="posForm">
                         <div id="hiddenInputs"></div>
@@ -281,6 +326,8 @@ foreach ($products as $p) {
 
 <script>
 let cart = {};
+const taxPercent = <?php echo $tax_percent; ?>;
+const currencySymbol = '<?php echo $currency_symbol; ?>';
 
 // Category filter
 $('.cat-btn').on('click', function() {
@@ -296,7 +343,7 @@ $('.cat-btn').on('click', function() {
     }
 });
 
-function addToCart(id, name, price, maxQty) {
+function addToCart(id, name, price, maxQty, image) {
     if (cart[id]) {
         if (cart[id].qty < maxQty) {
             cart[id].qty++;
@@ -306,7 +353,7 @@ function addToCart(id, name, price, maxQty) {
         }
     } else {
         if (maxQty > 0) {
-            cart[id] = { name: name, price: price, qty: 1, maxQty: maxQty };
+            cart[id] = { name: name, price: price, qty: 1, maxQty: maxQty, image: image };
         }
     }
     // Mini animation toast
@@ -361,16 +408,23 @@ function renderCart() {
         let subtotal = item.price * item.qty;
         total += subtotal;
 
+        let imageHtml = item.image 
+            ? `<img src="assets/img/products/${item.image}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 10px;" class="border shadow-sm">`
+            : `<div class="bg-light d-flex align-items-center justify-content-center border" style="width: 45px; height: 45px; border-radius: 6px; margin-right: 10px; color: #ccc;"><i class="fas fa-box fa-xs"></i></div>`;
+
         html += `
-        <div class="cart-item px-3">
-            <div class="d-flex justify-content-between align-items-start mb-1">
+        <div class="cart-item px-2">
+            <div class="d-flex align-items-center mb-2">
+                ${imageHtml}
                 <div style="flex:1;">
-                    <strong style="font-size: 0.88rem;">${item.name}</strong>
-                    <div class="text-muted" style="font-size: 0.75rem;">${item.price.toLocaleString('en-US')} ₭ × ${item.qty}</div>
-                </div>
-                <div class="text-right">
-                    <div class="text-success font-weight-bold" style="font-size: 0.9rem;">${subtotal.toLocaleString('en-US')} ₭</div>
-                    <button class="btn btn-sm p-0 text-danger" onclick="removeItem(${id})" style="font-size: 0.7rem;"><i class="fas fa-trash"></i></button>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong style="font-size: 0.82rem; color: #333;" class="text-truncate d-inline-block" style="max-width: 120px;">${item.name}</strong>
+                        <div class="text-success font-weight-bold" style="font-size: 0.85rem;">${subtotal.toLocaleString('en-US')} ${currencySymbol}</div>
+                    </div>
+                    <div class="text-muted d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
+                        <span>${item.price.toLocaleString('en-US')} ${currencySymbol} × ${item.qty}</span>
+                        <button class="btn btn-sm p-0 text-danger" onclick="removeItem(${id})" style="font-size: 0.7rem;"><i class="fas fa-times-circle"></i></button>
+                    </div>
                 </div>
             </div>
             <div class="d-flex align-items-center">
@@ -403,7 +457,12 @@ function renderCart() {
         $('#btnCheckout').prop('disabled', false).html('<i class="fas fa-money-bill-wave"></i> ຊຳລະເງິນ (' + itemCount + ' ລາຍການ)');
     }
 
-    $('#cartTotal').text(total.toLocaleString('en-US'));
+    let taxAmount = Math.round(total * (taxPercent / 100));
+    let grandTotal = total + taxAmount;
+
+    $('#cartSubtotal').text(total.toLocaleString('en-US'));
+    $('#cartTax').text(taxAmount.toLocaleString('en-US'));
+    $('#cartTotal').text(grandTotal.toLocaleString('en-US'));
     $('#hiddenInputs').html(hiddenHtml);
 }
 
@@ -413,7 +472,7 @@ $('#posForm').on('submit', function(e) {
     var total = $('#cartTotal').text();
     Swal.fire({
         title: '<i class="fas fa-cash-register text-success"></i> ຮັບຊຳລະເງິນ?',
-        html: '<div style="font-size:1.4rem; font-weight:700; color:#28a745;">' + total + ' ₭</div>',
+        html: '<div style="font-size:1.4rem; font-weight:700; color:#28a745;">' + total + ' ' + currencySymbol + '</div>',
         showCancelButton: true,
         confirmButtonColor: '#28a745',
         confirmButtonText: '<i class="fas fa-check"></i> ຢືນຢັນ',
@@ -422,6 +481,25 @@ $('#posForm').on('submit', function(e) {
         if (result.isConfirmed) { this.submit(); }
     });
 });
+
+// Print trigger on success
+<?php if(isset($_GET['status']) && $_GET['status'] == 'success' && isset($_SESSION['print_bill'])): ?>
+    var printUrl = 'print_receipt.php?bill_id=<?php echo $_SESSION['print_bill']; ?>';
+    
+    // Create hidden iframe for printing
+    var printFrame = document.createElement('iframe');
+    printFrame.style.display = 'none';
+    printFrame.src = printUrl;
+    document.body.appendChild(printFrame);
+    
+    Swal.fire({
+        icon: 'success',
+        title: 'ຂາຍສຳເລັດແລ້ວ!',
+        text: 'ລະບົບກຳລັງສັ່ງພິມໃບບິນໃຫ້ທ່ານ...',
+        confirmButtonColor: '#28a745'
+    });
+    <?php unset($_SESSION['print_bill']); ?>
+<?php endif; ?>
 </script>
 </body>
 </html>

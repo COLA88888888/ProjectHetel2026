@@ -66,6 +66,10 @@ if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
     <link rel="stylesheet" href="fontawesome-free-6.2.1-web/css/all.min.css">
     <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
     <script src="jquery.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      body { font-family: 'Noto Sans Lao Looped', sans-serif; }
+    </style>
   </head>
 <?php
 require_once 'config/db.php';
@@ -77,9 +81,24 @@ try {
     $booked_rooms = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status = 'Booked'")->fetchColumn() ?: 0;
     $guest_count = $pdo->query("SELECT COALESCE(SUM(guest_count), 0) FROM bookings WHERE status != 'Cancelled'")->fetchColumn() ?: 0;
     
-    // Revenue calculations
-    $total_revenue = $pdo->query("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status = 'Completed' OR status = 'Checked In'")->fetchColumn() ?: 0;
-    $today_revenue = $pdo->query("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE (status = 'Completed' OR status = 'Checked In') AND DATE(created_at) = CURDATE()")->fetchColumn() ?: 0;
+    // Revenue calculations (Room + POS)
+    // Updated to include 'Occupied', 'Completed', and 'Checked In' to ensure Walk-in revenue shows up immediately
+    $room_revenue = $pdo->query("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied')")->fetchColumn() ?: 0;
+    $pos_revenue = $pdo->query("SELECT SUM(amount) FROM orders")->fetchColumn() ?: 0;
+    $total_revenue = $room_revenue + $pos_revenue;
+
+    // Use current date from PHP to ensure sync with MySQL
+    $current_date = date('Y-m-d');
+    
+    $stmtTR = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?)");
+    $stmtTR->execute([$current_date, $current_date]);
+    $today_room = $stmtTR->fetchColumn() ?: 0;
+
+    $stmtTP = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE DATE(o_date) = ?");
+    $stmtTP->execute([$current_date]);
+    $today_pos = $stmtTP->fetchColumn() ?: 0;
+    
+    $today_revenue = $today_room + $today_pos;
     
     // Fetch system activity history (Last 8 actions)
     $stmt_history = $pdo->query("SELECT b.customer_name, b.status, b.created_at, r.room_number 
@@ -99,8 +118,8 @@ try {
         $date_label = date('d/m', strtotime("-$i days"));
         $days[] = $date_label;
 
-        // Room Revenue
-        $stmtR = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) as total FROM bookings WHERE DATE(check_in_date) = ?");
+        // Room Revenue - Including Occupied for real-time chart tracking
+        $stmtR = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) as total FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND DATE(check_in_date) = ?");
         $stmtR->execute([$date]);
         $room_revenue_7d[] = $stmtR->fetch()['total'] ?? 0;
 
@@ -263,6 +282,8 @@ try {
         </div>
       </div>
 
+
+
     </div>
   </div>
     
@@ -365,7 +386,10 @@ try {
                 ]
               },
               options: {
-                animation: { duration: 600 },
+                animation: { 
+                  duration: 2000,
+                  easing: 'easeOutQuart'
+                },
                 maintainAspectRatio: false,
                 responsive: true,
                 legend: { display: true, position: 'bottom', labels: { fontSize: 12 } },
@@ -404,7 +428,10 @@ try {
                 }]
               },
               options: {
-                animation: { duration: 600 },
+                animation: { 
+                  duration: 2000,
+                  easing: 'easeOutQuart'
+                },
                 responsive: true,
                 maintainAspectRatio: true,
                 cutoutPercentage: 60,
@@ -421,6 +448,7 @@ try {
                 }
               }
             });
+
           });
         }
 

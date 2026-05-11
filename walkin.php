@@ -43,6 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
+    <script>
+        if (window.top === window.self) { window.location.href = 'menu_admin.php'; }
+    </script>
     <style>
         body { font-family: 'Noto Sans Lao', sans-serif; background-color: #f4f6f9; padding: 20px; }
         .room-card { transition: transform 0.2s; }
@@ -176,6 +179,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <!-- SweetAlert2 -->
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
+
+<?php if(isset($_SESSION['print_booking'])): ?>
+    <script>
+        var printUrl = 'print_room_receipt.php?booking_id=<?php echo $_SESSION['print_booking']; ?>';
+        
+        // Hidden iframe print
+        var printFrame = document.createElement('iframe');
+        printFrame.style.display = 'none';
+        printFrame.src = printUrl;
+        document.body.appendChild(printFrame);
+        
+        <?php unset($_SESSION['print_booking']); ?>
+    </script>
+<?php endif; ?>
 
 </body>
 </html>

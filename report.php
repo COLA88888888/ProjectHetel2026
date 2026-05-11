@@ -97,6 +97,22 @@ for ($i = 5; $i >= 0; $i--) {
     $stmtEC->execute([$month_date]);
     $expenses_chart[] = $stmtEC->fetch()['total'] ?? 0;
 }
+
+// Fetch Room Type Revenue Breakdown (Total or Last 6 Months)
+$room_type_labels = [];
+$room_type_revenue = [];
+$stmtRT = $pdo->query("
+    SELECT r.room_type, SUM(b.total_price + b.food_charge) as total 
+    FROM bookings b 
+    JOIN rooms r ON b.room_id = r.id 
+    WHERE b.status IN ('Completed', 'Checked In')
+    GROUP BY r.room_type 
+    ORDER BY total DESC
+");
+while($row = $stmtRT->fetch()) {
+    $room_type_labels[] = $row['room_type'];
+    $room_type_revenue[] = (float)$row['total'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="lo">
@@ -222,10 +238,10 @@ for ($i = 5; $i >= 0; $i--) {
     </div>
     <?php endif; ?>
 
-    <!-- Finance Chart -->
-    <?php if($type == 'all' || $type == 'finance'): ?>
-    <div class="row mt-3" id="financeChartContainer">
-        <div class="col-12">
+    <!-- Finance & Room Revenue Charts -->
+    <div class="row mt-3" id="chartsContainer">
+        <?php if($type == 'all' || $type == 'finance'): ?>
+        <div class="col-lg-8 col-12 mb-3">
             <div class="card card-primary card-outline shadow-sm">
                 <div class="card-header bg-white">
                     <h3 class="card-title font-weight-bold"><i class="fas fa-chart-bar text-primary"></i> ກຣາຟສະຫຼຸບລາຍຮັບ - ລາຍຈ່າຍ (6 ເດືອນຫຼ້າສຸດ)</h3>
@@ -235,8 +251,37 @@ for ($i = 5; $i >= 0; $i--) {
                 </div>
             </div>
         </div>
+        <?php endif; ?>
+
+        <?php if($type == 'all' || $type == 'finance' || $type == 'room_revenue'): ?>
+        <div class="<?php echo ($type == 'room_revenue') ? 'col-12' : 'col-lg-4 col-12'; ?> mb-3">
+            <div class="card card-success card-outline shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-door-open text-success"></i> ລາຍຮັບແບ່ງຕາມປະເພດຫ້ອງ</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="roomTypeChart" style="min-height: 250px; height: 350px; max-height: 350px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if($type == 'room_revenue'): ?>
+        <!-- Additional Detail for Room Revenue Page -->
+        <div class="col-12 mb-3">
+            <div class="card card-info card-outline shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-chart-line text-info"></i> ແນວໂນ້ມລາຍຮັບຫ້ອງພັກ (6 ເດືອນຫຼ້າສຸດ)</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="roomTrendChart" style="min-height: 250px; height: 350px; max-height: 350px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+
     </div>
-    <?php endif; ?>
 
     <!-- Recent Transactions Table -->
     <?php if($type == 'all' || $type == 'room_history'): ?>
@@ -367,6 +412,7 @@ $(document).ready(function() {
     $('#posTable').DataTable(dtConfig);
 
     // Chart.js Configuration
+    <?php if($type == 'all' || $type == 'finance'): ?>
     var financeChartCanvas = $('#financeChart').get(0).getContext('2d');
     var financeChartData = {
       labels  : <?php echo json_encode($months); ?>,
@@ -394,12 +440,13 @@ $(document).ready(function() {
 
     var financeChartOptions = {
       animation: {
-          duration: 0
+          duration: 2000,
+          easing: 'easeOutQuart'
       },
       hover: {
-          animationDuration: 0
+          animationDuration: 1000
       },
-      responsiveAnimationDuration: 0,
+      responsiveAnimationDuration: 1000,
       maintainAspectRatio : false,
       responsive : true,
       legend: {
@@ -436,6 +483,86 @@ $(document).ready(function() {
       data: financeChartData,
       options: financeChartOptions
     });
+    <?php endif; ?>
+
+    <?php if($type == 'all' || $type == 'finance' || $type == 'room_revenue'): ?>
+    // Room Type Revenue Chart
+    var roomTypeCanvas = $('#roomTypeChart').get(0).getContext('2d');
+    var roomTypeData = {
+      labels  : <?php echo json_encode($room_type_labels); ?>,
+      datasets: [
+        {
+          data                : <?php echo json_encode($room_type_revenue); ?>,
+          backgroundColor     : ['#28a745', '#007bff', '#ffc107', '#dc3545', '#17a2b8', '#6610f2'],
+        }
+      ]
+    }
+    var roomTypeOptions = {
+      animation: {
+          duration: 2000,
+          easing: 'easeOutQuart'
+      },
+      maintainAspectRatio : false,
+      responsive : true,
+      legend: {
+        display: true,
+        position: 'bottom'
+      },
+      tooltips: {
+          callbacks: {
+              label: function(tooltipItem, data) {
+                  var val = data.datasets[0].data[tooltipItem.index];
+                  return data.labels[tooltipItem.index] + ': ' + Number(val).toLocaleString('en-US') + ' ກີບ';
+              }
+          }
+      }
+    }
+
+    new Chart(roomTypeCanvas, {
+      type: 'doughnut',
+      data: roomTypeData,
+      options: roomTypeOptions
+    });
+    <?php endif; ?>
+
+    <?php if($type == 'room_revenue'): ?>
+    // Room Trend Chart (Line Chart for room_revenue page)
+    var roomTrendCanvas = $('#roomTrendChart').get(0).getContext('2d');
+    var roomTrendData = {
+      labels  : <?php echo json_encode($months); ?>,
+      datasets: [
+        {
+          label: 'ລາຍຮັບຫ້ອງພັກ',
+          backgroundColor: 'rgba(23, 162, 184, 0.1)',
+          borderColor: '#17a2b8',
+          borderWidth: 3,
+          data: <?php echo json_encode($room_revenue_chart); ?>,
+          fill: true,
+          lineTension: 0.3,
+          pointRadius: 5,
+          pointBackgroundColor: '#17a2b8'
+        }
+      ]
+    }
+    new Chart(roomTrendCanvas, {
+      type: 'line',
+      data: roomTrendData,
+      options: {
+        animation: { duration: 2000, easing: 'easeOutQuart' },
+        maintainAspectRatio: false,
+        responsive: true,
+        scales: {
+          yAxes: [{
+            ticks: { 
+              beginAtZero: true,
+              callback: function(v) { return v.toLocaleString('en-US') + ' ₭'; } 
+            }
+          }]
+        }
+      }
+    });
+    <?php endif; ?>
+
 });
 </script>
 </body>

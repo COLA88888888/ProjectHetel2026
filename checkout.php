@@ -14,11 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_checkout'])) {
     $stmt = $pdo->prepare("UPDATE bookings SET status = 'Completed', payment_method = ?, amount_received = ?, change_amount = ? WHERE id = ?");
     if ($stmt->execute([$payment_method, $amount_received, $change_amount, $booking_id])) {
         // Update room status to Available and Needs Cleaning
-        $updateRoom = $pdo->prepare("UPDATE rooms SET status = 'Available', housekeeping_status = 'Cleaning' WHERE id = ?");
-        $updateRoom->execute([$room_id]);
+        $pdo->prepare("UPDATE rooms SET status = 'Available', housekeeping_status = 'Cleaning' WHERE id = ?")->execute([$room_id]);
         
-        $_SESSION['success'] = "ດຳເນີນການ Check-out ແລະ ຊຳລະເງິນສຳເລັດ!";
-        header("Location: checkout.php");
+        $_SESSION['print_booking'] = $booking_id;
+        header("Location: checkout.php?status=success");
         exit();
     } else {
         $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການ Check-out!";
@@ -75,23 +74,40 @@ if (isset($_GET['booking_id'])) {
         .total-row { font-size: 1.25rem; font-weight: bold; background-color: #f8f9fa; }
         .grand-total { font-size: 1.5rem; font-weight: bold; color: #dc3545; }
     </style>
+    <script>
+        // Guard: If not in iframe, redirect to menu_admin
+        if (window.top === window.self) {
+            window.location.href = 'menu_admin.php';
+        }
+    </script>
 </head>
 <body>
 
 <div class="container-fluid">
-    <?php if(isset($_SESSION['success'])): ?>
+    <?php if(isset($_GET['status']) && $_GET['status'] == 'success' && isset($_SESSION['print_booking'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'success',
-                    title: 'ສຳເລັດ',
-                    text: '<?php echo $_SESSION['success']; ?>',
-                    showConfirmButton: false,
-                    timer: 2000
+                    title: 'Check-out ສຳເລັດ!',
+                    text: 'ທ່ານຕ້ອງການພິມໃບບິນທີ່ພັກຫຼືບໍ່?',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="fas fa-print"></i> ພິມໃບບິນ',
+                    cancelButtonText: 'ປິດ'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        var printUrl = 'print_room_receipt.php?booking_id=<?php echo $_SESSION['print_booking']; ?>';
+                        var printFrame = document.createElement('iframe');
+                        printFrame.style.display = 'none';
+                        printFrame.src = printUrl;
+                        document.body.appendChild(printFrame);
+                    }
                 });
             });
         </script>
-    <?php unset($_SESSION['success']); endif; ?>
+    <?php unset($_SESSION['print_booking']); endif; ?>
 
     <?php if(isset($_SESSION['error'])): ?>
         <script>
@@ -265,7 +281,7 @@ if (isset($_GET['booking_id'])) {
                             
                             <div class="row">
                                 <div class="col-12 text-right">
-                                    <button type="button" class="btn btn-default mr-2" onclick="window.print();"><i class="fas fa-print"></i> ພິມໃບບິນ</button>
+                                    <a href="print_room_receipt.php?booking_id=<?php echo $selected_booking['id']; ?>" target="_blank" class="btn btn-default mr-2"><i class="fas fa-print"></i> ພິມໃບບິນ</a>
                                     <button type="submit" name="confirm_checkout" class="btn btn-success btn-lg">
                                         <i class="fas fa-check-double"></i> Check-out
                                     </button>

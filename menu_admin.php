@@ -48,8 +48,9 @@ try {
 }
 ?>
 <html>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
 <style>
- *{font-family:'Noto Sans Lao', 'Phetsarath OT', sans-serif;}
+ *{font-family: 'Noto Sans Lao Looped', sans-serif;}
  .nav-sidebar .menu-is-opening > .nav-link p > .right.fa-angle-right,
  .nav-sidebar .menu-open > .nav-link p > .right.fa-angle-right {
    transform: rotate(90deg) !important;
@@ -210,7 +211,7 @@ try {
             <span></span><?php echo $_SESSION['status']; ?>
           </a>
           <ul class="dropdown-menu dropdown-menu-right">
-              <a class="dropdown-item" href="logout.php"><i class="fa fa-power-off"></i> <?php echo $lang['logout']; ?></a>
+              <a class="dropdown-item" href="javascript:void(0);" onclick="confirmLogout()"><i class="fa fa-power-off"></i> <?php echo $lang['logout']; ?></a>
           </ul>
       </li>
     </ul>
@@ -228,70 +229,61 @@ try {
     <!-- Sidebar -->
     <div class="sidebar">
       <!-- Sidebar Menu -->
-      <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+      <nav class="mt-2 pb-5">
+        <ul class="nav nav-pills nav-sidebar flex-column nav-flat nav-child-indent" data-widget="treeview" role="menu" data-accordion="false">
         
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.6); font-size: 0.75rem; letter-spacing: 1px;">ໜ້າຫຼັກ</li>
           <li class="nav-item">
-            <a href="Homepage.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-home"></i>
+            <a href="Homepage.php" target="frame" class="nav-link active">
+              <i class="nav-icon fas fa-chart-line"></i>
               <p>ດາດສ໌ບອດ</p>
             </a>
           </li>
- 
-          <li class="nav-item">
-            <a href="room_types/form_room_types.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-layer-group"></i>
-              <p>ຈັດການປະເພດຫ້ອງ</p>
-            </a>
-          </li>
-          
-          <li class="nav-item">
-            <a href="rooms/select_rooms.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-door-open"></i>
-              <p>ລາຍລະອຽດຫ້ອງ</p>
-            </a>
-          </li>
 
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ບໍລິການລູກຄ້າ</li>
           <li class="nav-item">
             <a href="walkin.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-walking"></i>
-              <p>ເຂົ້າພັກເລີຍ (Walk-in)</p>
+              <i class="nav-icon fas fa-door-open"></i>
+              <p>ເຂົ້າພັກ</p>
             </a>
           </li>
-
           <li class="nav-item">
             <a href="reserve.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-calendar-check"></i>
-              <p>ຈອງລ່ວງໜ້າ</p>
+              <i class="nav-icon fas fa-calendar-alt"></i>
+              <p>ຈອງຫ້ອງພັກ</p>
             </a>
           </li>
-
           <li class="nav-item">
             <a href="checkout.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-sign-out-alt"></i>
+              <i class="nav-icon fas fa-receipt"></i>
               <p>Check-out</p>
             </a>
           </li>
-
           <li class="nav-item">
             <a href="room_service.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-concierge-bell"></i>
+              <i class="nav-icon fas fa-bell"></i>
               <p>ບໍລິການເພີ່ມເຕີມ</p>
             </a>
           </li>
 
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ຄັງສິນຄ້າ ແລະ ການຂາຍ</li>
           <li class="nav-item">
             <a href="pos.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-desktop"></i>
-              <p>POS ຂາຍເຄື່ອງໜ້າຮ້ານ</p>
+              <i class="nav-icon fas fa-cash-register"></i>
+              <p>ຂາຍສິນຄ້າ (POS)</p>
             </a>
           </li>
-
+          <li class="nav-item">
+            <a href="stock.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-boxes"></i>
+              <p>ສະຕ໋ອກສິນຄ້າ</p>
+            </a>
+          </li>
           <li class="nav-item">
             <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-warehouse"></i>
+              <i class="nav-icon fas fa-tags"></i>
               <p>
-                 ຈັດການສະຕ໋ອກສິນຄ້າ
+                 ຂໍ້ມູນສິນຄ້າ
 				         <i class="fas fa-angle-right right"></i>
               </p>
             </a>
@@ -299,84 +291,60 @@ try {
               <li class="nav-item">
                 <a href="form_product_categories.php" target="frame" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
-                  <p>ປະເພດສິນຄ້າ</p>
+                  <p>ໝວດໝູ່ສິນຄ້າ</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="stock.php" target="frame" class="nav-link">
+                <a href="form_product_units.php" target="frame" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
-                  <p>ຂໍ້ມູນສິນຄ້າ</p>
-                </a>
-              </li>
-            </ul>
-          </li>
- 
-          <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-chart-pie"></i>
-              <p>
-                 ລາຍງານ
-				         <i class="fas fa-angle-right right"></i>
-              </p>
-            </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item">
-                <a href="report.php?type=room_history" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon text-info"></i>
-                  <p>ປະຫວັດການເປີດຫ້ອງ</p>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a href="report.php?type=room_revenue" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon text-success"></i>
-                  <p>ລາຍຮັບຈາກການເປີດຫ້ອງ</p>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a href="report.php?type=finance" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon text-warning"></i>
-                  <p>ລາຍຮັບ-ລາຍຈ່າຍ</p>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a href="report.php?type=pos_history" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon text-primary"></i>
-                  <p>ລາຍຮັບຈາກການຂາຍສິນຄ້າ</p>
+                  <p>ຫົວໜ່ວຍສິນຄ້າ</p>
                 </a>
               </li>
             </ul>
           </li>
 
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ການຈັດການ ແລະ ລາຍງານ</li>
+          <li class="nav-item">
+            <a href="report.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-chart-bar"></i>
+              <p>ລາຍງານການເງິນ</p>
+            </a>
+          </li>
           <li class="nav-item">
             <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-cog"></i>
+              <i class="nav-icon fas fa-hotel"></i>
               <p>
-                 ການຕັ້ງຄ່າລະບົບ
+                 ຕັ້ງຄ່າຫ້ອງພັກ
 				         <i class="fas fa-angle-right right"></i>
               </p>
             </a>
             <ul class="nav nav-treeview">
               <li class="nav-item">
-                <a href="settings.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon text-primary"></i>
-                  <p>ຂໍ້ມູນໂຮງແຮມ</p>
+                <a href="rooms/select_rooms.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ລາຍລະອຽດຫ້ອງ</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="currency/form_currency.php" target="frame" class="nav-link">
+                <a href="room_types/form_room_types.php" target="frame" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
-                  <p>ສະກຸນເງິນ</p>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a href="users/manage_users.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>ຈັດການຜູ້ໃຊ້</p>
+                  <p>ປະເພດຫ້ອງ</p>
                 </a>
               </li>
             </ul>
           </li>
-          
+          <li class="nav-item">
+            <a href="users/manage_users.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-user-shield"></i>
+              <p>ຈັດການຜູ້ໃຊ້</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="settings.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-sliders-h"></i>
+              <p>ຕັ້ງຄ່າລະບົບ</p>
+            </a>
+          </li>
         </ul>
       </nav>
       <!-- /.sidebar-menu -->
@@ -468,6 +436,24 @@ try {
       $('#currentLangFlag').attr('src', flagSrc).attr('alt', flagAlt);
     });
   });
+</script>
+<script>
+function confirmLogout() {
+    Swal.fire({
+        title: 'ຢືນຢັນການອອກຈາກລະບົບ',
+        text: "ທ່ານຕ້ອງການອອກຈາກລະບົບແທ້ຫຼືບໍ່?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'ຕົກລົງ, ອອກຈາກລະບົບ',
+        cancelButtonText: 'ຍົກເລີກ'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'logout.php';
+        }
+    })
+}
 </script>
 </body>
 </html>
