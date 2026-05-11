@@ -17,8 +17,9 @@ if (isset($_SESSION['checked'])) {
     <title>ເຂົ້າສູ່ລະບົບ - Hotel Management</title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        * { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
         :root {
             --primary-blue: #007bff;
             --blue-hover: #0069d9;

@@ -14,6 +14,10 @@ $active_bookings = $stmt->fetchAll();
 
 $selected_booking_id = isset($_GET['booking_id']) ? (int)$_GET['booking_id'] : (count($active_bookings) > 0 ? $active_bookings[0]['booking_id'] : 0);
 
+// Fetch available products for selection
+$stmtProd = $pdo->query("SELECT * FROM products WHERE qty > 0 ORDER BY prod_name ASC");
+$products_list = $stmtProd->fetchAll();
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_service'])) {
     $booking_id = (int)$_POST['booking_id'];
@@ -21,18 +25,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_service'])) {
     $price = (float)str_replace(',', '', $_POST['price']);
     $qty = (int)$_POST['qty'];
     $total_price = $price * $qty;
+    $prod_id = isset($_POST['prod_id']) && !empty($_POST['prod_id']) ? (int)$_POST['prod_id'] : null;
 
-    $stmt = $pdo->prepare("INSERT INTO room_services (booking_id, item_name, price, qty, total_price) VALUES (?, ?, ?, ?, ?)");
-    if ($stmt->execute([$booking_id, $item_name, $price, $qty, $total_price])) {
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("INSERT INTO room_services (booking_id, prod_id, item_name, price, qty, total_price) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$booking_id, $prod_id, $item_name, $price, $qty, $total_price]);
+
         // Update food_charge in bookings
         $updateBooking = $pdo->prepare("UPDATE bookings SET food_charge = food_charge + ? WHERE id = ?");
         $updateBooking->execute([$total_price, $booking_id]);
 
+        // Reduce stock if it's a product
+        if ($prod_id) {
+            $updateStock = $pdo->prepare("UPDATE products SET qty = qty - ? WHERE prod_id = ?");
+            $updateStock->execute([$qty, $prod_id]);
+        }
+
+        $pdo->commit();
         $_SESSION['success'] = "ບັນທຶກຄ່າໃຊ້ຈ່າຍເພີ່ມສຳເລັດ!";
         header("Location: room_service.php?booking_id=" . $booking_id);
         exit();
-    } else {
-        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ!";
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ: " . $e->getMessage();
     }
 }
 
@@ -41,18 +57,33 @@ if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
     $booking_id = (int)$_GET['booking_id'];
     
-    // Get the total of this item to subtract from booking
-    $stmt = $pdo->prepare("SELECT total_price FROM room_services WHERE id = ?");
-    $stmt->execute([$id]);
-    $service = $stmt->fetch();
-    
-    if ($service) {
-        $delStmt = $pdo->prepare("DELETE FROM room_services WHERE id = ?");
-        if ($delStmt->execute([$id])) {
+    $pdo->beginTransaction();
+    try {
+        // Get service info to restore values
+        $stmt = $pdo->prepare("SELECT total_price, prod_id, qty FROM room_services WHERE id = ?");
+        $stmt->execute([$id]);
+        $service = $stmt->fetch();
+        
+        if ($service) {
+            // Delete record
+            $delStmt = $pdo->prepare("DELETE FROM room_services WHERE id = ?");
+            $delStmt->execute([$id]);
+
+            // Restore food_charge
             $updateBooking = $pdo->prepare("UPDATE bookings SET food_charge = food_charge - ? WHERE id = ?");
             $updateBooking->execute([$service['total_price'], $booking_id]);
-            $_SESSION['success'] = "ລົບລາຍການສຳເລັດ!";
+
+            // Restore stock if it was a product
+            if ($service['prod_id']) {
+                $restoreStock = $pdo->prepare("UPDATE products SET qty = qty + ? WHERE prod_id = ?");
+                $restoreStock->execute([$service['qty'], $service['prod_id']]);
+            }
         }
+        $pdo->commit();
+        $_SESSION['success'] = "ລົບລາຍການສຳເລັດ!";
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ: " . $e->getMessage();
     }
     header("Location: room_service.php?booking_id=" . $booking_id);
     exit();
@@ -139,26 +170,40 @@ if ($selected_booking_id > 0) {
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>ຊື່ລາຍການ (ເຊັ່ນ: ນ້ຳດື່ມ, ເບຍ, ອາຫານ)</label>
+                                <label>ຄົ້ນຫາ ແລະ ເລືອກສິນຄ້າ (ຈາກສະຕັອກ)</label>
+                                <input type="text" id="product_search" class="form-control" list="productList" placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ..." autocomplete="off">
+                                <datalist id="productList">
+                                    <?php foreach($products_list as $p): ?>
+                                        <option data-id="<?php echo $p['prod_id']; ?>" data-price="<?php echo $p['sprice']; ?>" value="<?php echo htmlspecialchars($p['prod_name']); ?>">
+                                            ລາຄາ: <?php echo number_format($p['sprice']); ?> | ຄົງເຫຼືອ: <?php echo $p['qty']; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </datalist>
+                                <input type="hidden" name="prod_id" id="prod_id">
+                                <small class="text-muted">* ຖ້າເປັນຄ່າບໍລິການອື່ນໆ ໃຫ້ປ້ອນໃສ່ຊ່ອງລຸ່ມນີ້ໂດຍກົງ</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>ຊື່ລາຍການ (Item Name)</label>
                                 <input type="text" name="item_name" id="item_name" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ລາຍການ">
                             </div>
                             <div class="row">
                                 <div class="col-6">
                                     <div class="form-group">
-                                        <label>ລາຄາ (ກີບ)</label>
+                                        <label>ລາຄາ (Price)</label>
                                         <input type="text" name="price" id="price" class="form-control number-format" placeholder="0">
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <div class="form-group">
-                                        <label>ຈຳນວນ</label>
+                                        <label>ຈຳນວນ (Qty)</label>
                                         <input type="number" name="qty" id="qty" class="form-control" value="1" min="1">
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="card-footer">
-                            <button type="submit" name="add_service" class="btn btn-primary btn-block"><i class="fas fa-plus"></i> ບັນທຶກລາຍການ (ສະສົມໄວ້)</button>
+                            <button type="submit" name="add_service" class="btn btn-primary btn-block"><i class="fas fa-save"></i> ບັນທຶກລາຍການ (ຕັດສະຕັອກ)</button>
                         </div>
                     </form>
                 </div>
@@ -221,6 +266,27 @@ if ($selected_booking_id > 0) {
 
 <script>
 $(document).ready(function() {
+    // Product Search and Auto-fill
+    $('#product_search').on('input', function() {
+        var val = $(this).val();
+        var option = $('#productList option').filter(function() {
+            return this.value === val;
+        });
+
+        if (option.length) {
+            var prod_id = option.data('id');
+            var price = option.data('price');
+            
+            $('#prod_id').val(prod_id);
+            $('#item_name').val(val);
+            $('#price').val(parseInt(price).toLocaleString('en-US'));
+            $('#qty').focus();
+        } else {
+            // If user types something else, clear the hidden prod_id
+            $('#prod_id').val('');
+        }
+    });
+
     // Number formatting
     $('.number-format').on('input', function(e) {
         var value = $(this).val().replace(/[^0-9]/g, '');
