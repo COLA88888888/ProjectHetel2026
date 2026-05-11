@@ -180,19 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
 <!-- SweetAlert2 -->
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
 
-<?php if(isset($_SESSION['print_booking'])): ?>
-    <script>
-        var printUrl = 'print_room_receipt.php?booking_id=<?php echo $_SESSION['print_booking']; ?>';
-        
-        // Hidden iframe print
-        var printFrame = document.createElement('iframe');
-        printFrame.style.display = 'none';
-        printFrame.src = printUrl;
-        document.body.appendChild(printFrame);
-        
-        <?php unset($_SESSION['print_booking']); ?>
-    </script>
-<?php endif; ?>
+
 
 </body>
 </html>

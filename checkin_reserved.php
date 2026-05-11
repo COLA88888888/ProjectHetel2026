@@ -34,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_checkin'])) {
     $pdo->prepare("UPDATE rooms SET status = 'Occupied' WHERE id = ?")->execute([$booking['room_id']]);
     
     $_SESSION['success'] = "ເຂົ້າພັກສຳເລັດ! ຫ້ອງ " . $booking['room_number'];
-    $_SESSION['print_booking'] = $booking_id;
     header("Location: reserve.php");
     exit();
 }
