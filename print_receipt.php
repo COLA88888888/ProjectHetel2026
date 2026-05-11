@@ -49,17 +49,18 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ໃບບິນຮັບເງິນ - <?php echo $bill_id; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif; font-size: 12px; margin: 0; padding: 0; color: #000; background: #f4f4f4; overflow-x: hidden; }
         .receipt { width: 100%; max-width: 75mm; margin: 10px auto; background: #fff; padding: 4mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 15px; }
-        .hotel-name { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+        .hotel-name { font-size: 16px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
         .divider { border-top: 1px dashed #000; margin: 8px 0; }
         .info-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; font-size: 11px; line-height: 1.3; }
-        .info-row span:first-child { flex: 1; padding-right: 5px; }
-        .info-row span:last-child { text-align: right; font-weight: bold; }
+        .info-row span:first-child { flex: 1; padding-right: 5px; color: #555; }
+        .info-row span:last-child { text-align: right; font-weight: bold; color: #000; }
         .item-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; table-layout: fixed; }
-        .item-table th { border-bottom: 1px dashed #000; text-align: left; padding: 4px 0; }
+        .item-table th { border-bottom: 1px dashed #000; text-align: left; padding: 4px 0; color: #333; }
         .item-table td { padding: 6px 0; vertical-align: top; border-bottom: 1px solid #eee; word-wrap: break-word; }
         .item-table tr:last-child td { border-bottom: none; }
         .text-right { text-align: right !important; }
@@ -96,25 +97,25 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
 <body>
 
 <div class="no-print" style="text-align: center; margin-top: 10px;">
-    <button onclick="window.print()" class="btn-print" style="border: none; cursor: pointer; display: inline-block;">ພິມໃບບິນ (Print)</button>
-    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">ປິດໜ້າຕ່າງນີ້</button>
+    <button onclick="window.print()" class="btn-print" style="border: none; cursor: pointer; display: inline-block;"><i class="fas fa-print"></i> ພິມໃບບິນ (Print)</button>
+    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;"><i class="fas fa-times"></i> ປິດໜ້າຕ່າງ</button>
 </div>
 
 <div class="receipt">
     <div class="header">
-        <div class="hotel-name"><?php echo htmlspecialchars($hotel_name); ?></div>
-        <div style="font-size: 11px;"><?php echo htmlspecialchars($hotel_address); ?></div>
-        <div style="font-size: 11px;">Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
+        <div class="hotel-name"><i class="fas fa-hotel"></i> <?php echo htmlspecialchars($hotel_name); ?></div>
+        <div style="font-size: 11px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($hotel_address); ?></div>
+        <div style="font-size: 11px;"><i class="fas fa-phone-alt"></i> Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
         <div class="divider"></div>
-        <div style="font-weight: bold; font-size: 15px;">ໃບບິນຮັບເງິນ (RECEIPT)</div>
+        <div style="font-weight: bold; font-size: 14px;"><i class="fas fa-file-invoice-dollar"></i> ໃບບິນຮັບເງິນ (RECEIPT)</div>
     </div>
 
     <div class="info-row">
-        <span>ເລກທີບິນ:</span>
+        <span><i class="fas fa-hashtag"></i> ເລກທີບິນ:</span>
         <span><?php echo $bill_id; ?></span>
     </div>
     <div class="info-row">
-        <span>ວັນທີ:</span>
+        <span><i class="fas fa-calendar-day"></i> ວັນທີ:</span>
         <span><?php echo $date; ?></span>
     </div>
 

@@ -128,10 +128,10 @@ while($row = $stmtRT->fetch()) {
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
     <!-- DataTables -->
     <link rel="stylesheet" href="plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
-    <!-- Noto Sans Lao -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Noto Sans Lao Looped -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao', sans-serif; background-color: #f4f6f9; padding: 10px; }
+        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 10px; }
         .inner h3 { font-size: 2.2rem; font-weight: bold; }
         .inner p { font-size: 1.1rem; }
         /* Responsive tables */

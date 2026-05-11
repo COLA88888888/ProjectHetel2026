@@ -66,10 +66,10 @@ if (isset($_GET['booking_id'])) {
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
-    <!-- Noto Sans Lao -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Noto Sans Lao Looped -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao', sans-serif; background-color: #f4f6f9; padding: 20px; }
+        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
         .invoice-title { font-size: 1.5rem; font-weight: bold; border-bottom: 2px solid #28a745; padding-bottom: 10px; margin-bottom: 20px; }
         .total-row { font-size: 1.25rem; font-weight: bold; background-color: #f8f9fa; }
         .grand-total { font-size: 1.5rem; font-weight: bold; color: #dc3545; }

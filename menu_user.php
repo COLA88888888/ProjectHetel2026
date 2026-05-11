@@ -1,7 +1,6 @@
-
-<html>
-<style>
-*{font-family:'Noto Sans Lao', 'Phetsarath OT', sans-serif;}
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        *{font-family: 'Noto Sans Lao Looped', sans-serif !important;}
  .brand-link.text-center { transition: padding 0.3s ease; overflow: hidden; }
  .brand-link.text-center img { transition: all 0.3s ease; }
  .sidebar-collapse .brand-link.text-center { padding: 10px 0 !important; }

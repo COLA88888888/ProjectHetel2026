@@ -73,10 +73,10 @@ $room_types = $stmtTypes->fetchAll();
     <link rel="stylesheet" href="../plugins/datatables-buttons/css/buttons.bootstrap4.min.css">
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="../sweetalert/dist/sweetalert2.min.css">
-    <!-- Noto Sans Lao -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Noto Sans Lao Looped -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao', sans-serif; background-color: #f4f6f9; padding: 20px; }
+        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
         .badge-status { font-size: 14px; padding: 5px 10px; }
         .hk-select { border: 2px solid #ddd; border-radius: 6px; padding: 4px 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; outline: none; -webkit-appearance: none; -moz-appearance: none; appearance: auto; }
         .hk-select.hk-ready { border-color: #17a2b8; background: #e8f8fb; color: #117a8b; }

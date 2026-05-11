@@ -48,9 +48,13 @@ try {
 }
 ?>
 <html>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
+ <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
 <style>
- *{font-family: 'Noto Sans Lao Looped', sans-serif;}
+ *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+ .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; }
+ html, body, .nav-link, .brand-text, h1, h2, h3, h4, h5, h6, .btn, .form-control, .card-title { 
+    font-family: 'Noto Sans Lao Looped', sans-serif !important; 
+ }
  .nav-sidebar .menu-is-opening > .nav-link p > .right.fa-angle-right,
  .nav-sidebar .menu-open > .nav-link p > .right.fa-angle-right {
    transform: rotate(90deg) !important;
@@ -131,7 +135,7 @@ try {
   <link rel="stylesheet" href="icon/css/all.min.css">
   <!-- Google Font: Source Sans Pro -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
   <!-- Ionicons -->
@@ -334,16 +338,33 @@ try {
             </ul>
           </li>
           <li class="nav-item">
-            <a href="users/manage_users.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-user-shield"></i>
-              <p>ຈັດການຜູ້ໃຊ້</p>
+            <a href="#" class="nav-link">
+              <i class="nav-icon fas fa-cogs"></i>
+              <p>
+                 ຕັ້ງຄ່າລະບົບ
+                 <i class="fas fa-angle-right right"></i>
+              </p>
             </a>
-          </li>
-          <li class="nav-item">
-            <a href="settings.php" target="frame" class="nav-link">
-              <i class="nav-icon fas fa-sliders-h"></i>
-              <p>ຕັ້ງຄ່າລະບົບ</p>
-            </a>
+            <ul class="nav nav-treeview">
+              <li class="nav-item">
+                <a href="settings.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ຂໍ້ມູນໂຮງແຮມ</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="currency/form_currency.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ສະກຸນເງິນ</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="users/manage_users.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ຈັດການຜູ້ໃຊ້</p>
+                </a>
+              </li>
+            </ul>
           </li>
         </ul>
       </nav>

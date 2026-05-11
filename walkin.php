@@ -39,15 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
     <link rel="stylesheet" href="plugins/fontawesome-free-5.15.3-web/css/all.min.css">
     <!-- AdminLTE -->
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
-    <!-- Noto Sans Lao -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Noto Sans Lao Looped -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
     <script>
         if (window.top === window.self) { window.location.href = 'menu_admin.php'; }
     </script>
     <style>
-        body { font-family: 'Noto Sans Lao', sans-serif; background-color: #f4f6f9; padding: 20px; }
+        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
         .room-card { transition: transform 0.2s; }
         .room-card:hover { transform: scale(1.02); cursor: pointer; border-color: #28a745; }
         .room-price { font-size: 1.2rem; font-weight: 600; color: #28a745; }

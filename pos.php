@@ -78,12 +78,14 @@ foreach ($products as $p) {
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         if (window.top === window.self) { window.location.href = 'menu_admin.php'; }
     </script>
     <style>
-        body { font-family: 'Noto Sans Lao', sans-serif; background-color: #f8f9fa; padding: 10px; }
+        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+        .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
+        body { background-color: #f8f9fa; padding: 10px; }
         
         /* Category Buttons */
         .cat-btn {

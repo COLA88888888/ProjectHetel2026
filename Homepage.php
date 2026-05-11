@@ -11,10 +11,10 @@ if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
     $_SESSION['permissions'] = '["room_types","rooms","bookings","housekeeping","reports","settings","users"]';
 }
 ?>
-  <html>
-  <style>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <style>
     * {
-      font-family: 'Phetsarath OT';
+      font-family: 'Noto Sans Lao Looped', sans-serif;
     }
 
     #save {
@@ -66,7 +66,7 @@ if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
     <link rel="stylesheet" href="fontawesome-free-6.2.1-web/css/all.min.css">
     <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
     <script src="jquery.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped+Looped:wght@400;700&display=swap" rel="stylesheet">
     <style>
       body { font-family: 'Noto Sans Lao Looped', sans-serif; }
     </style>

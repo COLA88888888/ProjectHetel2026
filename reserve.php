@@ -163,9 +163,11 @@ $reservations = $stmtReserved->fetchAll();
     <link rel="stylesheet" href="plugins/fontawesome-free-5.15.3-web/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao', sans-serif; background-color: #f4f6f9; padding: 10px; }
+        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+        .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
+        body { background-color: #f4f6f9; padding: 10px; }
         .room-card { transition: transform 0.2s; border-radius: 10px; }
         .room-card:hover { transform: scale(1.02); cursor: pointer; border-color: #f39c12; }
         .room-price { font-size: 1.1rem; font-weight: 600; color: #f39c12; }

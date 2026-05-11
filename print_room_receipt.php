@@ -53,22 +53,23 @@ $final_payable = $grand_total - $booking['deposit_amount'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ໃບບິນຄ່າທີ່ພັກ - #BK-<?php echo $booking_id; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif; font-size: 12px; margin: 0; padding: 0; color: #000; background: #f4f4f4; overflow-x: hidden; }
         .receipt { width: 100%; max-width: 75mm; margin: 10px auto; background: #fff; padding: 4mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 12px; }
-        .hotel-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+        .hotel-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; }
         .divider { border-top: 1px dashed #000; margin: 8px 0; }
         .info-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; font-size: 11px; line-height: 1.3; }
-        .info-row span:first-child { flex: 1; padding-right: 5px; }
-        .info-row span:last-child { text-align: right; font-weight: bold; }
+        .info-row span:first-child { flex: 1; padding-right: 5px; color: #555; }
+        .info-row span:last-child { text-align: right; font-weight: bold; color: #000; }
         .item-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11px; table-layout: fixed; }
-        .item-table th { border-bottom: 1px dashed #000; text-align: left; padding: 4px 0; }
+        .item-table th { border-bottom: 1px dashed #000; text-align: left; padding: 4px 0; color: #333; }
         .item-table td { padding: 6px 0; vertical-align: top; border-bottom: 1px solid #eee; word-wrap: break-word; }
         .item-table tr:last-child td { border-bottom: none; }
         .text-right { text-align: right !important; }
         .total-section { margin-top: 12px; }
-        .grand-total { font-size: 15px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; color: red; }
+        .grand-total { font-size: 15px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; color: #d9534f; }
         .footer { text-align: center; margin-top: 25px; font-size: 10px; font-style: italic; line-height: 1.4; color: #444; }
         
         @media print {
@@ -100,25 +101,25 @@ $final_payable = $grand_total - $booking['deposit_amount'];
 <body>
 
 <div class="no-print" style="text-align: center; margin-top: 10px;">
-    <button onclick="window.print()" class="btn-print" style="border: none; cursor: pointer; display: inline-block;">ພິມໃບບິນ (Print)</button>
-    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">ປິດໜ້າຕ່າງນີ້</button>
+    <button onclick="window.print()" class="btn-print"><i class="fas fa-print"></i> ພິມໃບບິນ (Print)</button>
+    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;"><i class="fas fa-times"></i> ປິດໜ້າຕ່າງ</button>
 </div>
 
 <div class="receipt">
     <div class="header">
-        <div class="hotel-name"><?php echo htmlspecialchars($hotel_name); ?></div>
-        <div style="font-size: 10px;"><?php echo htmlspecialchars($hotel_address); ?></div>
-        <div style="font-size: 10px;">Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
+        <div class="hotel-name"><i class="fas fa-hotel"></i> <?php echo htmlspecialchars($hotel_name); ?></div>
+        <div style="font-size: 11px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($hotel_address); ?></div>
+        <div style="font-size: 11px;"><i class="fas fa-phone-alt"></i> Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
         <div class="divider"></div>
-        <div style="font-weight: bold; font-size: 14px;">ໃບບິນຄ່າທີ່ພັກ (INVOICE)</div>
+        <div style="font-weight: bold; font-size: 13px;"><i class="fas fa-bed"></i> ໃບບິນຄ່າທີ່ພັກ (ROOM INVOICE)</div>
     </div>
 
     <div class="info-row">
-        <span>ເລກທີບິນ:</span>
+        <span><i class="fas fa-hashtag"></i> ເລກທີບິນ:</span>
         <span>#BK-<?php echo str_pad($booking_id, 5, '0', STR_PAD_LEFT); ?></span>
     </div>
     <div class="info-row">
-        <span>ລູກຄ້າ:</span>
+        <span><i class="fas fa-user"></i> ລູກຄ້າ:</span>
         <span><?php echo htmlspecialchars($booking['customer_name']); ?></span>
     </div>
     <div class="info-row">
