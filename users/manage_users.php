@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
     $address = trim($_POST['address']);
     $status = $_POST['status'];
     $profile_img = 'default_avatar.png';
+    $permissions = json_encode($_POST['permissions'] ?? []);
 
     // Image Upload
     if (isset($_FILES['profile_img']) && $_FILES['profile_img']['error'] == 0) {
@@ -21,8 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
         move_uploaded_file($_FILES['profile_img']['tmp_name'], '../assets/img/' . $profile_img);
     }
 
-    $stmt = $pdo->prepare("INSERT INTO users (username, password, fname, lname, phone, email, address, status, profile_img) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    if ($stmt->execute([$username, $password, $fname, $lname, $phone, $email, $address, $status, $profile_img])) {
+    $stmt = $pdo->prepare("INSERT INTO users (username, password, fname, lname, phone, email, address, status, profile_img, permissions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    if ($stmt->execute([$username, $password, $fname, $lname, $phone, $email, $address, $status, $profile_img, $permissions])) {
         $_SESSION['success'] = "ເພີ່ມຜູ້ໃຊ້ໃໝ່ສຳເລັດແລ້ວ!";
     } else {
         $_SESSION['error'] = "ມີບາງຢ່າງຜິດພາດ!";
@@ -41,9 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
     $email = trim($_POST['email']);
     $address = trim($_POST['address']);
     $status = $_POST['status'];
+    $permissions = json_encode($_POST['permissions'] ?? []);
 
-    $sql = "UPDATE users SET username=?, fname=?, lname=?, phone=?, email=?, address=?, status=? ";
-    $params = [$username, $fname, $lname, $phone, $email, $address, $status];
+    $sql = "UPDATE users SET username=?, fname=?, lname=?, phone=?, email=?, address=?, status=?, permissions=? ";
+    $params = [$username, $fname, $lname, $phone, $email, $address, $status, $permissions];
 
     // Password Update
     if (!empty($_POST['password'])) {
@@ -217,7 +219,7 @@ $users = $stmt->fetchAll();
                                 <?php endif; ?>
                             </td>
                             <td class="align-middle">
-                                <button class="btn btn-sm btn-warning text-white btn-edit shadow-sm"
+                                    <button class="btn btn-sm btn-warning text-white btn-edit shadow-sm"
                                     data-id="<?php echo $u['user_id']; ?>"
                                     data-username="<?php echo htmlspecialchars($u['username']); ?>"
                                     data-fname="<?php echo htmlspecialchars($u['fname']); ?>"
@@ -226,7 +228,8 @@ $users = $stmt->fetchAll();
                                     data-email="<?php echo htmlspecialchars($u['email']); ?>"
                                     data-status="<?php echo htmlspecialchars($u['status']); ?>"
                                     data-address="<?php echo htmlspecialchars($u['address'] ?? ''); ?>"
-                                    data-img="<?php echo $img_path; ?>">
+                                    data-img="<?php echo $img_path; ?>"
+                                    data-permissions='<?php echo $u['permissions'] ?? '[]'; ?>'>
                                     <i class="fas fa-edit"></i> ແກ້ໄຂ
                                 </button>
                                 <?php if($u['user_id'] != 1): ?>
@@ -276,7 +279,8 @@ $users = $stmt->fetchAll();
                             data-email="<?php echo htmlspecialchars($u['email']); ?>"
                             data-status="<?php echo htmlspecialchars($u['status']); ?>"
                             data-address="<?php echo htmlspecialchars($u['address'] ?? ''); ?>"
-                            data-img="<?php echo $img_path; ?>">
+                            data-img="<?php echo $img_path; ?>"
+                            data-permissions='<?php echo $u['permissions'] ?? '[]'; ?>'>
                             <i class="fas fa-edit"></i> ແກ້ໄຂ
                         </button>
                         <?php if($u['user_id'] != 1): ?>
@@ -339,10 +343,50 @@ $users = $stmt->fetchAll();
                   </div>
                   <div class="col-md-12 form-group">
                       <label>ສິດທິການໃຊ້ງານ (Role) <span class="text-danger">*</span></label>
-                      <select name="status" class="form-control" required>
+                      <select name="status" class="form-control mb-3" required>
                           <option value="ພະນັກງານ">ພະນັກງານ (Staff)</option>
                           <option value="ຜູ້ບໍລິຫານ">ຜູ້ບໍລິຫານ (Admin)</option>
                       </select>
+
+                      <label class="d-block mt-3 border-bottom pb-2 mb-3">ກຳນົດສິດການເຂົ້າເຖິງ (Permissions)</label>
+                      <div class="row px-3">
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="bookings" class="custom-control-input" id="p_add_bookings" checked>
+                              <label class="custom-control-label font-weight-normal" for="p_add_bookings">ຈອງຫ້ອງພັກ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="walkin" class="custom-control-input" id="p_add_walkin" checked>
+                              <label class="custom-control-label font-weight-normal" for="p_add_walkin">ເຂົ້າພັກ (Walk-in)</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="checkout" class="custom-control-input" id="p_add_checkout" checked>
+                              <label class="custom-control-label font-weight-normal" for="p_add_checkout">Check-out</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="room_service" class="custom-control-input" id="p_add_rs" checked>
+                              <label class="custom-control-label font-weight-normal" for="p_add_rs">ບໍລິການເພີ່ມເຕີມ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="pos" class="custom-control-input" id="p_add_pos" checked>
+                              <label class="custom-control-label font-weight-normal" for="p_add_pos">ຂາຍສິນຄ້າ (POS)</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="stock" class="custom-control-input" id="p_add_stock" checked>
+                              <label class="custom-control-label font-weight-normal" for="p_add_stock">ສະຕ໋ອກສິນຄ້າ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="report" class="custom-control-input" id="p_add_report">
+                              <label class="custom-control-label font-weight-normal" for="p_add_report">ລາຍງານ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="rooms" class="custom-control-input" id="p_add_rooms">
+                              <label class="custom-control-label font-weight-normal" for="p_add_rooms">ຈັດການຫ້ອງ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="settings" class="custom-control-input" id="p_add_settings">
+                              <label class="custom-control-label font-weight-normal" for="p_add_settings">ຕັ້ງຄ່າລະບົບ</label>
+                          </div>
+                      </div>
                   </div>
               </div>
           </div>
@@ -405,10 +449,50 @@ $users = $stmt->fetchAll();
                   </div>
                   <div class="col-md-12 form-group">
                       <label>ສິດທິການໃຊ້ງານ (Role) <span class="text-danger">*</span></label>
-                      <select name="status" id="edit_status" class="form-control" required>
+                      <select name="status" id="edit_status" class="form-control mb-3" required>
                           <option value="ພະນັກງານ">ພະນັກງານ (Staff)</option>
                           <option value="ຜູ້ບໍລິຫານ">ຜູ້ບໍລິຫານ (Admin)</option>
                       </select>
+
+                      <label class="d-block mt-3 border-bottom pb-2 mb-3">ກຳນົດສິດການເຂົ້າເຖິງ (Permissions)</label>
+                      <div class="row px-3">
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="bookings" class="custom-control-input edit-perm" id="p_edit_bookings">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_bookings">ຈອງຫ້ອງພັກ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="walkin" class="custom-control-input edit-perm" id="p_edit_walkin">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_walkin">ເຂົ້າພັກ (Walk-in)</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="checkout" class="custom-control-input edit-perm" id="p_edit_checkout">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_checkout">Check-out</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="room_service" class="custom-control-input edit-perm" id="p_edit_rs">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_rs">ບໍລິການເພີ່ມເຕີມ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="pos" class="custom-control-input edit-perm" id="p_edit_pos">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_pos">ຂາຍສິນຄ້າ (POS)</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="stock" class="custom-control-input edit-perm" id="p_edit_stock">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_stock">ສະຕ໋ອກສິນຄ້າ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="report" class="custom-control-input edit-perm" id="p_edit_report">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_report">ລາຍງານ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="rooms" class="custom-control-input edit-perm" id="p_edit_rooms">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_rooms">ຈັດການຫ້ອງ</label>
+                          </div>
+                          <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
+                              <input type="checkbox" name="permissions[]" value="settings" class="custom-control-input edit-perm" id="p_edit_settings">
+                              <label class="custom-control-label font-weight-normal" for="p_edit_settings">ຕັ້ງຄ່າລະບົບ</label>
+                          </div>
+                      </div>
                   </div>
               </div>
           </div>
@@ -434,6 +518,18 @@ $('.btn-edit').on('click', function() {
     $('#edit_address').val($(this).data('address'));
     $('#edit_status').val($(this).data('status'));
     $('#preview_edit').attr('src', $(this).data('img'));
+
+    // Clear and set checkboxes
+    $('.edit-perm').prop('checked', false);
+    var perms = $(this).data('permissions');
+    if(Array.isArray(perms)){
+        perms.forEach(function(p){
+            $('#p_edit_' + p).prop('checked', true);
+            // Handle some mapping issues if any
+            if(p == 'room_service') $('#p_edit_rs').prop('checked', true);
+        });
+    }
+
     $('#editModal').modal('show');
 });
 

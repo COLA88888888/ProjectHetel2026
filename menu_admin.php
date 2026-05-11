@@ -127,6 +127,7 @@ try {
  .main-sidebar .nav-treeview { background: rgba(0,0,0,0.08) !important; border-radius: 6px !important; margin: 2px 8px !important; }
  .main-sidebar .nav-treeview .nav-link { padding-left: 20px !important; font-size: 0.92em; }
  .main-sidebar .nav-header { color: rgba(255,255,255,0.5) !important; }
+  .dropdown-item, .dropdown-toggle { cursor: pointer !important; }
 </style>
 <head>
   <meta charset="utf-8">
@@ -244,39 +245,53 @@ try {
             </a>
           </li>
 
+          <?php if($is_admin || in_array('bookings', $perms) || in_array('walkin', $perms) || in_array('checkout', $perms) || in_array('room_service', $perms)): ?>
           <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ບໍລິການລູກຄ້າ</li>
+          <?php if($is_admin || in_array('walkin', $perms)): ?>
           <li class="nav-item">
             <a href="walkin.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-door-open"></i>
               <p>ເຂົ້າພັກ</p>
             </a>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('bookings', $perms)): ?>
           <li class="nav-item">
             <a href="reserve.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-calendar-alt"></i>
               <p>ຈອງຫ້ອງພັກ</p>
             </a>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('checkout', $perms)): ?>
           <li class="nav-item">
             <a href="checkout.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-receipt"></i>
               <p>Check-out</p>
             </a>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('room_service', $perms)): ?>
           <li class="nav-item">
             <a href="room_service.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-bell"></i>
               <p>ບໍລິການເພີ່ມເຕີມ</p>
             </a>
           </li>
+          <?php endif; ?>
+          <?php endif; ?>
 
+          <?php if($is_admin || in_array('pos', $perms) || in_array('stock', $perms)): ?>
           <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ຄັງສິນຄ້າ ແລະ ການຂາຍ</li>
+          <?php if($is_admin || in_array('pos', $perms)): ?>
           <li class="nav-item">
             <a href="pos.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-cash-register"></i>
               <p>ຂາຍສິນຄ້າ (POS)</p>
             </a>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('stock', $perms)): ?>
           <li class="nav-item">
             <a href="stock.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-boxes"></i>
@@ -306,14 +321,20 @@ try {
               </li>
             </ul>
           </li>
+          <?php endif; ?>
+          <?php endif; ?>
 
+          <?php if($is_admin || in_array('report', $perms) || in_array('rooms', $perms) || in_array('settings', $perms) || in_array('users', $perms)): ?>
           <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ການຈັດການ ແລະ ລາຍງານ</li>
+          <?php if($is_admin || in_array('report', $perms)): ?>
           <li class="nav-item">
             <a href="report.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-chart-bar"></i>
               <p>ລາຍງານການເງິນ</p>
             </a>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('rooms', $perms)): ?>
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-hotel"></i>
@@ -337,6 +358,8 @@ try {
               </li>
             </ul>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('settings', $perms) || in_array('users', $perms)): ?>
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-cogs"></i>
@@ -346,6 +369,7 @@ try {
               </p>
             </a>
             <ul class="nav nav-treeview">
+              <?php if($is_admin || in_array('settings', $perms)): ?>
               <li class="nav-item">
                 <a href="settings.php" target="frame" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
@@ -358,14 +382,19 @@ try {
                   <p>ສະກຸນເງິນ</p>
                 </a>
               </li>
+              <?php endif; ?>
+              <?php if($is_admin || in_array('users', $perms)): ?>
               <li class="nav-item">
                 <a href="users/manage_users.php" target="frame" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>ຈັດການຜູ້ໃຊ້</p>
                 </a>
               </li>
+              <?php endif; ?>
             </ul>
           </li>
+          <?php endif; ?>
+          <?php endif; ?>
         </ul>
       </nav>
       <!-- /.sidebar-menu -->

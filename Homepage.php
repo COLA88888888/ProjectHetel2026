@@ -1,5 +1,3 @@
-<script src="sweetalert/dist/sweetalert2.all.min.js"></script>
-<script src="jquery.js"></script>
 <?php
 session_start();
 if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
@@ -11,6 +9,8 @@ if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
     $_SESSION['permissions'] = '["room_types","rooms","bookings","housekeeping","reports","settings","users"]';
 }
 ?>
+<script src="sweetalert/dist/sweetalert2.all.min.js"></script>
+<script src="jquery.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped+Looped:wght@400;700&display=swap" rel="stylesheet">
     <style>
     * {

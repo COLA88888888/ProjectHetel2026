@@ -1,6 +1,61 @@
+<?php
+session_start();
+
+// Language Selection Logic
+if (isset($_GET['lang'])) {
+    $_SESSION['lang'] = $_GET['lang'];
+}
+$current_lang = $_SESSION['lang'] ?? 'la';
+
+// Include the appropriate language file
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
+$flags = [
+    'la' => ['src' => 'https://flagcdn.com/w20/la.png', 'alt' => 'Lao'],
+    'en' => ['src' => 'https://flagcdn.com/w20/gb.png', 'alt' => 'English'],
+    'cn' => ['src' => 'https://flagcdn.com/w20/cn.png', 'alt' => 'Chinese'],
+    'vn' => ['src' => 'https://flagcdn.com/w20/vn.png', 'alt' => 'Vietnamese'],
+];
+$active_flag = $flags[$current_lang] ?? $flags['la'];
+
+if(@$_SESSION['checked']<>1){
+	echo "<script>alert('ລົງຊືີ່ເຂົ້າໃຊ້ກ່ອນ');
+    window.location.href='index.php';
+	</script>";
+    exit;
+}
+else{
+// Fetch hotel logo & name from settings
+require_once 'config/db.php';
+try {
+    $stmtLogo = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('hotel_logo', 'hotel_name')");
+    $hotel_settings = $stmtLogo->fetchAll(PDO::FETCH_KEY_PAIR);
+    $hotel_logo = !empty($hotel_settings['hotel_logo']) ? 'assets/img/' . $hotel_settings['hotel_logo'] : 'https://via.placeholder.com/150?text=Logo';
+    $hotel_name = $hotel_settings['hotel_name'] ?? 'ລະບົບໂຮງແຮມ';
+} catch (Exception $e) {
+    $hotel_logo = 'https://via.placeholder.com/150?text=Logo';
+    $hotel_name = 'ລະບົບໂຮງແຮມ';
+}
+$perms = json_decode($_SESSION['permissions'] ?? '[]', true);
+$is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
+?>
+<html>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        *{font-family: 'Noto Sans Lao Looped', sans-serif !important;}
+<style>
+ *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+ .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; }
+ html, body, .nav-link, .brand-text, h1, h2, h3, h4, h5, h6, .btn, .form-control, .card-title { 
+    font-family: 'Noto Sans Lao Looped', sans-serif !important; 
+ }
+ .nav-sidebar .menu-is-opening > .nav-link p > .right.fa-angle-right,
+ .nav-sidebar .menu-open > .nav-link p > .right.fa-angle-right {
+   transform: rotate(90deg) !important;
+ }
  .brand-link.text-center { transition: padding 0.3s ease; overflow: hidden; }
  .brand-link.text-center img { transition: all 0.3s ease; }
  .sidebar-collapse .brand-link.text-center { padding: 10px 0 !important; }
@@ -13,7 +68,7 @@
 
  /* ===== Light Blue Theme for Navbar ===== */
  .main-header.navbar {
-   background: linear-gradient(135deg, #5DADE2 0%, #85C1E9 100%) !important;
+   background: linear-gradient(135deg, #029affff 0%, #0099ffff 100%) !important;
    border-bottom: 2px solid #3498DB !important;
    box-shadow: 0 2px 8px rgba(93,173,226,0.3) !important;
  }
@@ -32,7 +87,7 @@
 
  /* ===== Light Blue Theme for Sidebar ===== */
  .main-sidebar {
-   background: linear-gradient(180deg, #2E86C1 0%, #2471A3 50%, #1A5276 100%) !important;
+   background: linear-gradient(180deg, #0099ffff 0%, #0099ffff 50%, #009dffff 100%) !important;
    box-shadow: 3px 0 12px rgba(46,134,193,0.3) !important;
  }
  .main-sidebar .brand-link {
@@ -69,6 +124,7 @@
  .main-sidebar .nav-treeview { background: rgba(0,0,0,0.08) !important; border-radius: 6px !important; margin: 2px 8px !important; }
  .main-sidebar .nav-treeview .nav-link { padding-left: 20px !important; font-size: 0.92em; }
  .main-sidebar .nav-header { color: rgba(255,255,255,0.5) !important; }
+ .dropdown-item, .dropdown-toggle { cursor: pointer !important; }
 </style>
 <head>
 
@@ -96,52 +152,10 @@
   <link rel="stylesheet" href="plugins/daterangepicker/daterangepicker.css">
   <!-- summernote -->
   <link rel="stylesheet" href="plugins/summernote/summernote-bs4.min.css">
-	<script src="../sweetalert/dist/sweetalert2.all.min.js"></script>		
-	<script src="../jquery.js"></script>
+	<script src="sweetalert/dist/sweetalert2.all.min.js"></script>		
+	<script src="jquery.js"></script>
 </head>
 <body class="hold-transition sidebar-mini sidebar-no-expand layout-fixed">
-<?php
-session_start();
-
-// Language Selection Logic
-if (isset($_GET['lang'])) {
-    $_SESSION['lang'] = $_GET['lang'];
-}
-$current_lang = $_SESSION['lang'] ?? 'la';
-
-// Include the appropriate language file
-$lang_file = "lang/{$current_lang}.php";
-if (file_exists($lang_file)) {
-    include $lang_file;
-} else {
-    include "lang/la.php";
-}
-
-$flags = [
-    'la' => ['src' => 'https://flagcdn.com/w20/la.png', 'alt' => 'Lao'],
-    'en' => ['src' => 'https://flagcdn.com/w20/gb.png', 'alt' => 'English'],
-    'cn' => ['src' => 'https://flagcdn.com/w20/cn.png', 'alt' => 'Chinese'],
-    'vn' => ['src' => 'https://flagcdn.com/w20/vn.png', 'alt' => 'Vietnamese'],
-];
-$active_flag = $flags[$current_lang] ?? $flags['la'];
-
-if(@$_SESSION['checked']<>1){
-	echo "<script>alert('ລົງຊືີ່ເຂົ້າໃຊ້ກ່ອນ');
-	</script>";
-	}
-else{
-// Fetch hotel logo & name from settings
-require_once 'config/db.php';
-try {
-    $stmtLogo = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('hotel_logo', 'hotel_name')");
-    $hotel_settings = $stmtLogo->fetchAll(PDO::FETCH_KEY_PAIR);
-    $hotel_logo = !empty($hotel_settings['hotel_logo']) ? 'assets/img/' . $hotel_settings['hotel_logo'] : 'https://via.placeholder.com/150?text=Logo';
-    $hotel_name = $hotel_settings['hotel_name'] ?? 'ລະບົບໂຮງແຮມ';
-} catch (Exception $e) {
-    $hotel_logo = 'https://via.placeholder.com/150?text=Logo';
-    $hotel_name = 'ລະບົບໂຮງແຮມ';
-}
-?>
 <div class="wrapper">
 
   <!-- Navbar -->
@@ -168,11 +182,11 @@ try {
       </li>  
 
       <!-- Usage Package -->
-      <li class="nav-item">
+      <!-- <li class="nav-item">
         <a class="nav-link" href="#" role="button" style="color: #28a745; font-weight: bold;">
           <i class="fas fa-crown"></i> ແພັກເກັດການນຳໃຊ້
         </a>
-      </li>
+      </li> -->
 
       <!-- Language Dropdown -->
       <li class="nav-item dropdown">
@@ -203,7 +217,7 @@ try {
           <ul class="dropdown-menu dropdown-menu-right">
               <!-- <a class="dropdown-item" href="#"><i class="fa fa-user"></i> ໂປຣໄຟຣ໌</a> -->
                 <li class="dropdown-divider"></li>
-                  <a class="dropdown-item" href="index.php"><i class="fa fa-power-off"></i> <?php echo $lang['logout']; ?></a>
+                  <a class="dropdown-item" href="javascript:void(0);" onclick="confirmLogout()"><i class="fa fa-power-off"></i> <?php echo $lang['logout']; ?></a>
           </ul>
       </li>
     </ul>
@@ -227,126 +241,145 @@ try {
      
 
       <!-- Sidebar Menu -->
-      <nav class="mt-2"> 
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+      <nav class="mt-2 pb-5">
+        <ul class="nav nav-pills nav-sidebar flex-column nav-flat nav-child-indent" data-widget="treeview" role="menu" data-accordion="false">
+        
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.6); font-size: 0.75rem; letter-spacing: 1px;">ໜ້າຫຼັກ</li>
+          <li class="nav-item">
+            <a href="Homepage.php" target="frame" class="nav-link active">
+              <i class="nav-icon fas fa-chart-line"></i>
+              <p>ດາດສ໌ບອດ</p>
+            </a>
+          </li>
 
-          <!-- <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-th"></i>
-              <p>
-                ສ້າງສິນຄ້າ
-              </p>
+          <?php if($is_admin || in_array('bookings', $perms) || in_array('walkin', $perms) || in_array('checkout', $perms) || in_array('room_service', $perms)): ?>
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ບໍລິການລູກຄ້າ</li>
+          <?php if($is_admin || in_array('walkin', $perms)): ?>
+          <li class="nav-item">
+            <a href="walkin.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-door-open"></i>
+              <p>ເຂົ້າພັກ</p>
             </a>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('bookings', $perms)): ?>
           <li class="nav-item">
-            <a href="#" class="nav-link">	
-              <i class="fas fa-font"></i>
-              <p>
-                ປະເພດສິນຄ້າ
-                <i class="fas fa-angle-left right"></i>
-              </p>
+            <a href="reserve.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-calendar-alt"></i>
+              <p>ຈອງຫ້ອງພັກ</p>
             </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item"> --> 
-               <!-- ຕໍາແໜງຂອງຟອມບັນທຶກປະເພດສິນຄ້າ -->
-                <!-- <a href="categories/form_categories.php" target="frame" class="nav-link">
-                  <i class="fas fa-plus-circle"></i>
-                  <p>ເພີ່ມປະເພດສິນຄ້າ</p>
-                </a>
-              </li>
-              <li class="nav-item"> -->
-               <!-- ຕໍາແໜງຂອງລາຍງານປະເພດສິນຄ້າ -->
-                <!-- <a href="categories/select_categories.php" target="frame" class="nav-link">
-                  <i class="fas fa-eye"></i>
-                  <p>ສະແດງປະເພດສິນຄ້າ</p>
-                </a>
-              </li>
-            </ul>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('checkout', $perms)): ?>
           <li class="nav-item">
-            <a href="#" class="nav-link">
-            <i class="fas fa-users"></i>
-              <p>
-                ຂໍ້ມູນສິນຄ້າ
-                 <i class="fas fa-angle-left right"></i>
-              </p>
+            <a href="checkout.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-receipt"></i>
+              <p>Check-out</p>
             </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item"> -->
-               <!-- ຟອມບັນທຶກຂໍ້ມູນສິນຄ້າ -->
-                <!-- <a href="products/form_products.php" target="frame" class="nav-link">
-                  <i class="fas fa-plus-circle"></i>
-                  <p>ບັນທຶກຂໍ້ມູນສິນຄ້າ</p>
-                </a>
-              </li>
-              <li class="nav-item"> -->
-               <!-- ຟາຍລາຍງານຂໍ້ມູນສິນຄ້າ -->
-                <!-- <a href="products/select_products.php" target="frame" class="nav-link">
-                  <i class="fas fa-eye"></i>
-                  <p>ລາຍງານຂໍ້ມູນສິນຄ້າ</p>
-                </a>
-              </li>
-              <li class="nav-item"> -->
-                <!-- ຟາຍຄົ້ນຫາຂໍ້ມູນສິນຄ້າ -->
-                <!-- <a href="#" target="frame" class="nav-link">
-                  <i class="fas fa-search"></i>
-                  <p>ຄົ້ນຫາຂໍ້ມູນສິນຄ້າ</p>
-                </a>
-              </li>
-            </ul>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('room_service', $perms)): ?>
           <li class="nav-item">
-            <a href="#" class="nav-link">
-            <i class="fas fa-cart-arrow-down"></i>
-              <p>
-                ຂໍ້ມູນສິນຄ້ານຳເຂົ້າ
-                 <i class="fas fa-angle-left right"></i>
-              </p>
+            <a href="room_service.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-bell"></i>
+              <p>ບໍລິການເພີ່ມເຕີມ</p>
             </a>
-            <ul class="nav nav-treeview">
-              <li class="nav-item"> -->
-               <!-- ຟອມບັນທຶກຂໍ້ມູນສິນຄ້ານຳເຂົ້າ -->
-                <!-- <a href="receives/form_receives.php" target="frame" class="nav-link">
-                  <i class="fas fa-plus-circle"></i>
-                  <p>ບັນທຶກຂໍ້ມູນສິນຄ້ານຳເຂົ້າ</p>
-                 <i class="fas fa-angle-left right"></i>
-                </a>
-              </li> -->
-              <!-- <li class="nav-item"> -->
-               <!-- ຟາຍລາຍງານຂໍ້ມູນສິນຄ້ານຳເຂົ້າ -->
-                <!-- <a href="receives/select_receives.php" target="frame" class="nav-link">
-                  <i class="fas fa-eye"></i>
-                  <p>ສະແດງຂໍ້ມູນສິນຄິນນຳເຂົ້າ</p>
-                 <i class="fas fa-angle-left right"></i>
-                </a>
-              </li>
-            </ul>
-          </li> -->
+          </li>
+          <?php endif; ?>
+          <?php endif; ?>
+
+          <?php if($is_admin || in_array('pos', $perms) || in_array('stock', $perms)): ?>
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ຄັງສິນຄ້າ ແລະ ການຂາຍ</li>
+          <?php if($is_admin || in_array('pos', $perms)): ?>
+          <li class="nav-item">
+            <a href="pos.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-cash-register"></i>
+              <p>ຂາຍສິນຄ້າ (POS)</p>
+            </a>
+          </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('stock', $perms)): ?>
+          <li class="nav-item">
+            <a href="stock.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-boxes"></i>
+              <p>ສະຕ໋ອກສິນຄ້າ</p>
+            </a>
+          </li>
+          <?php endif; ?>
+          <?php endif; ?>
+          
+          <?php if($is_admin || in_array('report', $perms) || in_array('rooms', $perms) || in_array('settings', $perms) || in_array('users', $perms)): ?>
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ການຈັດການ ແລະ ລາຍງານ</li>
+          <?php if($is_admin || in_array('report', $perms)): ?>
+          <li class="nav-item">
+            <a href="report.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-file-invoice-dollar"></i>
+              <p>ລາຍງານການຂາຍສ່ວນຕົວ</p>
+            </a>
+          </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('rooms', $perms)): ?>
           <li class="nav-item">
             <a href="#" class="nav-link">
-            <i class="fas fa-shopping-cart"></i>
+              <i class="nav-icon fas fa-hotel"></i>
               <p>
-                <?php echo $lang['bookings']; ?>
-                 <i class="fas fa-angle-left right"></i>
+                 ຕັ້ງຄ່າຫ້ອງພັກ
+				         <i class="fas fa-angle-right right"></i>
               </p>
             </a>
             <ul class="nav nav-treeview">
               <li class="nav-item">
-               <!-- ຟອມບັນທຶກສິນຄ້າຂາຍອອກ -->
-                <a href="orders/form_orders.php" target="frame" class="nav-link">
-                  <i class="fas fa-plus-circle"></i>
-                  <p>ບັນທຶກລາຍການຈອງ</p>
+                <a href="rooms/select_rooms.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ລາຍລະອຽດຫ້ອງ</p>
                 </a>
               </li>
               <li class="nav-item">
-               <!-- ຟາຍລາຍງານຂໍ້ມູນສິນຄ້າຂາຍອອກ -->
-                <a href="orders/select_orders.php" target="frame" class="nav-link">
-                  <i class="fas fa-eye"></i>
-                  <p>ສະແດງລາຍການຈອງ</p>
+                <a href="room_types/form_room_types.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ປະເພດຫ້ອງ</p>
                 </a>
               </li>
             </ul>
           </li>
+          <?php endif; ?>
+          <?php if($is_admin || in_array('settings', $perms) || in_array('users', $perms)): ?>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <i class="nav-icon fas fa-cogs"></i>
+              <p>
+                 ຕັ້ງຄ່າລະບົບ
+                 <i class="fas fa-angle-right right"></i>
+              </p>
+            </a>
+            <ul class="nav nav-treeview">
+              <?php if($is_admin || in_array('settings', $perms)): ?>
+              <li class="nav-item">
+                <a href="settings.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ຂໍ້ມູນໂຮງແຮມ</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="currency/form_currency.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ສະກຸນເງິນ</p>
+                </a>
+              </li>
+              <?php endif; ?>
+              <?php if($is_admin || in_array('users', $perms)): ?>
+              <li class="nav-item">
+                <a href="users/manage_users.php" target="frame" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>ຈັດການຜູ້ໃຊ້</p>
+                </a>
+              </li>
+              <?php endif; ?>
+            </ul>
+          </li>
+          <?php endif; ?>
+          <?php endif; ?>
+
         </ul>
       </nav>
       <!-- /.sidebar-menu -->
@@ -358,7 +391,7 @@ try {
   <div class="content-wrapper">
 
 
-	<iframe width="100%" height="100%" frameborder="0" name="frame" src="orders/form_orders.php"></iframe>  <!-- Homepage.php -->
+	<iframe width="100%" height="100%" frameborder="0" name="frame" src="Homepage.php"></iframe>  <!-- Homepage.php -->
 
        
     <!-- /.content -->
@@ -473,6 +506,24 @@ try {
       $('#currentLangFlag').attr('src', flagSrc).attr('alt', flagAlt);
     });
   });
+</script>
+<script>
+function confirmLogout() {
+    Swal.fire({
+        title: 'ຢືນຢັນການອອກຈາກລະບົບ',
+        text: "ທ່ານຕ້ອງການອອກຈາກລະບົບແທ້ຫຼືບໍ່?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'ຕົກລົງ, ອອກຈາກລະບົບ',
+        cancelButtonText: 'ຍົກເລີກ'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'logout.php';
+        }
+    })
+}
 </script>
 </body>
 </html>
