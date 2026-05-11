@@ -50,39 +50,50 @@ $final_payable = $grand_total - $booking['deposit_amount'];
 <html lang="lo">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ໃບບິນຄ່າທີ່ພັກ - #BK-<?php echo $booking_id; ?></title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao', sans-serif; font-size: 13px; margin: 0; padding: 20px; color: #000; }
-        .receipt { width: 80mm; margin: 0 auto; background: #fff; padding: 5px; }
-        .header { text-align: center; margin-bottom: 15px; }
-        .hotel-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
+        body { font-family: 'Noto Sans Lao Looped', sans-serif; font-size: 12px; margin: 0; padding: 0; color: #000; background: #f4f4f4; overflow-x: hidden; }
+        .receipt { width: 100%; max-width: 75mm; margin: 10px auto; background: #fff; padding: 4mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 12px; }
+        .hotel-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
         .divider { border-top: 1px dashed #000; margin: 8px 0; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; }
-        .item-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
-        .item-table th { border-bottom: 1px dashed #000; text-align: left; padding: 5px 0; }
-        .item-table td { padding: 4px 0; vertical-align: top; }
+        .info-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; font-size: 11px; line-height: 1.3; }
+        .info-row span:first-child { flex: 1; padding-right: 5px; }
+        .info-row span:last-child { text-align: right; font-weight: bold; }
+        .item-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11px; table-layout: fixed; }
+        .item-table th { border-bottom: 1px dashed #000; text-align: left; padding: 4px 0; }
+        .item-table td { padding: 6px 0; vertical-align: top; border-bottom: 1px solid #eee; word-wrap: break-word; }
+        .item-table tr:last-child td { border-bottom: none; }
         .text-right { text-align: right !important; }
-        .total-section { margin-top: 10px; font-weight: bold; font-size: 14px; }
-        .footer { text-align: center; margin-top: 25px; font-size: 11px; font-style: italic; }
+        .total-section { margin-top: 12px; }
+        .grand-total { font-size: 15px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; color: red; }
+        .footer { text-align: center; margin-top: 25px; font-size: 10px; font-style: italic; line-height: 1.4; color: #444; }
         
         @media print {
-            body { padding: 0; margin: 0; }
-            .receipt { width: 100%; padding: 0; }
+            body { background: none; padding: 0; margin: 0; }
+            .receipt { max-width: 100%; width: 100%; padding: 3mm; margin: 0; box-shadow: none; }
             .no-print { display: none; }
         }
         
         .btn-print {
-            display: block;
-            width: 80mm;
-            margin: 20px auto;
-            padding: 10px;
+            display: inline-block;
+            padding: 8px 18px;
             background: #007bff;
             color: #fff;
             text-align: center;
             text-decoration: none;
             border-radius: 5px;
             font-weight: bold;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        @media (max-width: 400px) {
+            .receipt { margin: 5px auto; padding: 3mm; }
+            body { font-size: 11px; }
         }
     </style>
 </head>
