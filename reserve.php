@@ -18,64 +18,130 @@ if (isset($_GET['cancel_booking'])) {
 }
 
 $available_rooms = [];
-$nights = 1;
-$selected_type = '';
-$reserve_date = date('Y-m-d', strtotime('+1 day'));
+$check_in_search = $_POST['check_in_search'] ?? date('Y-m-d');
+$check_out_search = $_POST['check_out_search'] ?? date('Y-m-d', strtotime('+1 day'));
+$selected_type = $_POST['room_type'] ?? 'all';
+
+// Calculate nights for display and pricing
+$d1 = new DateTime($check_in_search);
+$d2 = new DateTime($check_out_search);
+$nights_count = $d1->diff($d2)->days;
+if($nights_count < 1) $nights_count = 1;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
-    $nights = (int)$_POST['nights'];
-    $selected_type = $_POST['room_type'];
-    $reserve_date = $_POST['reserve_date'];
-
-    if ($selected_type === 'all' || empty($selected_type)) {
-        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້' OR housekeeping_status = 'Ready')");
-        $stmt->execute();
+    // Variables are already set above safely
+    // Core Logic: Find rooms that are NOT booked between search dates
+    // And also ensure the room isn't currently Occupied if searching for today
+    $query = "
+        SELECT r.* FROM rooms r 
+        WHERE (r.housekeeping_status = 'ພ້ອມໃຊ້' OR r.housekeeping_status = 'Ready')
+        AND r.status != 'Maintenance'
+        AND r.id NOT IN (
+            SELECT room_id FROM bookings 
+            WHERE status IN ('Booked', 'Occupied', 'Checked In') 
+            AND check_in_date < ? 
+            AND check_out_date > ?
+        )
+    ";
+    
+    // If search includes Today, also exclude rooms currently Occupied/Checked In
+    if ($check_in_search == date('Y-m-d')) {
+        $query .= " AND r.status NOT IN ('Occupied', 'Checked In')";
+    }
+    
+    if ($selected_type !== 'all') {
+        $query .= " AND r.room_type = ?";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$check_out_search, $check_in_search, $selected_type]);
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE room_type = ? AND status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້' OR housekeeping_status = 'Ready')");
-        $stmt->execute([$selected_type]);
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$check_out_search, $check_in_search]);
     }
     $available_rooms = $stmt->fetchAll();
+
+    // Alert if rooms are full
+    if (count($available_rooms) == 0) {
+        $_SESSION['info_msg'] = "ຂໍອະໄພ, ຫ້ອງພັກທຸກຫ້ອງແມ່ນເຕັມໝົດແລ້ວໃນຊ່ວງວັນທີທີ່ທ່ານເລືອກ!";
+    }
 }
 
-// Handle reservation submission
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reserve'])) {
-    $room_id = (int)$_POST['room_id'];
+// Handle Update Reservation (Edit)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
+    $booking_id = (int)$_POST['booking_id'];
     $customer_name = trim($_POST['customer_name']);
     $customer_phone = trim($_POST['customer_phone']);
-    $passport_number = trim($_POST['passport_number']);
-    $address = trim($_POST['address']);
     $guest_count = (int)$_POST['guest_count'];
-    $check_in_date = $_POST['check_in_date'];
-    $nights_res = (int)$_POST['nights_count'];
-    $check_out_date = date('Y-m-d', strtotime($check_in_date . " +$nights_res days"));
-    $deposit_amount = (float)str_replace(',', '', $_POST['deposit_amount']);
+    $check_in = $_POST['check_in_date'];
+    $check_out = $_POST['check_out_date'];
+    $deposit = (float)str_replace(',', '', $_POST['deposit_amount']);
+    
+    // Get room price to recalculate total
+    $stmtPrice = $pdo->prepare("SELECT r.price FROM rooms r JOIN bookings b ON r.id = b.room_id WHERE b.id = ?");
+    $stmtPrice->execute([$booking_id]);
+    $room_price = $stmtPrice->fetchColumn() ?: 0;
+    
+    $d1 = new DateTime($check_in);
+    $d2 = new DateTime($check_out);
+    $nights = $d1->diff($d2)->days;
+    if($nights < 1) $nights = 1;
+    $total_price = $room_price * $nights;
 
-    // Get room price
-    $stmtRoom = $pdo->prepare("SELECT * FROM rooms WHERE id = ? AND status = 'Available'");
-    $stmtRoom->execute([$room_id]);
-    $room = $stmtRoom->fetch();
-
-    if ($room) {
-        $total_price = $room['price'] * $nights_res;
-        $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Booked')");
-        
-        if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount])) {
-            // Update room status to Booked
-            $updateRoom = $pdo->prepare("UPDATE rooms SET status = 'Booked' WHERE id = ?");
-            $updateRoom->execute([$room_id]);
-            
-            $_SESSION['success'] = "ຈອງຫ້ອງລ່ວງໜ້າສຳເລັດ! ຫ້ອງ " . $room['room_number'] . " ວັນທີ " . date('d/m/Y', strtotime($check_in_date));
-            header("Location: reserve.php");
-            exit();
-        } else {
-            $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ!";
-        }
+    $stmt = $pdo->prepare("UPDATE bookings SET customer_name = ?, customer_phone = ?, guest_count = ?, check_in_date = ?, check_out_date = ?, total_price = ?, deposit_amount = ? WHERE id = ?");
+    if ($stmt->execute([$customer_name, $customer_phone, $guest_count, $check_in, $check_out, $total_price, $deposit, $booking_id])) {
+        $_SESSION['success'] = "ແກ້ໄຂການຈອງສຳເລັດ! ຍອດໃໝ່: " . number_format($total_price) . " ກີບ";
     } else {
-        $_SESSION['error'] = "ຫ້ອງນີ້ບໍ່ຫວ່າງແລ້ວ!";
+        $_SESSION['error'] = "ບໍ່ສາມາດແກ້ໄຂຂໍ້ມູນໄດ້!";
     }
     header("Location: reserve.php");
     exit();
 }
+
+    // Handle reservation submission
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reserve'])) {
+        $room_id = (int)$_POST['room_id'];
+        $customer_name = trim($_POST['customer_name']);
+        $customer_phone = trim($_POST['customer_phone']);
+        $passport_number = trim($_POST['passport_number']);
+        $address = trim($_POST['address']);
+        $guest_count = (int)$_POST['guest_count'];
+        $check_in_date = $_POST['check_in_date'];
+        $nights_res = (int)$_POST['nights_count'];
+        $check_out_date = date('Y-m-d', strtotime($check_in_date . " +$nights_res days"));
+        $deposit_amount = (float)str_replace(',', '', $_POST['deposit_amount']);
+
+        // Final Overlap Check before inserting
+        $stmtCheck = $pdo->prepare("
+            SELECT COUNT(*) FROM bookings 
+            WHERE room_id = ? 
+            AND status IN ('Booked', 'Occupied') 
+            AND check_in_date < ? 
+            AND check_out_date > ?
+        ");
+        $stmtCheck->execute([$room_id, $check_out_date, $check_in_date]);
+        $is_occupied = $stmtCheck->fetchColumn() > 0;
+
+        if (!$is_occupied) {
+            // Get room price
+            $stmtRoom = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
+            $stmtRoom->execute([$room_id]);
+            $room = $stmtRoom->fetch();
+
+            if ($room) {
+                $total_price = $room['price'] * $nights_res;
+                $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Booked')");
+                
+                if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount])) {
+                    $_SESSION['success'] = "ຈອງຫ້ອງລ່ວງໜ້າສຳເລັດ! ຫ້ອງ " . $room['room_number'] . " ວັນທີ " . date('d/m/Y', strtotime($check_in_date));
+                    header("Location: reserve.php");
+                    exit();
+                }
+            }
+        } else {
+            $_SESSION['error'] = "ຂໍອະໄພ, ຫ້ອງນີ້ມີຄົນຈອງໃນຊ່ວງວັນທີນີ້ແລ້ວ!";
+        }
+        header("Location: reserve.php");
+        exit();
+    }
 
 // Get list of current reservations
 $stmtReserved = $pdo->query("
@@ -132,9 +198,17 @@ $reservations = $stmtReserved->fetchAll();
         </script>
     <?php unset($_SESSION['error']); endif; ?>
 
+    <?php if(isset($_SESSION['info_msg'])): ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({ icon: 'info', title: 'ຫ້ອງເຕັມ', text: '<?php echo $_SESSION['info_msg']; ?>', confirmButtonText: 'ຕົກລົງ' });
+            });
+        </script>
+    <?php unset($_SESSION['info_msg']); endif; ?>
+
     <div class="row mb-3">
         <div class="col-12">
-            <h2><i class="fas fa-calendar-check text-warning"></i> ຈອງຫ້ອງລ່ວງໜ້າ (Reservation)</h2>
+            <h2><i class="fas fa-calendar-check text-warning"></i> ຈອງຫ້ອງລ່ວງໜ້າ</h2>
         </div>
     </div>
 
@@ -146,17 +220,17 @@ $reservations = $stmtReserved->fetchAll();
                 <div class="row">
                     <div class="col-md-3 col-6">
                         <div class="form-group">
-                            <label>ວັນທີເຂົ້າພັກ</label>
-                            <input type="date" name="reserve_date" class="form-control" value="<?php echo $reserve_date; ?>" min="<?php echo date('Y-m-d'); ?>" required>
+                            <label><i class="fas fa-calendar-alt text-success"></i> ເລີ່ມວັນທີ (From)</label>
+                            <input type="date" name="check_in_search" class="form-control" value="<?php echo $check_in_search; ?>" required>
                         </div>
                     </div>
-                    <div class="col-md-2 col-6">
+                    <div class="col-md-3 col-6">
                         <div class="form-group">
-                            <label>ຈຳນວນຄືນ</label>
-                            <input type="number" name="nights" class="form-control" value="<?php echo $nights; ?>" min="1" required>
+                            <label><i class="fas fa-calendar-check text-danger"></i> ຫາວັນທີ (To)</label>
+                            <input type="date" name="check_out_search" class="form-control" value="<?php echo $check_out_search; ?>" required>
                         </div>
                     </div>
-                    <div class="col-md-4 col-12">
+                    <div class="col-md-3 col-12">
                         <div class="form-group">
                             <label>ປະເພດຫ້ອງ</label>
                             <select name="room_type" class="form-control">
@@ -196,9 +270,19 @@ $reservations = $stmtReserved->fetchAll();
                                     <h4 class="font-weight-bold">ຫ້ອງ <?php echo htmlspecialchars($room['room_number']); ?></h4>
                                     <p class="text-muted mb-1 small"><?php echo htmlspecialchars($room['room_type']); ?> (<?php echo htmlspecialchars($room['bed_type']); ?>)</p>
                                     <hr class="my-2">
-                                    <p class="room-price mb-0"><?php echo number_format($room['price']); ?> ກີບ / ຄືນ</p>
-                                    <?php if($nights > 1): ?>
-                                        <p class="text-muted small mb-0">ລວມ <?php echo $nights; ?> ຄືນ: <strong><?php echo number_format($room['price'] * $nights); ?> ກີບ</strong></p>
+                                    <p class="room-price mb-0 text-orange font-weight-bold" style="font-size: 1.2rem;"><?php echo number_format($room['price']); ?> ກີບ / ຄືນ</p>
+                                    <div class="mt-3 p-2 border-success rounded shadow-sm" style="background-color: #e8f5e9; border: 1px dashed #28a745;">
+                                        <div class="text-success small font-weight-bold mb-1"><i class="fas fa-check-circle"></i> ຫວ່າງວັນທີ:</div>
+                                        <div class="h6 mb-0 font-weight-bold text-dark">
+                                            <?php echo date('d/m/Y', strtotime($check_in_search)); ?> 
+                                            <span class="text-muted mx-1">ຫາ</span> 
+                                            <?php echo date('d/m/Y', strtotime($check_out_search)); ?>
+                                        </div>
+                                    </div>
+                                    <?php if($nights_count > 1): ?>
+                                        <div class="mt-2 text-primary font-weight-bold">
+                                            <i class="fas fa-info-circle"></i> ລວມ <?php echo $nights_count; ?> ຄືນ: <?php echo number_format($room['price'] * $nights_count); ?> ກີບ
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                                 <div class="card-footer p-0">
@@ -207,9 +291,9 @@ $reservations = $stmtReserved->fetchAll();
                                         data-room-number="<?php echo htmlspecialchars($room['room_number']); ?>"
                                         data-room-type="<?php echo htmlspecialchars($room['room_type']); ?>"
                                         data-price="<?php echo $room['price']; ?>"
-                                        data-nights="<?php echo $nights; ?>"
-                                        data-total="<?php echo $room['price'] * $nights; ?>"
-                                        data-checkin="<?php echo $reserve_date; ?>">
+                                        data-nights="<?php echo $nights_count; ?>"
+                                        data-total="<?php echo $room['price'] * $nights_count; ?>"
+                                        data-checkin="<?php echo $check_in_search; ?>">
                                         <i class="fas fa-calendar-plus"></i> ຈອງລ່ວງໜ້າ
                                     </button>
                                 </div>
@@ -256,11 +340,38 @@ $reservations = $stmtReserved->fetchAll();
                         <td class="text-danger"><?php echo date('d/m/Y', strtotime($res['check_out_date'])); ?></td>
                         <td class="text-right"><?php echo number_format($res['total_price']); ?> ₭</td>
                         <td class="text-right text-info"><?php echo number_format($res['deposit_amount']); ?> ₭</td>
-                        <td class="align-middle">
-                            <a href="checkin_reserved.php?booking_id=<?php echo $res['id']; ?>" class="btn btn-sm btn-success mb-1" title="ເຂົ້າພັກ">
+                        <td class="align-middle text-center">
+                            <a href="checkin_reserved.php?booking_id=<?php echo $res['id']; ?>" class="btn btn-xs btn-success mb-1" title="ເຂົ້າພັກ">
                                 <i class="fas fa-sign-in-alt"></i> ເຂົ້າພັກ
                             </a>
-                            <a href="#" class="btn btn-sm btn-danger btn-cancel-reserve mb-1" data-id="<?php echo $res['id']; ?>" data-room-id="<?php echo $res['room_id']; ?>" title="ຍົກເລີກ">
+                            <button class="btn btn-xs btn-primary mb-1 btn-view-reserve" 
+                                data-id="<?php echo $res['id']; ?>"
+                                data-room="<?php echo htmlspecialchars($res['room_number']); ?>"
+                                data-type="<?php echo htmlspecialchars($res['room_type']); ?>"
+                                data-name="<?php echo htmlspecialchars($res['customer_name']); ?>"
+                                data-phone="<?php echo htmlspecialchars($res['customer_phone']); ?>"
+                                data-passport="<?php echo htmlspecialchars($res['passport_number'] ?? '-'); ?>"
+                                data-address="<?php echo htmlspecialchars($res['address'] ?? '-'); ?>"
+                                data-guests="<?php echo $res['guest_count']; ?>"
+                                data-checkin="<?php echo date('d/m/Y', strtotime($res['check_in_date'])); ?>"
+                                data-checkout="<?php echo date('d/m/Y', strtotime($res['check_out_date'])); ?>"
+                                data-total="<?php echo number_format($res['total_price']); ?>"
+                                data-deposit="<?php echo number_format($res['deposit_amount']); ?>"
+                                title="ເບິ່ງລາຍລະອຽດ">
+                                <i class="fas fa-eye"></i> ລາຍລະອຽດ
+                            </button>
+                            <button class="btn btn-xs btn-info mb-1 btn-edit-reserve" 
+                                data-id="<?php echo $res['id']; ?>"
+                                data-name="<?php echo htmlspecialchars($res['customer_name']); ?>"
+                                data-phone="<?php echo htmlspecialchars($res['customer_phone']); ?>"
+                                data-guests="<?php echo $res['guest_count']; ?>"
+                                data-checkin="<?php echo $res['check_in_date']; ?>"
+                                data-checkout="<?php echo $res['check_out_date']; ?>"
+                                data-deposit="<?php echo $res['deposit_amount']; ?>"
+                                title="ແກ້ໄຂ">
+                                <i class="fas fa-edit"></i> ແກ້ໄຂ
+                            </button>
+                            <a href="#" class="btn btn-xs btn-danger mb-1 btn-cancel-reserve" data-id="<?php echo $res['id']; ?>" data-room-id="<?php echo $res['room_id']; ?>" title="ຍົກເລີກ">
                                 <i class="fas fa-times-circle"></i> ຍົກເລີກ
                             </a>
                         </td>
@@ -310,20 +421,20 @@ $reservations = $stmtReserved->fetchAll();
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>ເລກບັດ / ພາສປອດ</label>
-                                <input type="text" name="passport_number" class="form-control" placeholder="ທາງເລືອກ">
+                                <label>ເລກບັດ / ພາສປອດ <span class="text-danger">*</span></label>
+                                <input type="text" name="passport_number" class="form-control" placeholder="ກະລຸນາກອກເລກບັດ" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>ຈຳນວນຜູ້ເຂົ້າພັກ</label>
-                                <input type="number" name="guest_count" class="form-control" value="1" min="1">
+                                <label>ຈຳນວນຜູ້ເຂົ້າພັກ <span class="text-danger">*</span></label>
+                                <input type="number" name="guest_count" class="form-control" value="1" min="1" required>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="form-group">
-                                <label>ທີ່ຢູ່</label>
-                                <textarea name="address" class="form-control" rows="2" placeholder="ບ້ານ, ເມືອງ, ແຂວງ..."></textarea>
+                                <label>ທີ່ຢູ່ປັດຈຸບັນ <span class="text-danger">*</span></label>
+                                <textarea name="address" class="form-control" rows="2" placeholder="ບ້ານ, ເມືອງ, ແຂວງ..." required></textarea>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -343,6 +454,90 @@ $reservations = $stmtReserved->fetchAll();
     </div>
 </div>
 
+<!-- View Reserve Modal -->
+<div class="modal fade" id="viewReserveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-user-circle"></i> ລາຍລະອຽດການຈອງ</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div class="display-4 text-primary"><i class="fas fa-address-card"></i></div>
+                    <h4 class="mt-2 font-weight-bold" id="v_name"></h4>
+                    <span class="badge badge-info" id="v_room_info"></span>
+                </div>
+                <table class="table table-sm table-borderless">
+                    <tr><td width="40%" class="text-muted">ເບີໂທຕິດຕໍ່:</td><td class="font-weight-bold" id="v_phone"></td></tr>
+                    <tr><td class="text-muted">ເລກບັດ/ພາສປອດ:</td><td class="font-weight-bold" id="v_passport"></td></tr>
+                    <tr><td class="text-muted">ທີ່ຢູ່:</td><td id="v_address"></td></tr>
+                    <tr><td class="text-muted">ຈຳນວນແຂກ:</td><td class="font-weight-bold"><span id="v_guests"></span> ຄົນ</td></tr>
+                    <tr><td colspan="2"><hr class="my-1"></td></tr>
+                    <tr><td class="text-muted">ວັນທີເຂົ້າພັກ:</td><td class="text-success font-weight-bold" id="v_checkin"></td></tr>
+                    <tr><td class="text-muted">ວັນທີອອກ:</td><td class="text-danger font-weight-bold" id="v_checkout"></td></tr>
+                    <tr><td class="text-muted">ຍອດລວມທັງໝົດ:</td><td class="font-weight-bold text-primary" id="v_total"></td></tr>
+                    <tr><td class="text-muted">ມັດຈຳແລ້ວ:</td><td class="font-weight-bold text-info" id="v_deposit"></td></tr>
+                </table>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">ປິດ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Reserve Modal -->
+<div class="modal fade" id="editReserveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="" method="post">
+                <input type="hidden" name="booking_id" id="edit_booking_id">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> ແກ້ໄຂຂໍ້ມູນການຈອງ</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>ຊື່ລູກຄ້າ</label>
+                        <input type="text" name="customer_name" id="edit_name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ເບີໂທ</label>
+                        <input type="text" name="customer_phone" id="edit_phone" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ຈຳນວນແຂກ</label>
+                        <input type="number" name="guest_count" id="edit_guests" class="form-control" min="1" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label>ວັນທີເຂົ້າ (Check-in)</label>
+                                <input type="date" name="check_in_date" id="edit_checkin" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label>ວັນທີອອກ (Check-out)</label>
+                                <input type="date" name="check_out_date" id="edit_checkout" class="form-control" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>ເງິນມັດຈຳ</label>
+                        <input type="text" name="deposit_amount" id="edit_deposit" class="form-control number-format">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">ປິດ</button>
+                    <button type="submit" name="update_reserve" class="btn btn-info">ບັນທຶກການແກ້ໄຂ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="plugins/jquery/jquery.min.js"></script>
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
@@ -350,13 +545,10 @@ $reservations = $stmtReserved->fetchAll();
 <?php if(isset($_SESSION['print_booking'])): ?>
     <script>
         var printUrl = 'print_room_receipt.php?booking_id=<?php echo $_SESSION['print_booking']; ?>';
-        
-        // Hidden iframe print
         var printFrame = document.createElement('iframe');
         printFrame.style.display = 'none';
         printFrame.src = printUrl;
         document.body.appendChild(printFrame);
-        
         <?php unset($_SESSION['print_booking']); ?>
     </script>
 <?php endif; ?>
@@ -366,51 +558,89 @@ $(document).ready(function() {
     // Open reserve modal
     $('.btn-reserve').on('click', function() {
         var btn = $(this);
-        $('#modal_room_id').val(btn.data('room-id'));
-        $('#modal_checkin').val(btn.data('checkin'));
-        $('#modal_nights').val(btn.data('nights'));
-        $('#modal_room_label').text('ຫ້ອງ ' + btn.data('room-number'));
-        $('#info_room').text(btn.data('room-number'));
-        $('#info_date').text(btn.data('checkin'));
-        $('#info_nights').text(btn.data('nights'));
-        $('#info_total').text(Number(btn.data('total')).toLocaleString('en-US'));
+        var roomId = btn.data('room-id');
+        var roomNum = btn.data('room-number');
+        var price = btn.data('price');
+        
+        var checkin = "<?php echo $check_in_search; ?>";
+        var checkout = "<?php echo $check_out_search; ?>";
+        
+        // Calculate nights
+        var d1 = new Date(checkin);
+        var d2 = new Date(checkout);
+        var diff = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+        if (diff < 1) diff = 1;
+        
+        var total = price * diff;
+
+        $('#modal_room_id').val(roomId);
+        $('#modal_checkin').val(checkin);
+        $('#modal_nights').val(diff);
+        $('#modal_room_label').text('ຫ້ອງ ' + roomNum);
+        $('#info_room').text(roomNum);
+        $('#info_date').text(checkin + ' ຫາ ' + checkout);
+        $('#info_nights').text(diff);
+        $('#info_total').text(new Intl.NumberFormat().format(total));
+        
         $('#reserveModal').modal('show');
     });
 
-    // Form validation
-    $('#reserveForm').on('submit', function(e) {
-        if ($('#res_name').val().trim() === '' || $('#res_phone').val().trim() === '') {
-            e.preventDefault();
-            Swal.fire({ icon: 'warning', title: 'ຂໍ້ມູນບໍ່ຄົບ', text: 'ກະລຸນາປ້ອນຊື່ ແລະ ເບີໂທລູກຄ້າ!', confirmButtonText: 'ຕົກລົງ' });
-            return false;
-        }
+    // Open Edit Modal
+    $('.btn-edit-reserve').on('click', function() {
+        var btn = $(this);
+        $('#edit_booking_id').val(btn.data('id'));
+        $('#edit_name').val(btn.data('name'));
+        $('#edit_phone').val(btn.data('phone'));
+        $('#edit_guests').val(btn.data('guests'));
+        $('#edit_checkin').val(btn.data('checkin'));
+        $('#edit_checkout').val(btn.data('checkout'));
+        $('#edit_deposit').val(new Intl.NumberFormat().format(btn.data('deposit')));
+        $('#editReserveModal').modal('show');
+    });
+
+    // Open View Modal
+    $('.btn-view-reserve').on('click', function() {
+        var btn = $(this);
+        $('#v_name').text(btn.data('name'));
+        $('#v_room_info').text('ຫ້ອງ ' + btn.data('room') + ' (' + btn.data('type') + ')');
+        $('#v_phone').text(btn.data('phone'));
+        $('#v_passport').text(btn.data('passport'));
+        $('#v_address').text(btn.data('address'));
+        $('#v_guests').text(btn.data('guests'));
+        $('#v_checkin').text(btn.data('checkin'));
+        $('#v_checkout').text(btn.data('checkout'));
+        $('#v_total').text(btn.data('total') + ' ກີບ');
+        $('#v_deposit').text(btn.data('deposit') + ' ກີບ');
+        $('#viewReserveModal').modal('show');
     });
 
     // Cancel reservation
     $('.btn-cancel-reserve').on('click', function(e) {
         e.preventDefault();
-        var bookingId = $(this).data('id');
+        var id = $(this).data('id');
         var roomId = $(this).data('room-id');
         Swal.fire({
-            title: 'ຍົກເລີກການຈອງ?',
-            text: 'ທ່ານແນ່ໃຈບໍ່ວ່າຕ້ອງການຍົກເລີກ?',
+            title: 'ຢືນຢັນການຍົກເລີກ?',
+            text: "ທ່ານຕ້ອງການຍົກເລີກການຈອງນີ້ແທ້ຫຼືບໍ່?",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'ຍົກເລີກການຈອງ',
-            cancelButtonText: 'ປິດ'
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ຢືນຢັນ',
+            cancelButtonText: 'ຍົກເລີກ'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '?cancel_booking=' + bookingId + '&room_id=' + roomId;
+                window.location.href = 'reserve.php?cancel_booking=' + id + '&room_id=' + roomId;
             }
         });
     });
 
-    // Number formatting
+    // Auto format number
     $('.number-format').on('input', function() {
-        var val = $(this).val().replace(/[^0-9]/g, '');
-        $(this).val(val !== '' ? parseInt(val, 10).toLocaleString('en-US') : '0');
+        var val = $(this).val().replace(/,/g, '');
+        if(!isNaN(val) && val !== '') {
+            $(this).val(new Intl.NumberFormat().format(val));
+        }
     });
 });
 </script>
