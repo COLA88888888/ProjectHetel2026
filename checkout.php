@@ -204,7 +204,7 @@ if (isset($_GET['booking_id'])) {
                                         <td><strong>ຄ່າຫ້ອງພັກ</strong></td>
                                         <td class="text-center">-</td>
                                         <td class="text-right">-</td>
-                                        <td class="text-right font-weight-bold text-primary"><?php echo number_format($selected_booking['total_price']); ?> ກີບ</td>
+                                        <td class="text-right font-weight-bold text-primary"><?php echo number_format($selected_booking['total_price']); ?> <?php echo $defCurr['currency_name']; ?></td>
                                     </tr>
                                     
                                     <!-- Food & Services -->
@@ -217,13 +217,13 @@ if (isset($_GET['booking_id'])) {
                                                 <td class="pl-4"><?php echo htmlspecialchars($svc['item_name']); ?></td>
                                                 <td class="text-center"><?php echo $svc['qty']; ?></td>
                                                 <td class="text-right"><?php echo number_format($svc['price']); ?></td>
-                                                <td class="text-right text-info"><?php echo number_format($svc['total_price']); ?> ກີບ</td>
+                                                <td class="text-right text-info"><?php echo number_format($svc['total_price']); ?> <?php echo $defCurr['currency_name']; ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                         <!-- Subtotal Services -->
                                         <tr>
                                             <td colspan="3" class="text-right"><strong>ລວມຄ່າບໍລິການເພີ່ມເຕີມ:</strong></td>
-                                            <td class="text-right font-weight-bold text-info"><?php echo number_format($selected_booking['food_charge']); ?> ກີບ</td>
+                                            <td class="text-right font-weight-bold text-info"><?php echo number_format($selected_booking['food_charge']); ?> <?php echo $defCurr['currency_name']; ?></td>
                                         </tr>
                                     <?php endif; ?>
                                     
@@ -231,7 +231,7 @@ if (isset($_GET['booking_id'])) {
                                     <?php if($selected_booking['deposit_amount'] > 0): ?>
                                         <tr class="text-success">
                                             <td colspan="3" class="text-right"><strong>ຫັກເງິນມັດຈຳ (ຈ່າຍແລ້ວ):</strong></td>
-                                            <td class="text-right font-weight-bold">- <?php echo number_format($selected_booking['deposit_amount']); ?> ກີບ</td>
+                                            <td class="text-right font-weight-bold">- <?php echo number_format($selected_booking['deposit_amount']); ?> <?php echo $defCurr['currency_name']; ?></td>
                                         </tr>
                                     <?php endif; ?>
                                     
@@ -240,7 +240,7 @@ if (isset($_GET['booking_id'])) {
                                     ?>
                                     <tr class="total-row">
                                         <td colspan="3" class="text-right">ຍອດລວມທີ່ຕ້ອງຊຳລະທັງໝົດ (Grand Total):</td>
-                                        <td class="text-right grand-total"><?php echo number_format($grand_total); ?> ກີບ</td>
+                                        <td class="text-right grand-total"><?php echo number_format($grand_total); ?> <?php echo $defCurr['currency_name']; ?></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -254,7 +254,7 @@ if (isset($_GET['booking_id'])) {
                             
                             <div class="row bg-light p-3 rounded mb-4">
                                 <div class="col-md-12 mb-3 border-bottom pb-2">
-                                    <h5 class="text-success"><i class="fas fa-hand-holding-usd"></i> ຂໍ້ມູນການຊຳລະເງິນ (ຮັບເງິນ)</h5>
+                                    <h5 class="text-success"><i class="fas fa-hand-holding-usd"></i> ຂໍ້ມູນການຊຳລະເງິນ (ຮັບ<?php echo $defCurr['currency_name']; ?>)</h5>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -267,13 +267,18 @@ if (isset($_GET['booking_id'])) {
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
-                                        <label>ຮັບເງິນມາ (ກີບ)</label>
-                                        <input type="text" name="amount_received" id="amount_received" class="form-control number-format text-right font-weight-bold" placeholder="0">
+                                        <label>ຮັບ<?php echo $defCurr['currency_name']; ?>ມາ</label>
+                                        <div class="input-group">
+                                            <input type="text" name="amount_received" id="amount_received" class="form-control number-format text-right font-weight-bold" placeholder="0">
+                                            <div class="input-group-append">
+                                                <button type="button" id="btn_full_pay" class="btn btn-primary btn-sm px-3" style="font-size: 0.8rem;">ຮັບເຕັມ</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
-                                        <label>ເງິນທອນ (ກີບ)</label>
+                                        <label>ເງິນທອນ (<?php echo $defCurr['currency_name']; ?>)</label>
                                         <input type="text" name="change_amount" id="change_amount" class="form-control text-right text-danger font-weight-bold" value="0" readonly>
                                     </div>
                                 </div>
@@ -313,6 +318,13 @@ if (isset($_GET['booking_id'])) {
 <script>
 $(document).ready(function() {
     var grandTotal = parseFloat($('#grand_total_val').val()) || 0;
+
+    // Full Payment Shortcut
+    $('#btn_full_pay').on('click', function() {
+        $('#amount_received').val(grandTotal.toLocaleString('en-US'));
+        calculateChange();
+        $('#amount_received').focus();
+    });
 
     // Number formatting
     $('.number-format').on('input', function(e) {

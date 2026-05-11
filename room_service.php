@@ -14,6 +14,10 @@ $active_bookings = $stmt->fetchAll();
 
 $selected_booking_id = isset($_GET['booking_id']) ? (int)$_GET['booking_id'] : (count($active_bookings) > 0 ? $active_bookings[0]['booking_id'] : 0);
 
+// Fetch categories for filtering
+$stmtCate = $pdo->query("SELECT id, name FROM product_categories ORDER BY name ASC");
+$categories = $stmtCate->fetchAll();
+
 // Fetch available products for selection
 $stmtProd = $pdo->query("SELECT * FROM products WHERE qty > 0 ORDER BY prod_name ASC");
 $products_list = $stmtProd->fetchAll();
@@ -119,7 +123,25 @@ if ($selected_booking_id > 0) {
     <!-- Noto Sans Lao Looped -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
+        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+        .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
+        body { background-color: #f4f6f9; padding: 20px; }
+        
+        /* Category Styles */
+        .cate-scroll { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; margin-bottom: 15px; scrollbar-width: thin; }
+        .cate-btn { white-space: nowrap; border-radius: 20px; padding: 8px 20px; cursor: pointer; transition: 0.2s; border: 1px solid #007bff; background: #fff; color: #007bff; }
+        .cate-btn.active { background: #007bff; color: #fff; }
+        .cate-btn:hover { background: #e7f1ff; }
+
+        /* Product Grid Styles */
+        .prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; max-height: 400px; overflow-y: auto; padding: 5px; }
+        .prod-item { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; cursor: pointer; transition: 0.2s; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .prod-item:hover { border-color: #007bff; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .prod-name { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 2.7rem; }
+        .prod-price { color: #28a745; font-weight: bold; font-size: 0.85rem; }
+        .prod-qty { font-size: 0.75rem; color: #777; }
+        
+        .sticky-form { position: sticky; top: 20px; }
     </style>
 </head>
 <body>
@@ -151,74 +173,101 @@ if ($selected_booking_id > 0) {
         </div>
     <?php else: ?>
         <div class="row">
-            <!-- Form Section -->
-            <div class="col-md-4">
-                <div class="card card-primary card-outline shadow-sm">
+            <!-- Product Selection Section -->
+            <div class="col-md-5">
+                <div class="card card-outline card-primary shadow-sm sticky-form">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-cart-plus"></i> ເພີ່ມລາຍການໃໝ່</h3>
+                        <h3 class="card-title"><i class="fas fa-search"></i> ເລືອກສິນຄ້າຈາກຮ້ານ</h3>
                     </div>
-                    <form action="" method="post" id="serviceForm">
-                        <div class="card-body">
-                            <div class="form-group">
-                                <label>ເລືອກຫ້ອງພັກ</label>
-                                <select name="booking_id" id="bookingSelect" class="form-control" onchange="window.location.href='?booking_id='+this.value">
-                                    <?php foreach($active_bookings as $b): ?>
-                                        <option value="<?php echo $b['booking_id']; ?>" <?php echo ($selected_booking_id == $b['booking_id']) ? 'selected' : ''; ?>>
-                                            ຫ້ອງ <?php echo htmlspecialchars($b['room_number']); ?> (<?php echo htmlspecialchars($b['customer_name']); ?>)
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
+                    <div class="card-body">
+                        <!-- Search Box -->
+                        <div class="input-group mb-3">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
                             </div>
-                            <div class="form-group">
-                                <label>ຄົ້ນຫາ ແລະ ເລືອກສິນຄ້າ (ຈາກສະຕັອກ)</label>
-                                <input type="text" id="product_search" class="form-control" list="productList" placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ..." autocomplete="off">
-                                <datalist id="productList">
-                                    <?php foreach($products_list as $p): ?>
-                                        <option data-id="<?php echo $p['prod_id']; ?>" data-price="<?php echo $p['sprice']; ?>" value="<?php echo htmlspecialchars($p['prod_name']); ?>">
-                                            ລາຄາ: <?php echo number_format($p['sprice']); ?> | ຄົງເຫຼືອ: <?php echo $p['qty']; ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </datalist>
-                                <input type="hidden" name="prod_id" id="prod_id">
-                                <small class="text-muted">* ຖ້າເປັນຄ່າບໍລິການອື່ນໆ ໃຫ້ປ້ອນໃສ່ຊ່ອງລຸ່ມນີ້ໂດຍກົງ</small>
-                            </div>
+                            <input type="text" id="product_search_manual" class="form-control" placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ ຫຼື ອາຫານ...">
+                        </div>
 
-                            <div class="form-group">
-                                <label>ຊື່ລາຍການ (Item Name)</label>
-                                <input type="text" name="item_name" id="item_name" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ລາຍການ">
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <div class="form-group">
-                                        <label>ລາຄາ (Price)</label>
-                                        <input type="text" name="price" id="price" class="form-control number-format" placeholder="0">
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="form-group">
-                                        <label>ຈຳນວນ (Qty)</label>
-                                        <input type="number" name="qty" id="qty" class="form-control" value="1" min="1">
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- Categories -->
+                        <div class="cate-scroll">
+                            <div class="cate-btn active" data-cate="all">ທັງໝົດ</div>
+                            <?php foreach($categories as $c): ?>
+                                <div class="cate-btn" data-cate="<?php echo htmlspecialchars($c['name']); ?>"><?php echo htmlspecialchars($c['name']); ?></div>
+                            <?php endforeach; ?>
                         </div>
-                        <div class="card-footer">
-                            <button type="submit" name="add_service" class="btn btn-primary btn-block"><i class="fas fa-save"></i> ບັນທຶກລາຍການ (ຕັດສະຕັອກ)</button>
+
+                        <!-- Product Grid -->
+                        <div class="prod-grid" id="productGrid">
+                            <?php foreach($products_list as $p): ?>
+                                <div class="prod-item" 
+                                     data-id="<?php echo $p['prod_id']; ?>" 
+                                     data-name="<?php echo htmlspecialchars($p['prod_name']); ?>" 
+                                     data-price="<?php echo $p['sprice']; ?>"
+                                     data-cate="<?php echo htmlspecialchars($p['category']); ?>">
+                                    <div class="prod-name"><?php echo htmlspecialchars($p['prod_name']); ?></div>
+                                    <div class="prod-price"><?php echo number_format($p['sprice']); ?> ກີບ</div>
+                                    <div class="prod-qty">ຄົງເຫຼືອ: <?php echo $p['qty']; ?></div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
 
             <!-- List Section -->
-            <div class="col-md-8">
+            <div class="col-md-7">
+                <!-- Selection Details Form (Hidden until selected) -->
+                <div id="selectionForm" class="card card-outline card-success shadow-sm mb-3" style="display: none;">
+                    <div class="card-body">
+                        <form action="" method="post" id="serviceForm">
+                            <div class="row align-items-end">
+                                <div class="col-md-3">
+                                    <label>ຫ້ອງພັກ</label>
+                                    <select name="booking_id" class="form-control">
+                                        <?php foreach($active_bookings as $b): ?>
+                                            <option value="<?php echo $b['booking_id']; ?>" <?php echo ($selected_booking_id == $b['booking_id']) ? 'selected' : ''; ?>>
+                                                ຫ້ອງ <?php echo htmlspecialchars($b['room_number']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>ຊື່ລາຍການ</label>
+                                    <input type="text" name="item_name" id="selected_item_name" class="form-control" readonly>
+                                    <input type="hidden" name="prod_id" id="selected_prod_id">
+                                </div>
+                                <div class="col-md-2">
+                                    <label>ລາຄາ</label>
+                                    <input type="text" name="price" id="selected_price" class="form-control number-format" readonly>
+                                </div>
+                                <div class="col-md-2">
+                                    <label>ຈຳນວນ</label>
+                                    <input type="number" name="qty" id="selected_qty" class="form-control" value="1" min="1">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" name="add_service" class="btn btn-success btn-block"><i class="fas fa-plus"></i> ບັນທຶກ</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="card card-info card-outline shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="card-title"><i class="fas fa-list"></i> ລາຍການທີ່ສັ່ງສຳລັບຫ້ອງທີ່ເລືອກ</h3>
-                        <div class="ml-auto text-danger font-weight-bold" style="font-size: 1.2rem;">
-                            ຍອດສະສົມທັງໝົດ: <?php echo number_format($total_accumulated); ?> ກີບ
+                        <h3 class="card-title"><i class="fas fa-list"></i> ບໍລິການຂອງຫ້ອງ: 
+                            <select onchange="window.location.href='?booking_id='+this.value" class="ml-2 border-0 bg-transparent font-weight-bold" style="outline: none;">
+                                <?php foreach($active_bookings as $b): ?>
+                                    <option value="<?php echo $b['booking_id']; ?>" <?php echo ($selected_booking_id == $b['booking_id']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($b['room_number']); ?> (<?php echo htmlspecialchars($b['customer_name']); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </h3>
+                        <div class="ml-auto text-danger font-weight-bold" style="font-size: 1.1rem;">
+                            ລວມ: <?php echo number_format($total_accumulated); ?> ກີບ
                         </div>
                     </div>
-                    <div class="card-body p-0 table-responsive">
+                    <div class="card-body p-0 table-responsive" style="max-height: 500px; overflow-y: auto;">
                         <table class="table table-striped table-hover text-center">
                             <thead class="bg-light">
                                 <tr>
@@ -266,25 +315,41 @@ if ($selected_booking_id > 0) {
 
 <script>
 $(document).ready(function() {
-    // Product Search and Auto-fill
-    $('#product_search').on('input', function() {
-        var val = $(this).val();
-        var option = $('#productList option').filter(function() {
-            return this.value === val;
-        });
-
-        if (option.length) {
-            var prod_id = option.data('id');
-            var price = option.data('price');
-            
-            $('#prod_id').val(prod_id);
-            $('#item_name').val(val);
-            $('#price').val(parseInt(price).toLocaleString('en-US'));
-            $('#qty').focus();
+    // Category Filtering
+    $('.cate-btn').on('click', function() {
+        $('.cate-btn').removeClass('active');
+        $(this).addClass('active');
+        
+        var cate = $(this).data('cate');
+        if (cate === 'all') {
+            $('.prod-item').show();
         } else {
-            // If user types something else, clear the hidden prod_id
-            $('#prod_id').val('');
+            $('.prod-item').hide();
+            $('.prod-item[data-cate="' + cate + '"]').show();
         }
+    });
+
+    // Manual Search
+    $('#product_search_manual').on('input', function() {
+        var val = $(this).val().toLowerCase();
+        $('.prod-item').filter(function() {
+            $(this).toggle($(this).data('name').toLowerCase().indexOf(val) > -1);
+        });
+    });
+
+    // Product Item Selection
+    $('.prod-item').on('click', function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        var price = $(this).data('price');
+
+        $('#selected_prod_id').val(id);
+        $('#selected_item_name').val(name);
+        $('#selected_price').val(parseInt(price).toLocaleString('en-US'));
+        $('#selected_qty').val(1);
+        
+        $('#selectionForm').slideDown();
+        $('#selected_qty').focus();
     });
 
     // Number formatting

@@ -14,6 +14,14 @@ $options = [
 
 try {
      $pdo = new PDO($dsn, $user, $pass, $options);
+
+     // Fetch Default Currency Global Variable
+     $stmtCur = $pdo->query("SELECT * FROM currency WHERE is_default = 1 LIMIT 1");
+     $defCurr = $stmtCur->fetch();
+     if(!$defCurr) {
+         // Fallback if none selected
+         $defCurr = ['currency_name' => 'ກີບ', 'symbol' => '₭', 'currency_code' => 'LAK'];
+     }
 } catch (\PDOException $e) {
      throw new \PDOException($e->getMessage(), (int)$e->getCode());
 }
