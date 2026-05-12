@@ -17,9 +17,11 @@ if (isset($_SESSION['checked'])) {
     <title>ເຂົ້າສູ່ລະບົບ - Hotel Management</title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="assets/img/logo.png" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+        .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
         :root {
             --primary-blue: #007bff;
             --blue-hover: #0069d9;
@@ -165,6 +167,7 @@ if (isset($_SESSION['checked'])) {
             </div> -->
             
             <div class="login-header">
+                <!-- <img src="assets/img/logo.png" alt="Logo" style="width: 120px; height: 120px; object-fit: contain; margin-bottom: 20px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1));"> -->
                 <h2>ຍິນດີຕ້ອນຮັບ!</h2>
                 <p>ລະບົບບໍລິຫານ ໂຮງແຮມ Hotel Management</p>
             </div>
@@ -172,13 +175,21 @@ if (isset($_SESSION['checked'])) {
             <form id="loginForm">
                 <div class="form-group mb-3">
                     <label class="form-label">ຊື່ຜູ້ນຳໃຊ້:</label>
-                    <input type="text" id="username" class="form-control" placeholder="ປ້ອນຊື່ຜູ້ນຳໃຊ້..." required autofocus>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888;">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <input type="text" id="username" class="form-control" placeholder="ປ້ອນຊື່ຜູ້ນຳໃຊ້..." required autofocus style="padding-left: 45px;">
+                    </div>
                 </div>
                 
                 <div class="form-group mb-3">
                     <label class="form-label">ລະຫັດຜ່ານ:</label>
                     <div class="password-container">
-                        <input type="password" id="password" class="form-control" placeholder="...." required style="padding-right: 45px;">
+                        <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888; z-index: 5;">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        <input type="password" id="password" class="form-control" placeholder="...." required style="padding-left: 45px; padding-right: 45px;">
                         <span class="password-toggle" id="togglePassword">
                             <i class="fas fa-eye" id="eyeIcon"></i>
                         </span>
@@ -190,7 +201,9 @@ if (isset($_SESSION['checked'])) {
                     <label for="remember" class="mb-0">ຈື່ຂ້ອຍໄວ້ໃນລະບົບ</label>
                 </div> -->
 
-                <button type="submit" class="btn-login" id="btnLogin">ເຂົ້າສູ່ລະບົບ</button>
+                <button type="submit" class="btn-login" id="btnLogin">
+                    <i class="fas fa-user-check mr-2"></i> ເຂົ້າສູ່ລະບົບ
+                </button>
             </form>
         </div>
     </div>
@@ -228,7 +241,7 @@ if (isset($_SESSION['checked'])) {
                     return;
                 }
 
-                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> ກຳລັງກວດສອບ...');
+                btn.prop('disabled', true).html('<i class="fas fa-circle-notch fa-spin"></i> ກຳລັງກວດສອບ...');
 
                 $.ajax({
                     url: 'Check_user.php',

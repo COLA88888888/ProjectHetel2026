@@ -52,6 +52,8 @@ try {
 
             $redirect = ($user['status'] == "ຜູ້ບໍລິຫານ") ? 'menu_admin.php' : 'menu_user.php';
             
+            logActivity($pdo, "ເຂົ້າສູ່ລະບົບ", "ຊື່ຜູ້ໃຊ້: $username");
+
             echo json_encode([
                 'success' => true, 
                 'redirect' => $redirect

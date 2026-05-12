@@ -47,8 +47,8 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
 <html>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
 <style>
- *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
- .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; }
+  *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+  .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
  html, body, .nav-link, .brand-text, h1, h2, h3, h4, h5, h6, .btn, .form-control, .card-title { 
     font-family: 'Noto Sans Lao Looped', sans-serif !important; 
  }
@@ -131,9 +131,6 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ລະບົບບໍລິຫານ ໂຮງແຮມ (User)</title>
-<link rel="stylesheet" href="icon/css/all.min.css">
-  <!-- Google Font: Source Sans Pro -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
   <!-- Ionicons -->
@@ -153,7 +150,7 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
   <!-- summernote -->
   <link rel="stylesheet" href="plugins/summernote/summernote-bs4.min.css">
 	<script src="sweetalert/dist/sweetalert2.all.min.js"></script>		
-	<script src="jquery.js"></script>
+	<script src="plugins/jquery/jquery.min.js"></script>
 </head>
 <body class="hold-transition sidebar-mini sidebar-no-expand layout-fixed">
 <div class="wrapper">
@@ -212,11 +209,11 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
       <li class="dropdown dropdown-user">
           <a class="nav-link dropdown-toggle link " data-toggle="dropdown">
             <img src="./assets/img/admin-avatar.png"height="30px" width="30px">
-              <span></span><?php echo $_SESSION['status'] ?? 'ພະນັກງານ'; ?><i class="fa fa-angle-down m-l-5"></i>
+              <span></span><?php echo $_SESSION['status'] ?? 'ພະນັກງານ'; ?>
           </a>
           <ul class="dropdown-menu dropdown-menu-right">
               <!-- <a class="dropdown-item" href="#"><i class="fa fa-user"></i> ໂປຣໄຟຣ໌</a> -->
-                <li class="dropdown-divider"></li>
+                <!-- <li class="dropdown-divider"></li> -->
                   <a class="dropdown-item" href="javascript:void(0);" onclick="confirmLogout()"><i class="fa fa-power-off"></i> <?php echo $lang['logout']; ?></a>
           </ul>
       </li>
@@ -242,7 +239,7 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
 
       <!-- Sidebar Menu -->
       <nav class="mt-2 pb-5">
-        <ul class="nav nav-pills nav-sidebar flex-column nav-flat nav-child-indent" data-widget="treeview" role="menu" data-accordion="false">
+        <ul class="nav nav-pills nav-sidebar flex-column nav-flat nav-child-indent" data-widget="treeview" role="menu" data-accordion="true">
         
           <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.6); font-size: 0.75rem; letter-spacing: 1px;">ໜ້າຫຼັກ</li>
           <li class="nav-item">
@@ -330,13 +327,13 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
             <ul class="nav nav-treeview">
               <li class="nav-item">
                 <a href="rooms/select_rooms.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-door-open nav-icon"></i>
                   <p>ລາຍລະອຽດຫ້ອງ</p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="room_types/form_room_types.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-tags nav-icon"></i>
                   <p>ປະເພດຫ້ອງ</p>
                 </a>
               </li>
@@ -356,13 +353,13 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
               <?php if($is_admin || in_array('settings', $perms)): ?>
               <li class="nav-item">
                 <a href="settings.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-hotel nav-icon"></i>
                   <p>ຂໍ້ມູນໂຮງແຮມ</p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="currency/form_currency.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-money-bill-wave nav-icon"></i>
                   <p>ສະກຸນເງິນ</p>
                 </a>
               </li>
@@ -370,7 +367,7 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
               <?php if($is_admin || in_array('users', $perms)): ?>
               <li class="nav-item">
                 <a href="users/manage_users.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-users-cog nav-icon"></i>
                   <p>ຈັດການຜູ້ໃຊ້</p>
                 </a>
               </li>
@@ -442,8 +439,6 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
 <script src="plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
 <!-- AdminLTE App -->
 <script src="dist/js/adminlte.js"></script>
-<!-- AdminLTE for demo purposes -->
-<script src="dist/js/demo.js"></script>
 <!-- AdminLTE dashboard demo (This is only for demo purposes) -->
 <script src="dist/js/pages/dashboard.js"></script>
 <script>

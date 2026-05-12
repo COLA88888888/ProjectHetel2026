@@ -4,6 +4,7 @@ $db   = 'db_hotel';
 $user = 'root';
 $pass = '';
 $charset = 'utf8';
+require_once __DIR__ . '/logger.php';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [

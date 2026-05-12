@@ -86,6 +86,7 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
             border: none;
             cursor: pointer;
             font-size: 12px;
+            font-family: 'Noto Sans Lao Looped', sans-serif;
         }
         
         @media (max-width: 400px) {
@@ -98,12 +99,15 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
 
 <div class="no-print" style="text-align: center; margin-top: 10px;">
     <button onclick="window.print()" class="btn-print" style="border: none; cursor: pointer; display: inline-block;"><i class="fas fa-print"></i> ພິມໃບບິນ (Print)</button>
-    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;"><i class="fas fa-times"></i> ປິດໜ້າຕ່າງ</button>
+    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px; font-family: 'Noto Sans Lao Looped', sans-serif;"><i class="fas fa-times"></i> ປິດໜ້າຕ່າງ</button>
 </div>
 
 <div class="receipt">
     <div class="header">
-        <div class="hotel-name"><i class="fas fa-hotel"></i> <?php echo htmlspecialchars($hotel_name); ?></div>
+        <?php if(!empty($settings['hotel_logo'])): ?>
+            <img src="assets/img/<?php echo $settings['hotel_logo']; ?>" style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 5px;">
+        <?php endif; ?>
+        <div class="hotel-name"><?php echo htmlspecialchars($hotel_name); ?></div>
         <div style="font-size: 11px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($hotel_address); ?></div>
         <div style="font-size: 11px;"><i class="fas fa-phone-alt"></i> Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
         <div class="divider"></div>
@@ -174,6 +178,13 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
     </div>
 
     <div class="footer">
+        <?php if(!empty($settings['hotel_qr'])): ?>
+            <div style="margin-top: 10px; text-align: center;">
+                <p style="margin-bottom: 5px; font-weight: bold; font-size: 10px; color: #555;">SCAN TO PAY (ສະແກນເພື່ອຊຳລະ)</p>
+                <img src="assets/img/<?php echo $settings['hotel_qr']; ?>" style="width: 130px; height: 130px; border: 1px solid #eee; padding: 5px; background: #fff;">
+            </div>
+        <?php endif; ?>
+        <br>
         <?php echo nl2br(htmlspecialchars($footer_text)); ?>
     </div>
 </div>

@@ -17,6 +17,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['confirm_checkout'])) {
         $pdo->prepare("UPDATE rooms SET status = 'Available', housekeeping_status = 'Cleaning' WHERE id = ?")->execute([$room_id]);
         
         $_SESSION['print_booking'] = $booking_id;
+        
+        logActivity($pdo, "Check-out ສຳເລັດ", "Booking ID: $booking_id, ວິທີຊຳລະ: $payment_method");
+        
         header("Location: checkout.php?status=success");
         exit();
     } else {
@@ -49,6 +52,10 @@ if (isset($_GET['booking_id'])) {
         $svcStmt = $pdo->prepare("SELECT * FROM room_services WHERE booking_id = ?");
         $svcStmt->execute([$bid]);
         $room_services = $svcStmt->fetchAll();
+        
+        // Fetch Tax Percent
+        $stmtTax = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
+        $tax_percent = (float)($stmtTax->fetchColumn() ?: 0);
     }
 }
 ?>
@@ -73,6 +80,18 @@ if (isset($_GET['booking_id'])) {
         .invoice-title { font-size: 1.5rem; font-weight: bold; border-bottom: 2px solid #28a745; padding-bottom: 10px; margin-bottom: 20px; }
         .total-row { font-size: 1.25rem; font-weight: bold; background-color: #f8f9fa; }
         .grand-total { font-size: 1.5rem; font-weight: bold; color: #dc3545; }
+        
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h2 { font-size: 1.3rem !important; }
+            h4 { font-size: 1rem !important; }
+            .invoice-title { font-size: 1.2rem; }
+            .total-row { font-size: 1.1rem; }
+            .grand-total { font-size: 1.3rem; }
+            .card-title { font-size: 1rem !important; }
+            .table-responsive { font-size: 0.85rem; }
+            .btn-lg { padding: 8px 16px; font-size: 1rem; }
+        }
     </style>
     <script>
         // Guard: If not in iframe, redirect to menu_admin
@@ -133,7 +152,7 @@ if (isset($_GET['booking_id'])) {
         <div class="col-md-4">
             <div class="card card-primary card-outline shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-bed"></i> ຫ້ອງທີ່ກຳລັງເຂົ້າພັກ (Occupied)</h3>
+                    <h3 class="card-title"><i class="fas fa-bed"></i> ຫ້ອງທີ່ກຳລັງເຂົ້າພັກ</h3>
                 </div>
                 <div class="card-body p-0">
                     <ul class="nav nav-pills flex-column">
@@ -184,7 +203,17 @@ if (isset($_GET['booking_id'])) {
                                 <h6 class="text-muted mb-1">ຂໍ້ມູນການເຂົ້າພັກ:</h6>
                                 <h5><strong>ຫ້ອງ <?php echo htmlspecialchars($selected_booking['room_number']); ?></strong> (<?php echo htmlspecialchars($selected_booking['room_type']); ?>)</h5>
                                 <div>Check-in: <span class="text-success"><?php echo date('d/m/Y', strtotime($selected_booking['check_in_date'])); ?></span></div>
-                                <div>Check-out: <span class="text-danger"><?php echo date('d/m/Y', strtotime($selected_booking['check_out_date'])); ?></span></div>
+                                <?php 
+                                    $today = date('Y-m-d');
+                                    $checkout_date = $selected_booking['check_out_date'];
+                                    $date_warning = "";
+                                    if ($today < $checkout_date) {
+                                        $date_warning = '<span class="badge badge-warning ml-2"><i class="fas fa-exclamation-triangle"></i> ຍັງບໍ່ຄົບກຳນົດວັນ</span>';
+                                    } elseif ($today > $checkout_date) {
+                                        $date_warning = '<span class="badge badge-danger ml-2"><i class="fas fa-clock"></i> ກາຍມື້ພັກແລ້ວ</span>';
+                                    }
+                                ?>
+                                <div>Check-out: <span class="text-danger"><?php echo date('d/m/Y', strtotime($selected_booking['check_out_date'])); ?></span> <?php echo $date_warning; ?></div>
                             </div>
                         </div>
 
@@ -236,10 +265,22 @@ if (isset($_GET['booking_id'])) {
                                     <?php endif; ?>
                                     
                                     <?php 
-                                        $grand_total = $selected_booking['total_price'] + $selected_booking['food_charge'] - $selected_booking['deposit_amount'];
+                                        $subtotal = $selected_booking['total_price'] + $selected_booking['food_charge'];
+                                        $tax_amount = round($subtotal * ($tax_percent / 100));
+                                        $total_after_tax = $subtotal + $tax_amount;
+                                        $grand_total = $total_after_tax - $selected_booking['deposit_amount'];
                                     ?>
+                                    
+                                    <!-- Tax Row -->
+                                    <?php if($tax_percent > 0): ?>
+                                    <tr class="text-info">
+                                        <td colspan="3" class="text-right"><strong>ພາສີອາກອນ (Tax <?php echo $tax_percent; ?>%):</strong></td>
+                                        <td class="text-right font-weight-bold"><?php echo number_format($tax_amount); ?> <?php echo $defCurr['currency_name']; ?></td>
+                                    </tr>
+                                    <?php endif; ?>
+
                                     <tr class="total-row">
-                                        <td colspan="3" class="text-right">ຍອດລວມທີ່ຕ້ອງຊຳລະທັງໝົດ (Grand Total):</td>
+                                        <td colspan="3" class="text-right">ຍອດລວມທີ່ຕ້ອງຊຳລະທັງໝົດ:</td>
                                         <td class="text-right grand-total"><?php echo number_format($grand_total); ?> <?php echo $defCurr['currency_name']; ?></td>
                                     </tr>
                                 </tbody>
@@ -251,6 +292,11 @@ if (isset($_GET['booking_id'])) {
                             <input type="hidden" name="booking_id" value="<?php echo $selected_booking['id']; ?>">
                             <input type="hidden" name="room_id" value="<?php echo $selected_booking['room_id']; ?>">
                             <input type="hidden" id="grand_total_val" value="<?php echo $grand_total; ?>">
+                            <input type="hidden" id="checkout_status_msg" value="<?php 
+                                if ($today < $checkout_date) echo "ຍັງບໍ່ຄົບກຳນົດວັນ! ";
+                                elseif ($today > $checkout_date) echo "ກາຍມື້ພັກແລ້ວ! ";
+                                else echo "";
+                            ?>">
                             
                             <div class="row bg-light p-3 rounded mb-4">
                                 <div class="col-md-12 mb-3 border-bottom pb-2">
@@ -361,6 +407,7 @@ $(document).ready(function() {
         e.preventDefault();
         var received = parseFloat($('#amount_received').val().replace(/,/g, '')) || 0;
         var method = $('#payment_method').val();
+        var statusMsg = $('#checkout_status_msg').val();
 
         if (received < grandTotal && method === 'ເງິນສົດ') {
             Swal.fire({
@@ -373,9 +420,9 @@ $(document).ready(function() {
         }
 
         Swal.fire({
-            title: 'ຢືນຢັນ Check-out?',
-            text: "ລະບົບຈະບັນທຶກການຊຳລະເງິນ ແລະ ປ່ຽນສະຖານະຫ້ອງເປັນຫ້ອງຫວ່າງອັດຕະໂນມັດ",
-            icon: 'warning',
+            title: statusMsg ? statusMsg + 'ຢືນຢັນ Check-out?' : 'ຢືນຢັນ Check-out?',
+            text: statusMsg ? "ຄຳເຕືອນ: " + statusMsg + " ລະບົບຈະບັນທຶກການຊຳລະເງິນ ແລະ ປ່ຽນສະຖານະຫ້ອງເປັນຫ້ອງຫວ່າງ" : "ລະບົບຈະບັນທຶກການຊຳລະເງິນ ແລະ ປ່ຽນສະຖານະຫ້ອງເປັນຫ້ອງຫວ່າງອັດຕະໂນມັດ",
+            icon: statusMsg ? 'warning' : 'question',
             showCancelButton: true,
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#d33',

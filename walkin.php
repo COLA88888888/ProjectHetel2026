@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="plugins/fontawesome-free-5.15.3-web/css/all.min.css">
+    <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <!-- AdminLTE -->
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
     <!-- Noto Sans Lao Looped -->
@@ -47,10 +47,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
         if (window.top === window.self) { window.location.href = 'menu_admin.php'; }
     </script>
     <style>
-        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
+        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+        .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
+        body { background-color: #f4f6f9; padding: 20px; }
         .room-card { transition: transform 0.2s; }
         .room-card:hover { transform: scale(1.02); cursor: pointer; border-color: #28a745; }
         .room-price { font-size: 1.2rem; font-weight: 600; color: #28a745; }
+        
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h2 { font-size: 1.2rem !important; }
+            h4 { font-size: 0.95rem !important; }
+            .room-price { font-size: 1rem; }
+            .card-title { font-size: 0.9rem !important; }
+            .btn { font-size: 0.85rem !important; }
+            .form-control { font-size: 0.85rem !important; }
+        }
     </style>
 </head>
 <body>
@@ -63,12 +75,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
                     icon: 'success',
                     title: 'ສຳເລັດ',
                     text: '<?php echo $_SESSION['success']; ?>',
-                    showConfirmButton: false,
-                    timer: 2000
+                    showConfirmButton: true,
+                    confirmButtonText: '<i class="fas fa-print"></i> ພິມໃບບິນ (Print Bill)',
+                    showCancelButton: true,
+                    cancelButtonText: 'ປິດ (Close)',
+                    confirmButtonColor: '#28a745'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        <?php if(isset($_SESSION['print_booking'])): ?>
+                            window.open('print_room_receipt.php?booking_id=<?php echo $_SESSION['print_booking']; ?>', '_blank', 'width=800,height=600');
+                            <?php unset($_SESSION['print_booking']); ?>
+                        <?php endif; ?>
+                    }
                 });
             });
         </script>
-    <?php unset($_SESSION['success']); endif; ?>
+    <?php unset($_SESSION['success']); unset($_SESSION['print_booking']); endif; ?>
     
     <?php if(isset($_SESSION['error'])): ?>
         <script>
@@ -85,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
 
     <div class="row">
         <div class="col-12">
-            <h2 class="mb-4"><i class="fas fa-walking"></i> ຮັບລູກຄ້າ Walk-in (ບໍ່ໄດ້ຈອງລ່ວງໜ້າ)</h2>
+            <h2 class="mb-4"><i class="fas fa-walking"></i> ຮັບລູກຄ້າ Walk-in</h2>
         </div>
     </div>
 

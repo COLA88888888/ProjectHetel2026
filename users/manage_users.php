@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
 
     $stmt = $pdo->prepare("INSERT INTO users (username, password, fname, lname, phone, email, address, status, profile_img, permissions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     if ($stmt->execute([$username, $password, $fname, $lname, $phone, $email, $address, $status, $profile_img, $permissions])) {
+        logActivity($pdo, "ເພີ່ມຜູ້ໃຊ້ໃໝ່", "Username: $username, ຊື່: $fname");
         $_SESSION['success'] = "ເພີ່ມຜູ້ໃຊ້ໃໝ່ສຳເລັດແລ້ວ!";
     } else {
         $_SESSION['error'] = "ມີບາງຢ່າງຜິດພາດ!";
@@ -68,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
 
     $stmt = $pdo->prepare($sql);
     if ($stmt->execute($params)) {
+        logActivity($pdo, "ແກ້ໄຂຂໍ້ມູນຜູ້ໃຊ້", "Username: $username");
         $_SESSION['success'] = "ແກ້ໄຂຂໍ້ມູນສຳເລັດ!";
     }
     header("Location: manage_users.php");
@@ -84,6 +86,7 @@ if (isset($_GET['delete'])) {
     } else {
         $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
         if ($stmt->execute([$id])) {
+            logActivity($pdo, "ລຶບຜູ້ໃຊ້", "User ID: $id");
             $_SESSION['success'] = "ລຶບຜູ້ໃຊ້ສຳເລັດ!";
         }
     }

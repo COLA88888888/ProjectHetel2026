@@ -222,17 +222,23 @@ $reservations = $stmtReserved->fetchAll();
                 <div class="row">
                     <div class="col-md-3 col-6">
                         <div class="form-group">
-                            <label><i class="fas fa-calendar-alt text-success"></i> ເລີ່ມວັນທີ (From)</label>
-                            <input type="date" name="check_in_search" class="form-control" value="<?php echo $check_in_search; ?>" required>
+                            <label><i class="fas fa-calendar-alt text-success"></i> ວັນທີເຂົ້າພັກ</label>
+                            <input type="date" name="check_in_search" id="search_checkin" class="form-control" value="<?php echo $check_in_search; ?>" required>
                         </div>
                     </div>
-                    <div class="col-md-3 col-6">
+                    <div class="col-md-2 col-6">
                         <div class="form-group">
-                            <label><i class="fas fa-calendar-check text-danger"></i> ຫາວັນທີ (To)</label>
-                            <input type="date" name="check_out_search" class="form-control" value="<?php echo $check_out_search; ?>" required>
+                            <label><i class="fas fa-moon text-warning"></i> ຈຳນວນຄືນ</label>
+                            <input type="number" id="search_nights" class="form-control" value="<?php echo $nights_count; ?>" min="1">
                         </div>
                     </div>
                     <div class="col-md-3 col-12">
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar-check text-danger"></i> ວັນທີອອກ</label>
+                            <input type="date" name="check_out_search" id="search_checkout" class="form-control" value="<?php echo $check_out_search; ?>" required>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-12">
                         <div class="form-group">
                             <label>ປະເພດຫ້ອງ</label>
                             <select name="room_type" class="form-control">
@@ -245,7 +251,7 @@ $reservations = $stmtReserved->fetchAll();
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-3 col-12 d-flex align-items-end">
+                    <div class="col-md-2 col-12 d-flex align-items-end">
                         <div class="form-group w-100">
                             <button type="submit" name="search" class="btn btn-warning btn-block text-white">
                                 <i class="fas fa-search"></i> ຄົ້ນຫາ
@@ -442,7 +448,7 @@ $reservations = $stmtReserved->fetchAll();
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>ເງິນມັດຈຳ (ກີບ)</label>
-                                <input type="text" name="deposit_amount" class="form-control number-format" value="0">
+                                <input type="text" name="deposit_amount" id="modal_deposit" class="form-control number-format" value="0">
                             </div>
                         </div>
                     </div>
@@ -540,14 +546,55 @@ $reservations = $stmtReserved->fetchAll();
     </div>
 </div>
 
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+</style>
 <script src="plugins/jquery/jquery.min.js"></script>
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
 
-
-
 <script>
 $(document).ready(function() {
+    // Helper to calculate date difference
+    function getDaysBetween(d1, d2) {
+        return Math.ceil((new Date(d2) - new Date(d1)) / (1000 * 60 * 60 * 24));
+    }
+
+    // Search Form: Auto-update Checkout when Check-in or Nights change
+    function updateSearchDates(source) {
+        let cin = $('#search_checkin').val();
+        let nights = parseInt($('#search_nights').val()) || 1;
+        let cout = $('#search_checkout').val();
+
+        if (source === 'cin' || source === 'nights') {
+            if (cin) {
+                let d = new Date(cin);
+                d.setDate(d.getDate() + nights);
+                $('#search_checkout').val(d.toISOString().split('T')[0]);
+            }
+        } else if (source === 'cout') {
+            if (cin && cout) {
+                let diff = getDaysBetween(cin, cout);
+                if (diff < 1) diff = 1;
+                $('#search_nights').val(diff);
+            }
+        }
+    }
+    $('#search_checkin, #search_nights').on('change input', function() { updateSearchDates('cin'); });
+    $('#search_checkout').on('change', function() { updateSearchDates('cout'); });
+
+    // Edit Modal logic
+    $('#edit_checkin, #edit_checkout').on('change', function() {
+        let cin = $('#edit_checkin').val();
+        let cout = $('#edit_checkout').val();
+        if(cin && cout && new Date(cin) >= new Date(cout)) {
+            let d = new Date(cin);
+            d.setDate(d.getDate() + 1);
+            $('#edit_checkout').val(d.toISOString().split('T')[0]);
+        }
+    });
+
     // Open reserve modal
     $('.btn-reserve').on('click', function() {
         var btn = $(this);
@@ -558,10 +605,7 @@ $(document).ready(function() {
         var checkin = "<?php echo $check_in_search; ?>";
         var checkout = "<?php echo $check_out_search; ?>";
         
-        // Calculate nights
-        var d1 = new Date(checkin);
-        var d2 = new Date(checkout);
-        var diff = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+        var diff = getDaysBetween(checkin, checkout);
         if (diff < 1) diff = 1;
         
         var total = price * diff;
@@ -574,6 +618,10 @@ $(document).ready(function() {
         $('#info_date').text(checkin + ' ຫາ ' + checkout);
         $('#info_nights').text(diff);
         $('#info_total').text(new Intl.NumberFormat().format(total));
+        
+        // Auto-calculate 50% deposit
+        var deposit = Math.round(total / 2);
+        $('#modal_deposit').val(new Intl.NumberFormat().format(deposit));
         
         $('#reserveModal').modal('show');
     });

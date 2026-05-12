@@ -54,6 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
             $stmtExp->execute(["[Stock] ຊື້ສິນຄ້າໃໝ່: " . $prod_name, $expense_amount]);
         }
         
+        logActivity($pdo, "ເພີ່ມສິນຄ້າໃໝ່", "ຊື່: $prod_name, ຈຳນວນ: $qty $unit");
+        
         $_SESSION['success'] = "ເພີ່ມສິນຄ້າສຳເລັດແລ້ວ!";
         header("Location: stock.php");
         exit();
@@ -121,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_product'])) {
     $params[] = $prod_id;
     $stmt = $pdo->prepare("UPDATE products SET prod_name = ?, category = ?, unit = ?, bprice = ?, sprice = ? $image_query WHERE prod_id = ?");
     if ($stmt->execute($params)) {
+        logActivity($pdo, "ແກ້ໄຂສິນຄ້າ", "ຊື່: $prod_name");
         $_SESSION['success'] = "ແກ້ໄຂສິນຄ້າສຳເລັດແລ້ວ!";
     } else {
         $_SESSION['error'] = "ບໍ່ສາມາດແກ້ໄຂໄດ້!";
@@ -146,6 +149,7 @@ if (isset($_GET['delete'])) {
     
     $stmt = $pdo->prepare("DELETE FROM products WHERE prod_id = ?");
     if ($stmt->execute([$id])) {
+        logActivity($pdo, "ລຶບສິນຄ້າ", "Product ID: $id");
         $_SESSION['success'] = "ລຶບສິນຄ້າສຳເລັດແລ້ວ!";
     } else {
         $_SESSION['error'] = "ບໍ່ສາມາດລຶບໄດ້!";
@@ -175,6 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['restock'])) {
         }
 
         $_SESSION['success'] = "ເພີ່ມຈຳນວນເຂົ້າສະຕັອກສຳເລັດ!";
+        logActivity($pdo, "ເຕີມສະຕັອກສິນຄ້າ", "ສິນຄ້າ: " . ($prod['prod_name'] ?? $prod_id) . ", ຈຳນວນ: +$add_qty");
         header("Location: stock.php");
         exit();
     }

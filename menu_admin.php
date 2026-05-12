@@ -51,7 +51,7 @@ try {
  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
 <style>
  *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
- .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; }
+ .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
  html, body, .nav-link, .brand-text, h1, h2, h3, h4, h5, h6, .btn, .form-control, .card-title { 
     font-family: 'Noto Sans Lao Looped', sans-serif !important; 
  }
@@ -68,6 +68,13 @@ try {
  .os-scrollbar-handle { background: rgba(93,173,226,0.4) !important; }
  .sidebar { height: calc(100vh - 240px) !important; }
  .nav-sidebar { padding-bottom: 30px !important; }
+ 
+ @media (max-width: 768px) {
+    .brand-text { font-size: 0.9rem !important; }
+    .nav-sidebar .nav-link p { font-size: 0.8rem !important; }
+    .main-header .navbar-nav .nav-link { font-size: 0.85rem !important; }
+    .user-panel .info a { font-size: 0.85rem !important; }
+ }
 
  /* ===== Light Blue Theme for Navbar ===== */
  .main-header.navbar {
@@ -133,10 +140,6 @@ try {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ລະບົບບໍລິຫານ ໂຮງແຮມ (Hotel Management)</title>
-  <link rel="stylesheet" href="icon/css/all.min.css">
-  <!-- Google Font: Source Sans Pro -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
   <!-- Ionicons -->
@@ -156,7 +159,7 @@ try {
   <!-- summernote -->
   <link rel="stylesheet" href="plugins/summernote/summernote-bs4.min.css">
   <script src="sweetalert/dist/sweetalert2.all.min.js"></script>		
-  <script src="jquery.js"></script>
+  <script src="plugins/jquery/jquery.min.js"></script>
 </head>
 <body class="hold-transition sidebar-mini sidebar-no-expand layout-fixed">
 
@@ -235,7 +238,7 @@ try {
     <div class="sidebar">
       <!-- Sidebar Menu -->
       <nav class="mt-2 pb-5">
-        <ul class="nav nav-pills nav-sidebar flex-column nav-flat nav-child-indent" data-widget="treeview" role="menu" data-accordion="false">
+        <ul class="nav nav-pills nav-sidebar flex-column nav-flat nav-child-indent" data-widget="treeview" role="menu" data-accordion="true">
         
           <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.6); font-size: 0.75rem; letter-spacing: 1px;">ໜ້າຫຼັກ</li>
           <li class="nav-item">
@@ -309,13 +312,13 @@ try {
             <ul class="nav nav-treeview">
               <li class="nav-item">
                 <a href="form_product_categories.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-th-list nav-icon"></i>
                   <p>ໝວດໝູ່ສິນຄ້າ</p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="form_product_units.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-balance-scale nav-icon"></i>
                   <p>ຫົວໜ່ວຍສິນຄ້າ</p>
                 </a>
               </li>
@@ -334,6 +337,14 @@ try {
             </a>
           </li>
           <?php endif; ?>
+          <?php if($is_admin): ?>
+          <li class="nav-item">
+            <a href="logs.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-history"></i>
+              <p>ປະຫວັດລະບົບ</p>
+            </a>
+          </li>
+          <?php endif; ?>
           <?php if($is_admin || in_array('rooms', $perms)): ?>
           <li class="nav-item">
             <a href="#" class="nav-link">
@@ -346,13 +357,13 @@ try {
             <ul class="nav nav-treeview">
               <li class="nav-item">
                 <a href="rooms/select_rooms.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-door-open nav-icon"></i>
                   <p>ລາຍລະອຽດຫ້ອງ</p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="room_types/form_room_types.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-tags nav-icon"></i>
                   <p>ປະເພດຫ້ອງ</p>
                 </a>
               </li>
@@ -372,13 +383,13 @@ try {
               <?php if($is_admin || in_array('settings', $perms)): ?>
               <li class="nav-item">
                 <a href="settings.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-hotel nav-icon"></i>
                   <p>ຂໍ້ມູນໂຮງແຮມ</p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="currency/form_currency.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-money-bill-wave nav-icon"></i>
                   <p>ສະກຸນເງິນ</p>
                 </a>
               </li>
@@ -386,7 +397,7 @@ try {
               <?php if($is_admin || in_array('users', $perms)): ?>
               <li class="nav-item">
                 <a href="users/manage_users.php" target="frame" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
+                  <i class="fas fa-users-cog nav-icon"></i>
                   <p>ຈັດການຜູ້ໃຊ້</p>
                 </a>
               </li>

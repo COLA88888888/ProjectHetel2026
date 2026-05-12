@@ -2,10 +2,10 @@
 session_start();
 if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
     $_SESSION['checked'] = 1;
-    $_SESSION['fname'] = 'ຜູ້ບໍລິຫານ';
-    $_SESSION['lname'] = 'ລະບົບ';
+    $_SESSION['fname'] = 'Admin';
+    $_SESSION['lname'] = 'System';
     $_SESSION['user_id'] = 1;
-    $_SESSION['status'] = 'ຜູ້ບໍລິຫານ';
+    $_SESSION['status'] = 'Admin';
     $_SESSION['permissions'] = '["room_types","rooms","bookings","housekeeping","reports","settings","users"]';
 }
 ?>
@@ -77,9 +77,10 @@ require_once 'config/db.php';
 try {
     // Hotel Metrics
     $total_rooms = $pdo->query("SELECT COUNT(*) FROM rooms")->fetchColumn() ?: 0;
-    $available_rooms = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status = 'Available'")->fetchColumn() ?: 0;
-    $booked_rooms = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status = 'Booked'")->fetchColumn() ?: 0;
-    $guest_count = $pdo->query("SELECT COALESCE(SUM(guest_count), 0) FROM bookings WHERE status != 'Cancelled'")->fetchColumn() ?: 0;
+    $available_rooms = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້' OR housekeeping_status = 'Ready')")->fetchColumn() ?: 0;
+    // Unavailable rooms = Occupied + Cleaning + Maintenance/Broken
+    $unavailable_rooms = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status != 'Available' OR (housekeeping_status != 'ພ້ອມໃຊ້' AND housekeeping_status != 'Ready')")->fetchColumn() ?: 0;
+    $guest_count = $pdo->query("SELECT COALESCE(SUM(guest_count), 0) FROM bookings WHERE status IN ('Occupied', 'Checked In')")->fetchColumn() ?: 0;
     
     // Revenue calculations (Room + POS)
     // Updated to include 'Occupied', 'Completed', and 'Checked In' to ensure Walk-in revenue shows up immediately
@@ -100,6 +101,11 @@ try {
     
     $today_revenue = $today_room + $today_pos;
     
+    // Fetch today's arrivals (Reservations starting today)
+    $stmtArrivals = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE status = 'Booked' AND DATE(check_in_date) = ?");
+    $stmtArrivals->execute([$current_date]);
+    $arrivals_count = $stmtArrivals->fetchColumn() ?: 0;
+
     // Fetch system activity history (Last 8 actions)
     $stmt_history = $pdo->query("SELECT b.customer_name, b.status, b.created_at, r.room_number 
                                  FROM bookings b 
@@ -137,31 +143,33 @@ try {
     $today_revenue = 0;
 }
 ?> 
-<style>
-    .container-fluid{
-      padding: 30px;
-    }
-    .bg-teal {
-      background-color: #20c997 !important;
-    }
-    @media (max-width: 768px) {
-      .container-fluid { padding: 10px; }
-      .small-box .inner h3 { font-size: 1.3rem; }
-      .small-box .inner p { font-size: 0.78rem; }
-      .small-box .icon { font-size: 40px; top: 5px; right: 8px; }
-      .small-box .small-box-footer { font-size: 0.75rem; padding: 4px 0; }
-    }
-    @media (max-width: 480px) {
-      .container-fluid { padding: 6px; }
-      .small-box .inner { padding: 8px 10px; }
-      .small-box .inner h3 { font-size: 1.05rem; }
-      .small-box .inner p { font-size: 0.7rem; margin-bottom: 0; }
-      .small-box .icon { font-size: 30px; }
-      .small-box .small-box-footer { font-size: 0.7rem; }
-      .col-6 { padding-left: 4px; padding-right: 4px; }
-      .row { margin-left: -4px; margin-right: -4px; }
-    }
-</style>
+    <style>
+      body { font-family: 'Noto Sans Lao Looped', sans-serif; }
+      .container-fluid { padding: 30px; }
+      .bg-teal { background-color: #20c997 !important; }
+
+      @media (max-width: 768px) {
+        .container-fluid { padding: 10px; }
+        .small-box .inner h3 { font-size: 1.3rem !important; }
+        .small-box .inner p { font-size: 0.78rem !important; }
+        .small-box .icon { font-size: 40px !important; top: 5px !important; right: 8px !important; }
+        .small-box .small-box-footer { font-size: 0.75rem !important; padding: 4px 0 !important; }
+        .card-title { font-size: 0.9rem !important; }
+        .table { font-size: 0.8rem !important; }
+        .btn-sm { font-size: 0.75rem !important; }
+      }
+
+      @media (max-width: 480px) {
+        .container-fluid { padding: 6px; }
+        .small-box .inner { padding: 8px 10px; }
+        .small-box .inner h3 { font-size: 1.05rem !important; }
+        .small-box .inner p { font-size: 0.7rem !important; margin-bottom: 0 !important; }
+        .small-box .icon { font-size: 30px !important; }
+        .small-box .small-box-footer { font-size: 0.7rem !important; }
+        .col-6 { padding-left: 4px; padding-right: 4px; }
+        .row { margin-left: -4px; margin-right: -4px; }
+      }
+    </style>
   <body class="hold-transition sidebar-mini layout-fixed">
     <div class="container-fluid">
       <div class="row">
@@ -183,7 +191,7 @@ try {
         <div class="col-lg-4 col-6">
           <div class="small-box bg-warning">
             <div class="inner">
-              <h3><?= number_format($booked_rooms); ?> ຫ້ອງ</h3>
+              <h3><?= number_format($unavailable_rooms); ?> ຫ້ອງ</h3>
               <p>ຫ້ອງບໍ່ຫວ່າງ</p>
             </div>
             <div class="icon">
@@ -246,6 +254,20 @@ try {
               <i class="fas fa-dollar-sign"></i>
             </div>
             <a href="report.php?type=finance" class="small-box-footer">ເບິ່ງລາຍງານ <i class="fas fa-arrow-circle-right"></i></a>
+          </div>
+        </div>
+
+        <!-- Card 7: Today's Arrivals (Notification) -->
+        <div class="col-lg-4 col-6">
+          <div class="small-box bg-indigo text-white" style="background-color: #6610f2 !important;">
+            <div class="inner">
+              <h3><?= number_format($arrivals_count); ?> ລາຍການ</h3>
+              <p>ແຂກທີ່ສິມາພັກມື້ນີ້</p>
+            </div>
+            <div class="icon">
+              <i class="fas fa-calendar-day"></i>
+            </div>
+            <a href="reserve.php" class="small-box-footer">ເບິ່ງລາຍຊື່ແຂກຈອງ <i class="fas fa-arrow-circle-right"></i></a>
           </div>
         </div>
     </div>
@@ -336,6 +358,9 @@ try {
     <!-- PAGE LEVEL SCRIPTS-->
     <script>
       $(function () {
+        // Set Chart.js global font
+        Chart.defaults.global.defaultFontFamily = "'Noto Sans Lao Looped', sans-serif";
+        
         var lineChart = null;
         var donutChart = null;
 

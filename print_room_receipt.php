@@ -51,7 +51,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ໃບບິນຄ່າທີ່ພັກ - #BK-<?php echo $booking_id; ?></title>
+    <title>ໃບບິນຄ່າທີ່ພັກ - #KL-<?php echo $booking_id; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <style>
@@ -90,6 +90,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
             border: none;
             cursor: pointer;
             font-size: 12px;
+            font-family: 'Noto Sans Lao Looped', sans-serif;
         }
 
         @media (max-width: 400px) {
@@ -102,12 +103,15 @@ $final_payable = $grand_total - $booking['deposit_amount'];
 
 <div class="no-print" style="text-align: center; margin-top: 10px;">
     <button onclick="window.print()" class="btn-print"><i class="fas fa-print"></i> ພິມໃບບິນ (Print)</button>
-    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;"><i class="fas fa-times"></i> ປິດໜ້າຕ່າງ</button>
+    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px; font-family: 'Noto Sans Lao Looped', sans-serif;"><i class="fas fa-times"></i> ປິດໜ້າຕ່າງ</button>
 </div>
 
 <div class="receipt">
     <div class="header">
-        <div class="hotel-name"><i class="fas fa-hotel"></i> <?php echo htmlspecialchars($hotel_name); ?></div>
+        <?php if(!empty($settings['hotel_logo'])): ?>
+            <img src="assets/img/<?php echo $settings['hotel_logo']; ?>" style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 5px;">
+        <?php endif; ?>
+        <div class="hotel-name"><?php echo htmlspecialchars($hotel_name); ?></div>
         <div style="font-size: 11px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($hotel_address); ?></div>
         <div style="font-size: 11px;"><i class="fas fa-phone-alt"></i> Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
         <div class="divider"></div>
@@ -116,7 +120,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
 
     <div class="info-row">
         <span><i class="fas fa-hashtag"></i> ເລກທີບິນ:</span>
-        <span>#BK-<?php echo str_pad($booking_id, 5, '0', STR_PAD_LEFT); ?></span>
+        <span><?php echo $booking['bill_number'] ?: '#BK-'.str_pad($booking_id, 5, '0', STR_PAD_LEFT); ?></span>
     </div>
     <div class="info-row">
         <span><i class="fas fa-user"></i> ລູກຄ້າ:</span>
@@ -196,6 +200,13 @@ $final_payable = $grand_total - $booking['deposit_amount'];
     </div>
 
     <div class="footer">
+        <?php if(!empty($settings['hotel_qr'])): ?>
+            <div style="margin-top: 10px; text-align: center;">
+                <p style="margin-bottom: 5px; font-weight: bold; font-size: 10px; color: #555;">SCAN TO PAY (ສະແກນເພື່ອຊຳລະ)</p>
+                <img src="assets/img/<?php echo $settings['hotel_qr']; ?>" style="width: 130px; height: 130px; border: 1px solid #eee; padding: 5px; background: #fff;">
+            </div>
+        <?php endif; ?>
+        <br>
         <?php echo nl2br(htmlspecialchars($footer_text)); ?>
     </div>
 </div>

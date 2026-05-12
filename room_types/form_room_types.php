@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
 
     $stmt = $pdo->prepare("INSERT INTO room_types (room_type_name, description) VALUES (?, ?)");
     if ($stmt->execute([$room_type_name, $description])) {
+        logActivity($pdo, "ເພີ່ມປະເພດຫ້ອງໃໝ່", "ຊື່: $room_type_name");
         $_SESSION['success'] = "ບັນທຶກຂໍ້ມູນສຳເລັດ";
         header("Location: form_room_types.php");
         exit();
@@ -20,11 +21,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
 // Handle delete
 if (isset($_GET['delete'])) {
     $id = $_GET['delete'];
-    $stmt = $pdo->prepare("DELETE FROM room_types WHERE id = ?");
-    if ($stmt->execute([$id])) {
-        $_SESSION['success'] = "ລົບຂໍ້ມູນສຳເລັດ";
-    } else {
-        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການລົບ";
+    
+    // First, check if this room type is being used by any rooms
+    $stmtCheck = $pdo->prepare("SELECT room_type_name FROM room_types WHERE id = ?");
+    $stmtCheck->execute([$id]);
+    $type = $stmtCheck->fetch();
+    
+    if ($type) {
+        $typeName = $type['room_type_name'];
+        $stmtRoom = $pdo->prepare("SELECT COUNT(*) FROM rooms WHERE room_type = ?");
+        $stmtRoom->execute([$typeName]);
+        $count = $stmtRoom->fetchColumn();
+        
+        if ($count > 0) {
+            $_SESSION['error'] = "ບໍ່ສາມາດລົບໄດ້! ເພາະມີຫ້ອງຈຳນວນ $count ຫ້ອງ ທີ່ກຳລັງໃຊ້ປະເພດນີ້ຢູ່.";
+        } else {
+            $stmt = $pdo->prepare("DELETE FROM room_types WHERE id = ?");
+            if ($stmt->execute([$id])) {
+                logActivity($pdo, "ລົບປະເພດຫ້ອງ", "ປະເພດ: $typeName");
+                $_SESSION['success'] = "ລົບຂໍ້ມູນສຳເລັດ";
+            } else {
+                $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການລົບ";
+            }
+        }
     }
     header("Location: form_room_types.php");
     exit();
@@ -164,30 +183,30 @@ $room_types = $stmt->fetchAll();
 <script src="../sweetalert/dist/sweetalert2.all.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    // Initialize DataTable
-    $('#roomTypeTable').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": true,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-      "pageLength": 10,
-      "language": {
-          "search": "ຄົ້ນຫາ:",
-          "info": "ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ",
-          "infoEmpty": "ສະແດງ 0 ຫາ 0 ຈາກທັງໝົດ 0 ລາຍການ",
-          "zeroRecords": "ບໍ່ພົບຂໍ້ມູນທີ່ຄົ້ນຫາ",
-          "paginate": {
-              "first": "ໜ້າທຳອິດ",
-              "last": "ໜ້າສຸດທ້າຍ",
-              "next": "ຕໍ່ໄປ",
-              "previous": "ກ່ອນໜ້າ"
-          }
-      }
-    });
+// $(document).ready(function() {
+//     // Initialize DataTable
+//     $('#roomTypeTable').DataTable({
+//       "paging": true,
+//       "lengthChange": false,
+//       "searching": true,
+//       "ordering": true,
+//       "info": true,
+//       "autoWidth": false,
+//       "responsive": true,
+//       "pageLength": 10,
+//       "language": {
+//           "search": "ຄົ້ນຫາ:",
+//           "info": "ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ",
+//           "infoEmpty": "ສະແດງ 0 ຫາ 0 ຈາກທັງໝົດ 0 ລາຍການ",
+//           "zeroRecords": "ບໍ່ພົບຂໍ້ມູນທີ່ຄົ້ນຫາ",
+//           "paginate": {
+//               "first": "ໜ້າທຳອິດ",
+//               "last": "ໜ້າສຸດທ້າຍ",
+//               "next": "ຕໍ່ໄປ",
+//               "previous": "ກ່ອນໜ້າ"
+//           }
+//       }
+//     });
 
     $('#roomTypeForm').on('submit', function(e) {
         var roomTypeName = $('#room_type_name').val().trim();

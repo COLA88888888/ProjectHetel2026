@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
     
     $stmt = $pdo->prepare("INSERT INTO rooms (room_number, room_type, bed_type, price, status, housekeeping_status) VALUES (?, ?, ?, ?, ?, ?)");
     if ($stmt->execute([$room_number, $room_type, $bed_type, $price, $status, $housekeeping_status])) {
+        logActivity($pdo, "ເພີ່ມຫ້ອງໃໝ່", "ເລກຫ້ອງ: $room_number, ປະເພດ: $room_type");
         $_SESSION['success'] = "ບັນທຶກຂໍ້ມູນຫ້ອງສຳເລັດ";
         header("Location: select_rooms.php");
         exit();
@@ -29,6 +30,7 @@ if (isset($_GET['delete'])) {
     $id = $_GET['delete'];
     $stmt = $pdo->prepare("DELETE FROM rooms WHERE id = ?");
     if ($stmt->execute([$id])) {
+        logActivity($pdo, "ລົບຂໍ້ມູນຫ້ອງ", "ID: $id");
         $_SESSION['success'] = "ລົບຂໍ້ມູນສຳເລັດ";
     } else {
         $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການລົບ";
@@ -43,6 +45,9 @@ if (isset($_POST['update_housekeeping'])) {
     $hk_status = $_POST['hk_status'];
     $stmt = $pdo->prepare("UPDATE rooms SET housekeeping_status = ? WHERE id = ?");
     $ok = $stmt->execute([$hk_status, $id]);
+    if ($ok) {
+        logActivity($pdo, "ອັບເດດສະຖານະຄວາມພ້ອມ", "ID: $id, ສະຖານະໃໝ່: $hk_status");
+    }
     header('Content-Type: application/json');
     echo json_encode(['success' => $ok]);
     exit();
@@ -76,13 +81,39 @@ $room_types = $stmtTypes->fetchAll();
     <!-- Noto Sans Lao Looped -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
-        .badge-status { font-size: 14px; padding: 5px 10px; }
-        .hk-select { border: 2px solid #ddd; border-radius: 6px; padding: 4px 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; outline: none; -webkit-appearance: none; -moz-appearance: none; appearance: auto; }
-        .hk-select.hk-ready { border-color: #17a2b8; background: #e8f8fb; color: #117a8b; }
-        .hk-select.hk-cleaning { border-color: #ffc107; background: #fff8e1; color: #856404; }
-        .hk-select.hk-maintenance { border-color: #6c757d; background: #f0f0f0; color: #495057; }
+        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f8f9fa; padding: 20px; color: #333; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; }
+        .card-header { background-color: #fff; border-bottom: 1px solid #eee; padding: 15px 20px; }
+        .card-title { font-weight: 700; color: #2c3e50; font-size: 1.1rem; }
+        
+        /* Table Styling */
+        #roomTable thead th { background-color: #fcfcfc; color: #666; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; border-bottom: 2px solid #eee; padding: 15px 10px; }
+        #roomTable tbody td { vertical-align: middle; padding: 12px 10px; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem; }
+        
+        /* Badges */
+        .badge-status { border-radius: 8px; font-weight: 600; padding: 6px 12px; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .badge-available { background-color: #d4edda !important; color: #155724 !important; border: 1px solid #c3e6cb; }
+        .badge-booked { background-color: #fff3cd !important; color: #856404 !important; border: 1px solid #ffeeba; }
+        .badge-occupied { background-color: #f8d7da !important; color: #721c24 !important; border: 1px solid #f5c6cb; }
+        
+        /* Housekeeping Select */
+        .hk-select { border: 2px solid #ddd; border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; outline: none; width: 140px; text-align: center; }
+        .hk-select.hk-ready { border-color: #2e86de; background: #fff; color: #2e86de; }
+        .hk-select.hk-cleaning { border-color: #f1c40f; background: #fff; color: #f39c12; }
+        .hk-select.hk-maintenance { border-color: #95a5a6; background: #fff; color: #7f8c8d; }
         .hk-saving { opacity: 0.5; pointer-events: none; }
+        
+        /* Actions */
+        .btn-action { border-radius: 8px; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px; display: block; width: 100%; padding: 6px; }
+        .btn-edit { background-color: #f1c40f; color: #fff; border: none; }
+        .btn-delete-action { background-color: #e74c3c; color: #fff; border: none; }
+        .btn-edit:hover { background-color: #f39c12; color: #fff; }
+        .btn-delete-action:hover { background-color: #c0392b; color: #fff; }
+        
+        /* Room number styling */
+        .room-number-cell { font-size: 1.1rem; font-weight: 800; color: #2c3e50; }
+        .price-cell { font-weight: 600; color: #27ae60; }
+        .currency-label { font-size: 0.75rem; color: #999; display: block; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -190,17 +221,26 @@ $room_types = $stmtTypes->fetchAll();
                                 <?php $i = 1; foreach ($rooms as $row): ?>
                                     <tr>
                                         <td><?php echo $i++; ?></td>
-                                        <td><strong><?php echo htmlspecialchars($row['room_number']); ?></strong></td>
+                                        <td class="room-number-cell"><?php echo htmlspecialchars($row['room_number']); ?></td>
                                         <td><?php echo htmlspecialchars($row['room_type']); ?></td>
                                         <td><?php echo htmlspecialchars($row['bed_type']); ?></td>
-                                        <td><?php echo number_format($row['price']); ?> ກີບ</td>
+                                        <td class="price-cell">
+                                            <?php echo number_format($row['price']); ?>
+                                            <span class="currency-label">ກີບ</span>
+                                        </td>
                                         <td>
                                             <?php if($row['status'] == 'Available'): ?>
-                                                <span class="badge badge-success badge-status"><i class="fas fa-check-circle"></i> ຫ້ອງຫວ່າງ</span>
+                                                <?php if($row['housekeeping_status'] == 'ພ້ອມໃຊ້' || $row['housekeeping_status'] == 'Ready'): ?>
+                                                    <span class="badge badge-available badge-status">ຫ້ອງຫວ່າງ</span>
+                                                <?php elseif($row['housekeeping_status'] == 'Cleaning'): ?>
+                                                    <span class="badge badge-booked badge-status">ກຳລັງອະນາໄມ</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-secondary badge-status">ຫ້ອງເສຍ/ປິດປຸງ</span>
+                                                <?php endif; ?>
                                             <?php elseif($row['status'] == 'Booked'): ?>
-                                                <span class="badge badge-warning text-white badge-status"><i class="fas fa-calendar-check"></i> ຈອງລ່ວງໜ້າ</span>
+                                                <span class="badge badge-booked badge-status">ຈອງລ່ວງໜ້າ</span>
                                             <?php elseif($row['status'] == 'Occupied'): ?>
-                                                <span class="badge badge-danger badge-status"><i class="fas fa-user-check"></i> ເຂົ້າພັກແລ້ວ</span>
+                                                <span class="badge badge-occupied badge-status">ເຂົ້າພັກແລ້ວ</span>
                                             <?php else: ?>
                                                 <span class="badge badge-secondary badge-status"><?php echo htmlspecialchars($row['status']); ?></span>
                                             <?php endif; ?>
@@ -218,9 +258,9 @@ $room_types = $stmtTypes->fetchAll();
                                                 <option value="Maintenance" <?php echo ($hk == 'Maintenance') ? 'selected' : ''; ?>>ຫ້ອງເສຍ</option>
                                             </select>
                                         </td>
-                                        <td>
-                                            <a href="edit_room.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> ແກ້ໄຂ</a>
-                                            <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $row['id']; ?>"><i class="fas fa-trash"></i> ລົບ</a>
+                                        <td style="width: 100px;">
+                                            <a href="edit_room.php?id=<?php echo $row['id']; ?>" class="btn btn-action btn-edit">ແກ້ໄຂ</a>
+                                            <a href="#" class="btn btn-action btn-delete-action btn-delete" data-id="<?php echo $row['id']; ?>">ລົບ</a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

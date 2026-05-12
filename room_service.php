@@ -121,13 +121,16 @@ if ($selected_booking_id > 0) {
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="plugins/fontawesome-free-5.15.3-web/css/all.min.css">
+    <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <!-- AdminLTE -->
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
     <!-- Noto Sans Lao Looped -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Select2 -->
+    <link rel="stylesheet" href="plugins/select2/css/select2.min.css">
+    <link rel="stylesheet" href="plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css">
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #0099ffff 0%, #0066cc 100%);
@@ -295,23 +298,56 @@ if ($selected_booking_id > 0) {
                 flex-direction: column;
                 overflow: auto;
                 height: auto;
-                padding: 10px;
+                padding: 8px;
+                gap: 10px;
             }
             .order-column {
                 width: 100%;
                 order: -1; 
-                max-height: 400px;
-                margin-bottom: 10px;
+                max-height: none;
+                margin-bottom: 0;
             }
+            .room-selector-area { padding: 8px; }
+            .room-selector-area .d-flex { flex-wrap: nowrap !important; }
+            .room-selector-area label { font-size: 0.65rem !important; margin-bottom: 3px !important; }
+            .select2-container--bootstrap4 .select2-selection--single { 
+                height: 38px !important; 
+                line-height: 38px !important; 
+                font-size: 0.85rem !important; 
+                padding-left: 8px !important;
+            }
+            .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+                line-height: 36px !important;
+            }
+            #btnShowRoomGrid { height: 38px; width: 38px; flex-shrink: 0; }
+            
+            .order-list { padding: 5px; max-height: 250px; }
+            .order-item { padding: 8px; margin-bottom: 5px; }
+            .order-item-name { font-size: 0.85rem; }
+            .order-item-price { font-size: 0.75rem; }
+            
+            .total-box { padding: 10px; margin-bottom: 0; }
+            .total-label { font-size: 0.9rem; }
+            .total-amount { font-size: 1.2rem; }
+            .order-footer p { font-size: 0.7rem; margin-top: 5px !important; }
+
             .product-column {
-                height: 500px; 
+                height: auto; 
+                flex: none;
             }
             .product-scroll {
-                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
                 padding: 10px;
+                gap: 10px;
             }
-            .header-section h4 { font-size: 1.1rem; }
-            .header-section .mr-3 { display: none; } /* Hide date on mobile to save space */
+            .product-img-wrapper { height: 80px; }
+            .product-name { font-size: 0.78rem; min-height: 1.8rem; -webkit-line-clamp: 2; }
+            .product-price { font-size: 0.85rem; }
+            
+            .header-section { padding: 10px 15px; }
+            .header-section h4 { font-size: 0.95rem; }
+            .header-section .mr-3 { display: none; }
+            .cate-pill { padding: 6px 15px; font-size: 0.85rem; }
         }
 
         .room-selector-area {
@@ -411,15 +447,70 @@ if ($selected_booking_id > 0) {
             color: white;
         }
         
-        /* Floating Action */
-        .delete-item { color: #dc3545; cursor: pointer; padding: 5px; opacity: 0.6; transition: 0.2s; }
         .delete-item:hover { opacity: 1; transform: scale(1.1); }
+
+        /* Room Grid Styles */
+        .room-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .room-item-card {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .room-item-card:hover {
+            border-color: #007bff;
+            background: #f0f7ff;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .room-item-card.active {
+            border-color: #28a745;
+            background: #e8f5e9;
+            box-shadow: 0 4px 12px rgba(40,167,69,0.2);
+        }
+        .room-item-card.active::after {
+            content: "\f058";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: white;
+            color: #28a745;
+            border-radius: 50%;
+            font-size: 1.2rem;
+        }
+        .room-item-card .room-no { font-size: 1.3rem; font-weight: 800; color: #007bff; margin-bottom: 2px; }
+        .room-item-card .cust-name { font-size: 0.75rem; color: #555; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Ensure Select2 height matches the grid button */
+        .select2-container--bootstrap4 .select2-selection--single { 
+            height: 48px !important; 
+            line-height: 48px !important; 
+            font-size: 1.1rem !important; 
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-left: 12px !important;
+        }
     </style>
 </head>
 <body>
 
 <div class="header-section d-flex justify-content-between align-items-center">
-    <h4 class="m-0"><i class="fas fa-concierge-bell mr-2"></i> ບໍລິການຂອງຫ້ອງ (Room Service)</h4>
+    <h4 class="m-0"><i class="fas fa-concierge-bell mr-2"></i> ບໍລິການຂອງຫ້ອງ</h4>
     <div class="d-flex align-items-center">
         <span class="mr-3"><i class="fas fa-calendar-day mr-1"></i> <?php echo date('d/m/Y'); ?></span>
         <a href="Homepage.php" class="btn btn-light btn-sm rounded-pill px-3"><i class="fas fa-home"></i> ກັບໜ້າຫຼັກ</a>
@@ -483,14 +574,25 @@ if ($selected_booking_id > 0) {
     <!-- Order Panel -->
     <div class="order-column">
         <div class="room-selector-area">
-            <label class="text-muted small text-uppercase font-weight-bold mb-2 d-block">ເລືອກຫ້ອງທີ່ສັ່ງບໍລິການ</label>
-            <select id="roomSelect" class="form-control form-control-lg border-primary" style="font-weight: bold; color: #007bff;">
-                <?php foreach($active_bookings as $b): ?>
-                    <option value="<?php echo $b['booking_id']; ?>" <?php echo ($selected_booking_id == $b['booking_id']) ? 'selected' : ''; ?>>
-                        ຫ້ອງ <?php echo htmlspecialchars($b['room_number']); ?> - <?php echo htmlspecialchars($b['customer_name']); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+            <label class="text-muted small text-uppercase font-weight-bold mb-2 d-block"><i class="fas fa-search mr-1"></i> ເລືອກຫ້ອງທີ່ສັ່ງ (Select Room)</label>
+            <div class="d-flex align-items-center" style="gap: 8px;">
+                <div style="flex: 1;">
+                    <select id="roomSelect" class="form-control form-control-lg border-primary select2">
+                        <?php if(empty($active_bookings)): ?>
+                            <option value="">-- ບໍ່ມີຫ້ອງທີ່ເຂົ້າພັກ --</option>
+                        <?php endif; ?>
+                        <?php foreach($active_bookings as $b): ?>
+                            <option value="<?php echo $b['booking_id']; ?>" <?php echo ($selected_booking_id == $b['booking_id']) ? 'selected' : ''; ?>>
+                                ຫ້ອງ <?php echo htmlspecialchars($b['room_number']); ?> - <?php echo htmlspecialchars($b['customer_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-primary d-flex align-items-center justify-content-center" id="btnShowRoomGrid" style="height: 48px; width: 48px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,123,255,0.2);" title="ເບິ່ງແບບຜັງຫ້ອງ">
+                    <i class="fas fa-th fa-lg"></i>
+                </button>
+            </div>
+            <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle text-info"></i> ຄລິກທີ່ປຸ່ມສີຟ້າເພື່ອເບິ່ງຜັງຫ້ອງທັງໝົດ</p>
         </div>
 
         <div class="order-list">
@@ -542,7 +644,7 @@ if ($selected_booking_id > 0) {
 </div>
 
 <!-- Manual Entry Modal -->
-<div class="modal fade" id="manualModal" tabindex="-1">
+<!-- <div class="modal fade" id="manualModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="" method="post">
@@ -578,7 +680,7 @@ if ($selected_booking_id > 0) {
             </form>
         </div>
     </div>
-</div>
+</div> -->
 
 <!-- Hidden Quick Add Form -->
 <form id="quickAddForm" action="" method="post" style="display:none;">
@@ -590,39 +692,112 @@ if ($selected_booking_id > 0) {
     <input type="hidden" name="qty" value="1">
 </form>
 
+<!-- Room Selection Modal (Visual Grid) -->
+<div class="modal fade" id="roomGridModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-th-large mr-2"></i> ເລືອກຫ້ອງທີ່ສັ່ງ (Occupied Rooms)</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="mb-3">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input type="text" id="gridRoomSearch" class="form-control" placeholder="ຄົ້ນຫາເບີຫ້ອງ ຫຼື ຊື່ລູກຄ້າ...">
+                    </div>
+                </div>
+                <div class="room-grid-container" id="roomGridItems">
+                    <?php foreach($active_bookings as $b): ?>
+                        <div class="room-item-card <?php echo ($selected_booking_id == $b['booking_id']) ? 'active' : ''; ?>" 
+                             data-booking-id="<?php echo $b['booking_id']; ?>"
+                             data-room-no="<?php echo htmlspecialchars($b['room_number']); ?>"
+                             data-cust-name="<?php echo htmlspecialchars($b['customer_name']); ?>">
+                            <div class="room-no"><?php echo htmlspecialchars($b['room_number']); ?></div>
+                            <div class="cust-name"><?php echo htmlspecialchars($b['customer_name']); ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="plugins/jquery/jquery.min.js"></script>
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="plugins/select2/js/select2.full.min.js"></script>
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    // Room selection change
+$(function() {
+    // 1. Initialize Select2
+    if ($.fn.select2) {
+        $('.select2').select2({
+            theme: 'bootstrap4',
+            placeholder: "ຄົ້ນຫາເບີຫ້ອງ...",
+            minimumResultsForSearch: 0
+        });
+    }
+
+    // 2. Room Selection Change
     $('#roomSelect').on('change', function() {
-        window.location.href = '?booking_id=' + $(this).val();
+        var bid = $(this).val();
+        if(bid) {
+            window.location.href = 'room_service.php?booking_id=' + bid;
+        }
     });
 
-    // Category filtering
+    // 3. Room Grid Modal
+    $('#btnShowRoomGrid').on('click', function() {
+        $('#roomGridModal').modal('show');
+    });
+
+    $('.room-item-card').on('click', function() {
+        var bid = $(this).data('booking-id');
+        window.location.href = 'room_service.php?booking_id=' + bid;
+    });
+
+    $('#gridRoomSearch').on('keyup', function() {
+        var val = $(this).val().toLowerCase();
+        $('.room-item-card').each(function() {
+            var roomNo = String($(this).data('room-no')).toLowerCase();
+            var custName = $(this).data('cust-name').toLowerCase();
+            if (roomNo.indexOf(val) > -1 || custName.indexOf(val) > -1) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+
+    // 4. Product Search & Filter
+    $('#prodSearch').on('keyup', function() {
+        var val = $(this).val().toLowerCase();
+        $('.product-card').each(function() {
+            var name = $(this).data('name').toLowerCase();
+            if (name.indexOf(val) > -1) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+
     $('.cate-pill').on('click', function() {
         $('.cate-pill').removeClass('active');
         $(this).addClass('active');
         var cate = $(this).data('cate');
-        if(cate === 'all') {
-            $('.product-card').fadeIn(200);
+        if (cate === 'all') {
+            $('.product-card').show();
         } else {
             $('.product-card').hide();
-            $('.product-card[data-cate="'+cate+'"]').fadeIn(200);
+            $('.product-card[data-cate="' + cate + '"]').show();
         }
     });
 
-    // Search functionality
-    $('#prodSearch').on('input', function() {
-        var val = $(this).val().toLowerCase();
-        $('.product-card').filter(function() {
-            $(this).toggle($(this).data('name').toLowerCase().indexOf(val) > -1);
-        });
-    });
-
-    // Quick Add on product card click
+    // 5. Quick Add on product card click
     $('.product-card').on('click', function() {
         var id = $(this).data('id');
         var name = $(this).data('name');
@@ -634,47 +809,27 @@ $(document).ready(function() {
             return;
         }
 
-        $('#quick_booking_id').val(bookingId);
-        $('#quick_prod_id').val(id);
-        $('#quick_item_name').val(name);
-        $('#quick_price').val(price);
-        
-        // Submit via AJAX or direct form
-        $('#quickAddForm').submit();
-    });
-
-    // Manual Entry Modal
-    $('#btnAddManually').on('click', function() {
-        var bookingId = $('#roomSelect').val();
-        if(!bookingId) {
-            Swal.fire('ຜິດພາດ', 'ກະລຸນາເລືອກຫ້ອງກ່ອນ!', 'error');
-            return;
-        }
-        $('#modal_booking_id').val(bookingId);
-        $('#manualModal').modal('show');
-    });
-
-    // Number formatting
-    $('.number-format').on('input', function() {
-        var val = $(this).val().replace(/,/g, '');
-        if(!isNaN(val) && val !== '') {
-            $(this).val(new Intl.NumberFormat().format(val));
-        }
+        $('#form_booking_id').val(bookingId);
+        $('#form_prod_id').val(id);
+        $('#form_item_name').val(name);
+        $('#form_price').val(price);
+        $('#formAddService').submit();
     });
 });
 
-function confirmDelete(id, bookingId) {
+function confirmDelete(id, booking_id) {
     Swal.fire({
-        title: 'ລົບລາຍການ?',
-        text: "ທ່ານຕ້ອງການລົບລາຍການນີ້ແທ້ບໍ່?",
+        title: 'ຢືນຢັນການລົບ?',
+        text: "ທ່ານຕ້ອງການລົບລາຍການນີ້ແທ້ຫຼືບໍ່?",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        confirmButtonText: 'ລົບເລີຍ',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ຢືນຢັນ',
         cancelButtonText: 'ຍົກເລີກ'
     }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = "?delete=" + id + "&booking_id=" + bookingId;
+            window.location.href = 'room_service.php?delete=' + id + '&booking_id=' + booking_id;
         }
     });
 }

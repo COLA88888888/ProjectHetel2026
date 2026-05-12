@@ -27,6 +27,12 @@ $total_price = $room['price'] * $nights;
 $check_in_date = date('Y-m-d');
 $check_out_date = date('Y-m-d', strtotime("+$nights days"));
 
+// Fetch Tax Percent
+$stmtTax = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
+$tax_percent = (float)($stmtTax->fetchColumn() ?: 0);
+$tax_amount = round($total_price * ($tax_percent / 100));
+$grand_total = $total_price + $tax_amount;
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
     $customer_name = trim($_POST['customer_name']);
     $customer_phone = trim($_POST['customer_phone']);
@@ -35,10 +41,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
     $guest_count = (int)$_POST['guest_count'];
     $deposit_amount = (float)str_replace(',', '', $_POST['deposit_amount']);
     
-    // Save to bookings table
-    $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Occupied')");
+    $payment_method = $_POST['payment_method'];
     
-    if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount])) {
+    // Generate Bill Number: YYYYNNNN (e.g. 20260001)
+    $year = date('Y');
+    $stmtLast = $pdo->prepare("SELECT bill_number FROM bookings WHERE bill_number LIKE ? AND bill_number REGEXP '^[0-9]+$' ORDER BY bill_number DESC LIMIT 1");
+    $stmtLast->execute([$year . '%']);
+    $lastBill = $stmtLast->fetchColumn();
+
+    if ($lastBill) {
+        $lastNum = (int)substr($lastBill, 4);
+        $nextNum = $lastNum + 1;
+    } else {
+        $nextNum = 1;
+    }
+    $bill_number = $year . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+
+    // Save to bookings table
+    $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, payment_method, status, bill_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Occupied', ?)");
+    
+    if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount, $payment_method, $bill_number])) {
         $booking_id = $pdo->lastInsertId();
         // Update room status to Occupied
         $updateRoom = $pdo->prepare("UPDATE rooms SET status = 'Occupied' WHERE id = ?");
@@ -46,6 +68,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
         
         $_SESSION['success'] = "ດຳເນີນການ Check-in ເຂົ້າພັກສຳເລັດແລ້ວ!";
         $_SESSION['print_booking'] = $booking_id;
+        
+        logActivity($pdo, "Check-in ເຂົ້າພັກ", "ລູກຄ້າ: $customer_name, ຫ້ອງ: " . $room['room_number']);
+        
         header("Location: walkin.php");
         exit();
     } else {
@@ -66,6 +91,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h2 { font-size: 1.3rem !important; }
+            h4 { font-size: 1rem !important; }
+            .card-title { font-size: 1rem !important; }
+            .card-body { padding: 10px; }
+            .form-group label { font-size: 0.9rem; }
+            .form-control { font-size: 0.9rem; height: calc(2rem + 2px); }
+            .btn { font-size: 0.9rem; }
+        }
     </style>
 </head>
 <body>
@@ -99,7 +134,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
                             <b>ວັນທີອອກ:</b> <a class="float-right text-danger"><?php echo date('d/m/Y', strtotime($check_out_date)); ?></a>
                         </li>
                         <li class="list-group-item bg-light">
-                            <b>ຍອດລວມ (Total):</b> <a class="float-right text-info font-weight-bold" style="font-size: 1.1rem;"><?php echo number_format($total_price); ?> ກີບ</a>
+                            <b>ລາຄາລວມ (Subtotal):</b> <a class="float-right text-dark"><?php echo number_format($total_price); ?> ກີບ</a>
+                        </li>
+                        <?php if($tax_percent > 0): ?>
+                        <li class="list-group-item">
+                            <b>ພາສີອາກອນ (Tax <?php echo $tax_percent; ?>%):</b> <a class="float-right text-info"><?php echo number_format($tax_amount); ?> ກີບ</a>
+                        </li>
+                        <?php endif; ?>
+                        <li class="list-group-item bg-dark">
+                            <b>ຍອດລວມທັງໝົດ (Grand Total):</b> <a class="float-right text-warning font-weight-bold" style="font-size: 1.1rem;"><?php echo number_format($grand_total); ?> ກີບ</a>
                         </li>
                     </ul>
                 </div>
@@ -175,13 +218,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>ເງິນມັດຈຳ / ຈ່າຍກ່ອນ (ກີບ)</label>
+                                    <label>ວິທີຊຳລະເງິນ <span class="text-danger">*</span></label>
+                                    <select name="payment_method" class="form-control" required>
+                                        <option value="Cash">ເງິນສົດ</option>
+                                        <option value="Transfer">ໂອນເງິນ</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>ຍອດຈ່າຍທັງໝົດ (ກີບ) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">₭</span>
                                         </div>
-                                        <input type="text" name="deposit_amount" class="form-control number-format" value="0">
+                                        <input type="text" name="deposit_amount" class="form-control number-format" value="<?php echo number_format($grand_total); ?>" required readonly>
                                     </div>
+                                    <small class="text-muted">ລວມພາສີອາກອນແລ້ວ (<?php echo $nights; ?> ຄືນ)</small>
                                 </div>
                             </div>
                         </div>

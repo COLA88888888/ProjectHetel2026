@@ -9,7 +9,8 @@ $default_keys = [
     'hotel_address' => 'ນະຄອນຫຼວງວຽງຈັນ',
     'receipt_footer' => 'ຂໍຂອບໃຈທີ່ໃຊ້ບໍລິການ!',
     'hotel_logo' => '',
-    'tax_percent' => '0'
+    'tax_percent' => '0',
+    'hotel_qr' => ''
 ];
 
 foreach ($default_keys as $key => $val) {
@@ -65,6 +66,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
             }
         }
     }
+    // Handle QR Upload
+    if (isset($_FILES['hotel_qr']) && $_FILES['hotel_qr']['error'] == 0) {
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $filename = $_FILES['hotel_qr']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        if (in_array($ext, $allowed)) {
+            $newname = 'qr_' . time() . '.' . $ext;
+            if (move_uploaded_file($_FILES['hotel_qr']['tmp_name'], 'assets/img/' . $newname)) {
+                // Delete old QR if exists
+                if (!empty($settings_data['hotel_qr'])) {
+                    $oldPath = 'assets/img/' . $settings_data['hotel_qr'];
+                    if (file_exists($oldPath)) {
+                        unlink($oldPath);
+                    }
+                }
+                $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'hotel_qr'")->execute([$newname]);
+            }
+        }
+    }
+
+    logActivity($pdo, "ອັບເດດການຕັ້ງຄ່າລະບົບ", "ໂຮງແຮມ: $hotel_name");
 
     $_SESSION['success'] = "ບັນທຶກການຕັ້ງຄ່າສຳເລັດແລ້ວ!";
     header("Location: settings.php");
@@ -141,19 +164,35 @@ foreach($currencies as $c) {
                 <form action="" method="post" enctype="multipart/form-data">
                     <div class="card-body">
                         
-                        <div class="text-center mb-4">
-                            <?php if(!empty($settings_data['hotel_logo'])): ?>
-                                <img id="previewLogo" src="assets/img/<?php echo $settings_data['hotel_logo']; ?>" class="logo-preview shadow-sm">
-                            <?php else: ?>
-                                <img id="previewLogo" src="https://via.placeholder.com/150?text=Logo" class="logo-preview shadow-sm">
-                            <?php endif; ?>
-                            <div>
-                                <label for="hotel_logo" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-upload"></i> ປ່ຽນໂລໂກ້
-                                </label>
-                                <input type="file" name="hotel_logo" id="hotel_logo" class="d-none" accept="image/*" onchange="previewImage(this)">
+                        <div class="row mb-4">
+                            <div class="col-sm-6 text-center border-right">
+                                <?php if(!empty($settings_data['hotel_logo'])): ?>
+                                    <img id="previewLogo" src="assets/img/<?php echo $settings_data['hotel_logo']; ?>" class="logo-preview shadow-sm">
+                                <?php else: ?>
+                                    <img id="previewLogo" src="https://via.placeholder.com/150?text=Logo" class="logo-preview shadow-sm">
+                                <?php endif; ?>
+                                <div>
+                                    <label for="hotel_logo" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-upload"></i> ປ່ຽນໂລໂກ້
+                                    </label>
+                                    <input type="file" name="hotel_logo" id="hotel_logo" class="d-none" accept="image/*" onchange="previewImage(this, 'previewLogo')">
+                                </div>
+                                <small class="text-muted">ໂລໂກ້ໂຮງແຮມ</small>
                             </div>
-                            <small class="text-muted">ແນະນຳຂະໜາດ 500x500 ພິກເຊວ (ຮອງຮັບ JPG, PNG)</small>
+                            <div class="col-sm-6 text-center">
+                                <?php if(!empty($settings_data['hotel_qr'])): ?>
+                                    <img id="previewQR" src="assets/img/<?php echo $settings_data['hotel_qr']; ?>" class="logo-preview shadow-sm">
+                                <?php else: ?>
+                                    <img id="previewQR" src="https://via.placeholder.com/150?text=QR+Code" class="logo-preview shadow-sm">
+                                <?php endif; ?>
+                                <div>
+                                    <label for="hotel_qr" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-qrcode"></i> ປ່ຽນ QR ສຳລັບໂອນ
+                                    </label>
+                                    <input type="file" name="hotel_qr" id="hotel_qr" class="d-none" accept="image/*" onchange="previewImage(this, 'previewQR')">
+                                </div>
+                                <small class="text-muted">QR Code ສຳລັບຊຳລະເງິນ</small>
+                            </div>
                         </div>
 
                         <div class="form-group row">
@@ -216,9 +255,25 @@ foreach($currencies as $c) {
 
                     </div>
                     <div class="card-footer bg-light text-right">
-                        <button type="submit" name="save_settings" class="btn btn-primary px-5"><i class="fas fa-save"></i> ບັນທຶກການຕັ້ງຄ່າ</button>
+                        <button type="submit" name="save_settings" class="btn btn-primary px-5"><i class="fas fa-save"></i> ບັນທຶກ</button>
                     </div>
                 </form>
+            </div>
+
+            <!-- Network Access Info -->
+            <div class="card card-info card-outline shadow-sm mt-4">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-network-wired"></i> ການເຂົ້າເຖິງລະບົບ (Network Access)</h3>
+                </div>
+                <div class="card-body">
+                    <p>ທ່ານສາມາດໃຫ້ພະນັກງານຄົນອື່ນເຂົ້າໃຊ້ລະບົບຜ່ານ Network ດຽວກັນໄດ້ໂດຍການພິມ IP ນີ້ໃນ Browser:</p>
+                    <div class="alert alert-info">
+                        <h4 class="mb-0 text-center font-weight-bold">
+                            http://<?php echo gethostbyname(gethostname()); ?>/ProjectHotels
+                        </h4>
+                    </div>
+                    <small class="text-muted">* ໝາຍເຫດ: ເຄື່ອງອື່ນໆຕ້ອງເຊື່ອມຕໍ່ WiFi ຫຼື ວົງ LAN ດຽວກັນກັບເຄື່ອງ Server ນີ້.</small>
+                </div>
             </div>
         </div>
     </div>
@@ -229,11 +284,11 @@ foreach($currencies as $c) {
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
 
 <script>
-function previewImage(input) {
+function previewImage(input, previewId) {
     if (input.files && input.files[0]) {
         var reader = new FileReader();
         reader.onload = function(e) {
-            $('#previewLogo').attr('src', e.target.result);
+            $('#' + previewId).attr('src', e.target.result);
         }
         reader.readAsDataURL(input.files[0]);
     }

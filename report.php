@@ -3,9 +3,13 @@ session_start();
 require_once 'config/db.php';
 
 $type = $_GET['type'] ?? 'all';
+// Fetch Tax Percent
+$stmtTax = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
+$tax_percent = (float)($stmtTax->fetchColumn() ?: 0);
+$tax_mult = 1 + ($tax_percent / 100);
 
 // 1. Daily Revenue (Bookings + POS)
-$stmtDay = $pdo->prepare("SELECT SUM(total_price + food_charge) as daily_revenue FROM bookings WHERE DATE(check_in_date) = CURDATE()");
+$stmtDay = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) as daily_revenue FROM bookings WHERE DATE(check_in_date) = CURDATE()");
 $stmtDay->execute();
 $daily_revenue_bookings = $stmtDay->fetch()['daily_revenue'] ?? 0;
 
@@ -16,7 +20,7 @@ $daily_pos = $stmtPosDay->fetch()['daily_pos'] ?? 0;
 $daily_revenue = $daily_revenue_bookings + $daily_pos;
 
 // 2. Monthly Revenue (Bookings + POS)
-$stmtMonth = $pdo->prepare("SELECT SUM(total_price + food_charge) as monthly_revenue FROM bookings WHERE MONTH(check_in_date) = MONTH(CURDATE()) AND YEAR(check_in_date) = YEAR(CURDATE())");
+$stmtMonth = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) as monthly_revenue FROM bookings WHERE MONTH(check_in_date) = MONTH(CURDATE()) AND YEAR(check_in_date) = YEAR(CURDATE())");
 $stmtMonth->execute();
 $monthly_revenue_bookings = $stmtMonth->fetch()['monthly_revenue'] ?? 0;
 
@@ -83,7 +87,7 @@ for ($i = 5; $i >= 0; $i--) {
     $months[] = $month_label;
 
     // Room Revenue
-    $stmtRC = $pdo->prepare("SELECT SUM(total_price + food_charge) as total FROM bookings WHERE DATE_FORMAT(check_in_date, '%Y-%m') = ?");
+    $stmtRC = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) as total FROM bookings WHERE DATE_FORMAT(check_in_date, '%Y-%m') = ?");
     $stmtRC->execute([$month_date]);
     $room_revenue_chart[] = $stmtRC->fetch()['total'] ?? 0;
 
@@ -102,7 +106,7 @@ for ($i = 5; $i >= 0; $i--) {
 $room_type_labels = [];
 $room_type_revenue = [];
 $stmtRT = $pdo->query("
-    SELECT r.room_type, SUM(b.total_price + b.food_charge) as total 
+    SELECT r.room_type, SUM((b.total_price + b.food_charge) * $tax_mult) as total 
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
     WHERE b.status IN ('Completed', 'Checked In')
@@ -309,7 +313,9 @@ while($row = $stmtRT->fetch()) {
                         <tbody>
                             <?php foreach($recent_bookings as $row): ?>
                                 <?php 
-                                    $row_total = $row['total_price'] + $row['food_charge'];
+                                    $subtotal = $row['total_price'] + $row['food_charge'];
+                                    $row_tax = round($subtotal * ($tax_percent / 100));
+                                    $row_total = $subtotal + $row_tax;
                                 ?>
                                 <tr>
                                     <td><?php echo date('d/m/Y', strtotime($row['check_in_date'])); ?></td>
@@ -412,6 +418,8 @@ $(document).ready(function() {
     $('#posTable').DataTable(dtConfig);
 
     // Chart.js Configuration
+    Chart.defaults.global.defaultFontFamily = "'Noto Sans Lao Looped', sans-serif";
+    
     <?php if($type == 'all' || $type == 'finance'): ?>
     var financeChartCanvas = $('#financeChart').get(0).getContext('2d');
     var financeChartData = {

@@ -15,7 +15,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['checkout_pos']) || is
             $stmtTax = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
             $tax_p = (float)($stmtTax->fetchColumn() ?: 0);
 
-            $bill_id = 'INV-' . date('YmdHis') . rand(10, 99);
+            // Generate Bill ID: YYYYNNNN (e.g. 20260001)
+            $year = date('Y');
+            $stmtLast = $pdo->prepare("SELECT bill_id FROM orders WHERE bill_id LIKE ? AND bill_id REGEXP '^[0-9]+$' ORDER BY bill_id DESC LIMIT 1");
+            $stmtLast->execute([$year . '%']);
+            $lastBill = $stmtLast->fetchColumn();
+
+            if ($lastBill) {
+                $lastNum = (int)substr($lastBill, 4);
+                $nextNum = $lastNum + 1;
+            } else {
+                $nextNum = 1;
+            }
+            $bill_id = $year . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
             for ($i = 0; $i < count($prod_ids); $i++) {
                 $pid = (int)$prod_ids[$i];
                 $q = (int)$qtys[$i];
@@ -31,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['checkout_pos']) || is
                 $upd->execute([$q, $pid]);
             }
             $pdo->commit();
+            logActivity($pdo, "ຂາຍສິນຄ້າ (POS)", "ບິນເລກທີ: $bill_id");
             $_SESSION['print_bill'] = $bill_id;
             header("Location: pos.php?status=success");
             exit();
@@ -213,7 +226,7 @@ foreach ($products as $p) {
                 <div class="cat-scroll">
                     <button class="cat-btn active" data-cat="all">
                         <i class="fas fa-th-large mr-1"></i> ທັງໝົດ
-                        <span class="badge badge-light ml-1"><?php echo count($products); ?></span>
+                        <span class="badge badge-danger ml-1"><?php echo count($products); ?></span>
                     </button>
                     <?php 
                     $catIcons = [
@@ -233,7 +246,7 @@ foreach ($products as $p) {
                         <button class="cat-btn" data-cat="<?php echo htmlspecialchars($catName); ?>">
                             <i class="fas <?php echo $icon; ?> mr-1"></i>
                             <?php echo htmlspecialchars($catName); ?>
-                            <span class="badge badge-light ml-1"><?php echo $count; ?></span>
+                            <span class="badge badge-danger ml-1"><?php echo $count; ?></span>
                         </button>
                     <?php endforeach; ?>
                 </div>
@@ -285,9 +298,9 @@ foreach ($products as $p) {
         <!-- Cart (Right) -->
         <div class="col-lg-4 col-md-5">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 4px; display: flex; flex-direction: column;">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center" style="border-radius: 4px 4px 0 0;">
+                <div class="card-header bg-white d-flex align-items-center" style="border-radius: 4px 4px 0 0;">
                     <h5 class="m-0 font-weight-bold"><i class="fas fa-shopping-cart text-primary"></i> ກະຕ່າ</h5>
-                    <button class="btn btn-sm btn-outline-danger" onclick="clearCart()"><i class="fas fa-trash-alt"></i> ລ້າງ</button>
+                    <button class="btn btn-xs btn-outline-danger ml-auto" onclick="clearCart()" style="font-size: 0.75rem;"><i class="fas fa-trash-alt"></i> ລ້າງທັງໝົດ</button>
                 </div>
                 <div class="card-body p-0 cart-container" id="cartItems" style="flex: 1;">
                     <div class="text-center text-muted py-5" id="emptyCartMsg">
@@ -473,12 +486,24 @@ $('#posForm').on('submit', function(e) {
     e.preventDefault();
     var total = $('#cartTotal').text();
     Swal.fire({
-        title: '<i class="fas fa-cash-register text-success"></i> ຮັບຊຳລະເງິນ?',
-        html: '<div style="font-size:1.4rem; font-weight:700; color:#28a745;">' + total + ' ' + currencySymbol + '</div>',
+        title: 'ຢືນຢັນການຊຳລະເງິນ',
+        html: `
+            <div class="mb-1" style="font-size: 1rem; color: #666;">ຍອດເງິນທີ່ຕ້ອງຊຳລະທັງໝົດ:</div>
+            <div style="font-size: 2rem; font-weight: 800; color: #28a745; letter-spacing: 0.5px;">
+                ${total} <span style="font-size: 1.1rem;">${currencySymbol}</span>
+            </div>
+        `,
         showCancelButton: true,
         confirmButtonColor: '#28a745',
-        confirmButtonText: '<i class="fas fa-check"></i> ຢືນຢັນ',
-        cancelButtonText: 'ຍົກເລີກ'
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ຢືນຢັນການຮັບເງິນ',
+        cancelButtonText: 'ຍົກເລີກ',
+        reverseButtons: true,
+        padding: '2rem',
+        customClass: {
+            title: 'font-weight-bold text-dark',
+            popup: 'rounded-lg'
+        }
     }).then((result) => {
         if (result.isConfirmed) { this.submit(); }
     });
@@ -495,10 +520,16 @@ $('#posForm').on('submit', function(e) {
     document.body.appendChild(printFrame);
     
     Swal.fire({
-        icon: 'success',
         title: 'ຂາຍສຳເລັດແລ້ວ!',
         text: 'ລະບົບກຳລັງສັ່ງພິມໃບບິນໃຫ້ທ່ານ...',
-        confirmButtonColor: '#28a745'
+        confirmButtonColor: '#28a745',
+        padding: '2rem',
+        timer: 3000,
+        showConfirmButton: false,
+        customClass: {
+            title: 'text-success font-weight-bold',
+            popup: 'rounded-lg'
+        }
     });
     <?php unset($_SESSION['print_bill']); ?>
 <?php endif; ?>
