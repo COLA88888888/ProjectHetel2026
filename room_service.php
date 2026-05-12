@@ -31,6 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_service'])) {
     $total_price = $price * $qty;
     $prod_id = isset($_POST['prod_id']) && !empty($_POST['prod_id']) ? (int)$_POST['prod_id'] : null;
 
+    $is_ajax = isset($_POST['ajax']) && $_POST['ajax'] == 1;
+
     $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare("INSERT INTO room_services (booking_id, prod_id, item_name, price, qty, total_price) VALUES (?, ?, ?, ?, ?, ?)");
@@ -47,11 +49,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_service'])) {
         }
 
         $pdo->commit();
+
+        if ($is_ajax) {
+            echo json_encode(['status' => 'success', 'message' => 'ບັນທຶກສຳເລັດ!']);
+            exit();
+        }
+
         $_SESSION['success'] = "ບັນທຶກຄ່າໃຊ້ຈ່າຍເພີ່ມສຳເລັດ!";
         header("Location: room_service.php?booking_id=" . $booking_id);
         exit();
     } catch (Exception $e) {
         $pdo->rollBack();
+        if ($is_ajax) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit();
+        }
         $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ: " . $e->getMessage();
     }
 }
@@ -85,6 +97,42 @@ if (isset($_GET['delete'])) {
         }
         $pdo->commit();
         $_SESSION['success'] = "ລົບລາຍການສຳເລັດ!";
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ: " . $e->getMessage();
+    }
+    header("Location: room_service.php?booking_id=" . $booking_id);
+    exit();
+}
+
+// Handle Clear All
+if (isset($_GET['clear_all'])) {
+    $booking_id = (int)$_GET['clear_all'];
+    
+    $pdo->beginTransaction();
+    try {
+        // 1. Get all items to restore stock
+        $stmt = $pdo->prepare("SELECT prod_id, qty FROM room_services WHERE booking_id = ?");
+        $stmt->execute([$booking_id]);
+        $items = $stmt->fetchAll();
+        
+        foreach($items as $item) {
+            if ($item['prod_id']) {
+                $restoreStock = $pdo->prepare("UPDATE products SET qty = qty + ? WHERE prod_id = ?");
+                $restoreStock->execute([$item['qty'], $item['prod_id']]);
+            }
+        }
+
+        // 2. Delete all records
+        $delStmt = $pdo->prepare("DELETE FROM room_services WHERE booking_id = ?");
+        $delStmt->execute([$booking_id]);
+
+        // 3. Reset food_charge in bookings
+        $resetBooking = $pdo->prepare("UPDATE bookings SET food_charge = 0 WHERE id = ?");
+        $resetBooking->execute([$booking_id]);
+
+        $pdo->commit();
+        $_SESSION['success'] = "ຍົກເລີກລາຍການທັງໝົດສຳເລັດ!";
     } catch (Exception $e) {
         $pdo->rollBack();
         $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ: " . $e->getMessage();
@@ -572,7 +620,7 @@ if ($selected_booking_id > 0) {
     </div>
 
     <!-- Order Panel -->
-    <div class="order-column">
+    <div class="order-column" id="orderContainer">
         <div class="room-selector-area">
             <label class="text-muted small text-uppercase font-weight-bold mb-2 d-block"><i class="fas fa-search mr-1"></i> ເລືອກຫ້ອງທີ່ສັ່ງ (Select Room)</label>
             <div class="d-flex align-items-center" style="gap: 8px;">
@@ -592,7 +640,7 @@ if ($selected_booking_id > 0) {
                     <i class="fas fa-th fa-lg"></i>
                 </button>
             </div>
-            <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle text-info"></i> ຄລິກທີ່ປຸ່ມສີຟ້າເພື່ອເບິ່ງຜັງຫ້ອງທັງໝົດ</p>
+            <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle text-info"></i> ຄລິກທີ່ປຸ່ມສີຟ້າເພື່ອເບິ່ງຫ້ອງທັງໝົດ</p>
         </div>
 
         <div class="order-list">
@@ -638,7 +686,12 @@ if ($selected_booking_id > 0) {
                 <span class="total-label">ຍອດລວມທັງໝົດ:</span>
                 <span class="total-amount"><?php echo number_format($total_accumulated); ?> ກີບ</span>
             </div>
-            <p class="text-center text-muted small mt-2">ຄລິກທີ່ສິນຄ້າເພື່ອເພີ່ມລາຍການໃສ່ຫ້ອງທັນທີ</p>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-danger btn-block rounded-pill" onclick="clearAllItems(<?php echo $selected_booking_id; ?>)">
+                    <i class="fas fa-trash-alt mr-1"></i> ຍົກເລີກລາຍການທັງໝົດ
+                </button>
+            </div>
+            <p class="text-center text-muted small mt-3 mb-0">ຄລິກທີ່ສິນຄ້າເພື່ອເພີ່ມລາຍການໃສ່ຫ້ອງທັນທີ</p>
         </div>
     </div>
 </div>
@@ -741,16 +794,16 @@ $(function() {
         });
     }
 
-    // 2. Room Selection Change
-    $('#roomSelect').on('change', function() {
+    // 2. Room Selection Change (Using delegation for AJAX compatibility)
+    $(document).on('change', '#roomSelect', function() {
         var bid = $(this).val();
         if(bid) {
             window.location.href = 'room_service.php?booking_id=' + bid;
         }
     });
 
-    // 3. Room Grid Modal
-    $('#btnShowRoomGrid').on('click', function() {
+    // 3. Room Grid Modal (Using delegation for AJAX compatibility)
+    $(document).on('click', '#btnShowRoomGrid', function() {
         $('#roomGridModal').modal('show');
     });
 
@@ -797,7 +850,7 @@ $(function() {
         }
     });
 
-    // 5. Quick Add on product card click
+    // 5. Quick Add on product card click (Now using AJAX to prevent flicker)
     $('.product-card').on('click', function() {
         var id = $(this).data('id');
         var name = $(this).data('name');
@@ -809,12 +862,50 @@ $(function() {
             return;
         }
 
-        $('#form_booking_id').val(bookingId);
-        $('#form_prod_id').val(id);
-        $('#form_item_name').val(name);
-        $('#form_price').val(price);
-        $('#formAddService').submit();
+        $.ajax({
+            url: 'room_service.php',
+            method: 'POST',
+            data: {
+                add_service: 1,
+                ajax: 1,
+                booking_id: bookingId,
+                prod_id: id,
+                item_name: name,
+                price: price,
+                qty: 1
+            },
+            success: function(response) {
+                // Refresh only the order list part
+                $('#orderContainer').load('room_service.php?booking_id=' + bookingId + ' #orderContainer > *', function() {
+                    // Re-initialize Select2 if it was inside the refreshed area
+                    initSelect2();
+                });
+                
+                // Show a small toast notification
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: 'ເພີ່ມ ' + name + ' ແລ້ວ'
+                });
+            }
+        });
     });
+
+    function initSelect2() {
+        if ($.fn.select2) {
+            $('.select2').select2({
+                theme: 'bootstrap4',
+                placeholder: "ຄົ້ນຫາເບີຫ້ອງ...",
+                minimumResultsForSearch: 0
+            });
+        }
+    }
 });
 
 function confirmDelete(id, booking_id) {
@@ -833,7 +924,34 @@ function confirmDelete(id, booking_id) {
         }
     });
 }
+
+function clearAllItems(booking_id) {
+    Swal.fire({
+        title: 'ຢືນຢັນການຍົກເລີກທັງໝົດ?',
+        text: "ລາຍການທັງໝົດໃນຫ້ອງນີ້ຈະຖືກລຶບອອກ ແລະ ຄືນສະຕັອກສິນຄ້າທັນທີ!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ຢືນຢັນການຍົກເລີກ',
+        cancelButtonText: 'ກັບຄືນ'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'room_service.php?clear_all=' + booking_id;
+        }
+    });
+}
 </script>
+
+<!-- Hidden form for Quick Add -->
+<form id="formAddService" action="" method="post" style="display:none;">
+    <input type="hidden" name="add_service" value="1">
+    <input type="hidden" name="booking_id" id="form_booking_id">
+    <input type="hidden" name="prod_id" id="form_prod_id">
+    <input type="hidden" name="item_name" id="form_item_name">
+    <input type="hidden" name="price" id="form_price">
+    <input type="hidden" name="qty" value="1">
+</form>
 
 </body>
 </html>
