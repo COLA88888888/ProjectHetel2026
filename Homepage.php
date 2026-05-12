@@ -258,7 +258,7 @@ try {
         </div>
 
         <!-- Card 7: Today's Arrivals (Notification) -->
-        <div class="col-lg-4 col-6">
+        <!-- <div class="col-lg-4 col-6">
           <div class="small-box bg-indigo text-white" style="background-color: #6610f2 !important;">
             <div class="inner">
               <h3><?= number_format($arrivals_count); ?> ລາຍການ</h3>
@@ -269,7 +269,7 @@ try {
             </div>
             <a href="reserve.php" class="small-box-footer">ເບິ່ງລາຍຊື່ແຂກຈອງ <i class="fas fa-arrow-circle-right"></i></a>
           </div>
-        </div>
+        </div> -->
     </div>
 
       <!-- Chart Section -->
