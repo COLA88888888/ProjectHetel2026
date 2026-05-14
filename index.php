@@ -8,6 +8,19 @@ if (isset($_SESSION['checked'])) {
     }
     exit();
 }
+require_once 'config/db.php';
+try {
+    $stmtLogo = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'hotel_logo'");
+    $logo_val = $stmtLogo->fetchColumn();
+    
+    $stmtName = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'hotel_name'");
+    $hotel_name = $stmtName->fetchColumn() ?? 'ລະບົບໂຮງແຮມ';
+    
+    $hotel_logo = !empty($logo_val) ? 'assets/img/logo/' . $logo_val : 'assets/img/logo/logo.png';
+} catch (Exception $e) { 
+    $hotel_logo = 'assets/img/logo/logo.png';
+    $hotel_name = 'ລະບົບໂຮງແຮມ';
+}
 ?>
 <!DOCTYPE html>
 <html lang="lo">
@@ -17,21 +30,7 @@ if (isset($_SESSION['checked'])) {
     <title><?php echo htmlspecialchars($hotel_name); ?> - ເຂົ້າສູ່ລະບົບ</title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
-<?php 
-    require_once 'config/db.php';
-    try {
-        $stmtLogo = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'hotel_logo'");
-        $logo_val = $stmtLogo->fetchColumn();
-        
-        $stmtName = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'hotel_name'");
-        $hotel_name = $stmtName->fetchColumn() ?? 'ລະບົບໂຮງແຮມ';
-        
-        $hotel_logo = !empty($logo_val) ? 'assets/img/logo/' . $logo_val : 'assets/img/logo/logo.png';
-    } catch (Exception $e) { 
-        $hotel_logo = 'assets/img/logo/logo.png';
-        $hotel_name = 'ລະບົບໂຮງແຮມ';
-    }
-?>
+
     <link rel="shortcut icon" href="<?php echo $hotel_logo; ?>" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
