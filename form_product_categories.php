@@ -5,9 +5,10 @@ require_once 'config/db.php';
 // Handle Add Category
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_category'])) {
     $name = trim($_POST['name']);
+    $category_code = trim($_POST['category_code']);
     if (!empty($name)) {
-        $stmt = $pdo->prepare("INSERT INTO product_categories (name) VALUES (?)");
-        if ($stmt->execute([$name])) {
+        $stmt = $pdo->prepare("INSERT INTO product_categories (name, category_code) VALUES (?, ?)");
+        if ($stmt->execute([$name, $category_code])) {
             $_SESSION['success'] = "ເພີ່ມປະເພດສິນຄ້າສຳເລັດແລ້ວ!";
         } else {
             $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ!";
@@ -23,13 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_category'])) {
     $new_name = trim($_POST['name']);
     $old_name = trim($_POST['old_name']);
     
-    if (!empty($new_name) && $new_name !== $old_name) {
-        $stmt = $pdo->prepare("UPDATE product_categories SET name = ? WHERE id = ?");
-        if ($stmt->execute([$new_name, $id])) {
-            // Update all products that use this category
-            $updateProducts = $pdo->prepare("UPDATE products SET category = ? WHERE category = ?");
-            $updateProducts->execute([$new_name, $old_name]);
-            
+    if (!empty($new_name)) {
+        $category_code = trim($_POST['category_code']);
+        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, category_code = ? WHERE id = ?");
+        if ($stmt->execute([$new_name, $category_code, $id])) {
+            // Update all products that use this category only if name changed
+            if ($new_name !== $old_name) {
+                $updateProducts = $pdo->prepare("UPDATE products SET category = ? WHERE category = ?");
+                $updateProducts->execute([$new_name, $old_name]);
+            }
             $_SESSION['success'] = "ແກ້ໄຂປະເພດສິນຄ້າສຳເລັດແລ້ວ!";
         } else {
             $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ!";
@@ -90,6 +93,10 @@ $categories = $stmt->fetchAll();
                 <form action="" method="post">
                     <div class="card-body">
                         <div class="form-group">
+                            <label>ລະຫັດປະເພດ</label>
+                            <input type="text" name="category_code" class="form-control" placeholder="ກະລຸນາປ້ອນລະຫັດປະເພດ...">
+                        </div>
+                        <div class="form-group">
                             <label>ຊື່ປະເພດສິນຄ້າ</label>
                             <input type="text" name="name" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ປະເພດສິນຄ້າ..." required>
                         </div>
@@ -109,6 +116,7 @@ $categories = $stmt->fetchAll();
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>ລະຫັດ</th>
                                 <th class="text-left">ຊື່ປະເພດ</th>
                                 <th>ຈັດການ</th>
                             </tr>
@@ -118,16 +126,22 @@ $categories = $stmt->fetchAll();
                                 <?php foreach($categories as $index => $c): ?>
                                 <tr>
                                     <td><?php echo $index + 1; ?></td>
+                                    <td><span class="badge badge-secondary"><?php echo htmlspecialchars($c['category_code'] ?? '-'); ?></span></td>
                                     <td class="text-left font-weight-bold text-primary"><?php echo htmlspecialchars($c['name']); ?></td>
                                     <td>
-                                        <button class="btn btn-sm btn-warning text-white btn-edit" data-id="<?php echo $c['id']; ?>" data-name="<?php echo htmlspecialchars($c['name']); ?>"><i class="fas fa-edit"></i> ແກ້ໄຂ</button>
+                                        <button class="btn btn-sm btn-warning text-white btn-edit" 
+                                            data-id="<?php echo $c['id']; ?>" 
+                                            data-name="<?php echo htmlspecialchars($c['name']); ?>"
+                                            data-code="<?php echo htmlspecialchars($c['category_code'] ?? ''); ?>">
+                                            <i class="fas fa-edit"></i> ແກ້ໄຂ
+                                        </button>
                                         <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $c['id']; ?>"><i class="fas fa-trash-alt"></i> ລຶບ</a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="3" class="text-center text-muted py-4">ບໍ່ມີຂໍ້ມູນ</td>
+                                    <td colspan="4" class="text-center text-muted py-4">ບໍ່ມີຂໍ້ມູນ</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -153,6 +167,10 @@ $categories = $stmt->fetchAll();
               <input type="hidden" name="id" id="edit_id">
               <input type="hidden" name="old_name" id="edit_old_name">
               <div class="form-group">
+                  <label>ລະຫັດປະເພດ</label>
+                  <input type="text" name="category_code" id="edit_code" class="form-control">
+              </div>
+              <div class="form-group">
                   <label>ຊື່ປະເພດສິນຄ້າ</label>
                   <input type="text" name="name" id="edit_name" class="form-control" required>
               </div>
@@ -173,10 +191,12 @@ $categories = $stmt->fetchAll();
 $('.btn-edit').on('click', function() {
     var id = $(this).data('id');
     var name = $(this).data('name');
+    var code = $(this).data('code');
     
     $('#edit_id').val(id);
     $('#edit_name').val(name);
     $('#edit_old_name').val(name);
+    $('#edit_code').val(code);
     
     $('#editCategoryModal').modal('show');
 });

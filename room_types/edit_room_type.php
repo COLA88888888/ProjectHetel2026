@@ -19,10 +19,11 @@ if (!$room_type) {
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
     $room_type_name = $_POST['room_type_name'];
+    $room_type_code = $_POST['room_type_code'];
     $description = $_POST['description'];
 
-    $stmt = $pdo->prepare("UPDATE room_types SET room_type_name = ?, description = ? WHERE id = ?");
-    if ($stmt->execute([$room_type_name, $description, $id])) {
+    $stmt = $pdo->prepare("UPDATE room_types SET room_type_name = ?, room_type_code = ?, description = ? WHERE id = ?");
+    if ($stmt->execute([$room_type_name, $room_type_code, $description, $id])) {
         $_SESSION['success'] = "ແກ້ໄຂຂໍ້ມູນສຳເລັດ";
         header("Location: form_room_types.php");
         exit();
@@ -62,6 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
                 </div>
                 <form action="" method="post" id="editRoomTypeForm">
                     <div class="card-body">
+                        <div class="form-group">
+                            <label>ລະຫັດປະເພດຫ້ອງ</label>
+                            <input type="text" name="room_type_code" id="room_type_code" class="form-control" value="<?php echo htmlspecialchars($room_type['room_type_code'] ?? ''); ?>">
+                        </div>
                         <div class="form-group">
                             <label>ຊື່ປະເພດຫ້ອງ</label>
                             <input type="text" name="room_type_name" id="room_type_name" class="form-control" value="<?php echo htmlspecialchars($room_type['room_type_name'] ?? ''); ?>">

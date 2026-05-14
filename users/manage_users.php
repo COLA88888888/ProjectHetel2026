@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once '../config/session_check.php';
 require_once '../config/db.php';
 
 // Add User
@@ -201,9 +202,11 @@ $users = $stmt->fetchAll();
                 <tbody>
                     <?php foreach($users as $u): ?>
                         <?php 
-                            $img = !empty($u['profile_img']) ? $u['profile_img'] : 'default_avatar.png';
+                            $img = !empty($u['profile_img']) ? $u['profile_img'] : 'default.png';
                             $img_path = '../assets/img/' . $img;
-                            if (!file_exists($img_path)) $img_path = 'https://via.placeholder.com/50?text=User';
+                            if (!file_exists($img_path)) {
+                                $img_path = '../UserImg/default.png';
+                            }
                         ?>
                         <tr>
                             <td><img src="<?php echo $img_path; ?>" class="avatar shadow-sm"></td>
@@ -251,9 +254,11 @@ $users = $stmt->fetchAll();
     <div class="mobile-cards">
         <?php foreach($users as $u): ?>
             <?php 
-                $img = !empty($u['profile_img']) ? $u['profile_img'] : 'default_avatar.png';
+                $img = !empty($u['profile_img']) ? $u['profile_img'] : 'default.png';
                 $img_path = '../assets/img/' . $img;
-                if (!file_exists($img_path)) $img_path = 'https://via.placeholder.com/50?text=User';
+                if (!file_exists($img_path)) {
+                    $img_path = '../UserImg/default.png';
+                }
             ?>
             <div class="card user-card">
                 <div class="card-body">
@@ -307,7 +312,7 @@ $users = $stmt->fetchAll();
       <form action="" method="post" enctype="multipart/form-data">
           <div class="modal-body">
               <div class="text-center">
-                  <img id="preview_add" src="https://via.placeholder.com/100?text=Upload" class="avatar-lg shadow-sm">
+                  <img id="preview_add" src="../UserImg/default.png" class="avatar-lg shadow-sm">
                   <div class="mb-3">
                       <label class="btn btn-sm btn-outline-primary cursor-pointer">
                           <i class="fas fa-camera"></i> ເລືອກຮູບໂປຣໄຟລ໌

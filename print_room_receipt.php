@@ -109,7 +109,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
 <div class="receipt">
     <div class="header">
         <?php if(!empty($settings['hotel_logo'])): ?>
-            <img src="assets/img/<?php echo $settings['hotel_logo']; ?>" style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 5px;">
+            <img src="assets/img/logo/<?php echo $settings['hotel_logo']; ?>" style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 5px;">
         <?php endif; ?>
         <div class="hotel-name"><?php echo htmlspecialchars($hotel_name); ?></div>
         <div style="font-size: 11px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($hotel_address); ?></div>
@@ -167,6 +167,8 @@ $final_payable = $grand_total - $booking['deposit_amount'];
 
     <div class="divider"></div>
 
+    <div class="divider"></div>
+
     <div class="total-section">
         <div class="info-row" style="font-weight: normal; font-size: 12px;">
             <span>ລວມຍ່ອຍ:</span>
@@ -194,16 +196,26 @@ $final_payable = $grand_total - $booking['deposit_amount'];
         </div>
     </div>
 
-    <div class="info-row" style="margin-top: 15px;">
+    <div class="divider"></div>
+
+    <div class="info-row">
         <span>ວິທີຊຳລະ:</span>
         <span><?php echo htmlspecialchars($booking['payment_method'] ?? 'ເງິນສົດ'); ?></span>
+    </div>
+    <div class="info-row">
+        <span>ຮັບເງິນມາ:</span>
+        <span><?php echo number_format($booking['amount_received']); ?> <?php echo $currency_symbol; ?></span>
+    </div>
+    <div class="info-row">
+        <span>ເງິນທອນ:</span>
+        <span style="color: #d9534f; font-size: 14px;"><?php echo number_format($booking['change_amount']); ?> <?php echo $currency_symbol; ?></span>
     </div>
 
     <div class="footer">
         <?php if(!empty($settings['hotel_qr'])): ?>
             <div style="margin-top: 10px; text-align: center;">
                 <p style="margin-bottom: 5px; font-weight: bold; font-size: 10px; color: #555;">SCAN TO PAY (ສະແກນເພື່ອຊຳລະ)</p>
-                <img src="assets/img/<?php echo $settings['hotel_qr']; ?>" style="width: 130px; height: 130px; border: 1px solid #eee; padding: 5px; background: #fff;">
+                <img src="assets/img/QR/<?php echo $settings['hotel_qr']; ?>" style="width: 130px; height: 130px; border: 1px solid #eee; padding: 5px; background: #fff;">
             </div>
         <?php endif; ?>
         <br>

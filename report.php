@@ -66,6 +66,18 @@ $stmtRecent = $pdo->query("
 ");
 $recent_bookings = $stmtRecent->fetchAll();
 
+// Fetch Currently Unavailable Rooms (Booked Today or Occupied/Staying)
+$today_val = date('Y-m-d');
+$stmtUnavailable = $pdo->query("
+    SELECT b.*, r.room_number, r.room_type 
+    FROM bookings b 
+    JOIN rooms r ON b.room_id = r.id 
+    WHERE b.status IN ('Occupied', 'Checked In')
+    OR (b.status = 'Booked' AND b.check_in_date <= '$today_val' AND b.check_out_date > '$today_val')
+    ORDER BY b.status DESC, b.check_in_date ASC
+");
+$unavailable_list = $stmtUnavailable->fetchAll();
+
 // Get recent POS transactions
 $stmtRecentPos = $pdo->query("
     SELECT o.*, p.prod_name, p.category 
@@ -135,109 +147,116 @@ while($row = $stmtRT->fetch()) {
     <!-- Noto Sans Lao Looped -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 10px; }
-        .inner h3 { font-size: 2.2rem; font-weight: bold; }
-        .inner p { font-size: 1.1rem; }
-        /* Responsive tables */
-        .table-responsive { -webkit-overflow-scrolling: touch; }
-        .card-title { font-size: 1rem; }
-        @media (max-width: 768px) {
-            body { padding: 6px; }
-            h2 { font-size: 1.2rem; }
-            .inner h3 { font-size: 1.3rem; }
-            .inner p { font-size: 0.85rem; }
-            .card-title { font-size: 0.88rem; }
-            .small-box .icon { font-size: 40px; }
-            .table { font-size: 0.82rem; }
-            .dataTables_wrapper .dataTables_length,
-            .dataTables_wrapper .dataTables_filter,
-            .dataTables_wrapper .dataTables_info,
-            .dataTables_wrapper .dataTables_paginate { font-size: 0.82rem; }
-            .dataTables_wrapper .dataTables_filter input { width: 120px; }
+        body { font-family: 'Noto Sans Lao Looped', 'Phetsarath OT', 'Saysettha OT', sans-serif !important; background-color: #f0f4f8; padding: 20px; }
+        
+        /* ===== Modern & Compact Stat Cards ===== */
+        .stat-cards-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .stat-card {
+            position: relative;
+            border-radius: 12px;
+            padding: 16px 18px 14px;
+            color: #fff;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 110px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        @media (max-width: 576px) {
-            .inner h3 { font-size: 1.1rem; }
-            .inner p { font-size: 0.78rem; }
-            .table { font-size: 0.75rem; }
-            .badge { font-size: 0.7rem; padding: 3px 6px; }
+        .stat-card.gc-green  { background: linear-gradient(135deg, #1D976C 0%, #93F9B9 100%); }
+        .stat-card.gc-amber  { background: linear-gradient(135deg, #FF8008 0%, #FFC837 100%); }
+        .stat-card.gc-blue   { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); }
+        .stat-card.gc-indigo { background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%); }
+        .stat-card.gc-teal   { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); }
+        .stat-card.gc-dark   { background: linear-gradient(135deg, #30E8BF 0%, #FF8235 100%); }
+
+        .stat-card-label { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; opacity: 0.95; margin-bottom: 6px; }
+        .stat-card-value { font-size: 1.8rem; font-weight: 800; line-height: 1.1; }
+        .stat-card-icon { font-size: 1.8rem; opacity: 0.25; position: absolute; top: 10px; right: 12px; }
+
+        /* Section Header */
+        .section-header { display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e0e6ed; }
+        .section-header h2 { margin: 0; font-weight: 800; color: #2c3e50; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
+        .header-icon { background: #3498db; color: #fff; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(52,152,219,0.3); }
+
+        .card { border-radius: 12px !important; border: none !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important; }
+        .card-header { background: #fff !important; border-bottom: 1px solid #f0f4f8 !important; border-radius: 12px 12px 0 0 !important; }
+        .card-title { font-weight: 700 !important; color: #2c3e50 !important; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .stat-cards-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card-value { font-size: 1.15rem; }
+            .stat-card { min-height: 80px; padding: 10px; }
+            .stat-card-label { font-size: 0.65rem; }
+            .section-header h2 { font-size: 1.1rem; }
+            .container-fluid { padding: 0 5px; width: 100% !important; overflow-x: hidden; }
+            .row { margin-left: -5px; margin-right: -5px; width: 100% !important; }
+            .col-12, .col-lg-8, .col-lg-4 { padding-left: 5px; padding-right: 5px; width: 100% !important; }
+        }
+        @media (max-width: 480px) {
+            .stat-cards-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card-value { font-size: 1rem; }
+            .stat-card-label { font-size: 0.6rem; }
+            .stat-card { min-height: 75px; padding: 8px; }
         }
     </style>
 </head>
 <body>
 
 <div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col-12">
-            <h2><i class="fas fa-chart-line"></i> ບົດລາຍງານ ແລະ ສະຫຼຸບຜົນ</h2>
-        </div>
+    <div class="section-header">
+        <h2>ບົດລາຍງານ ແລະ ສະຫຼຸບຜົນ</h2>
     </div>
 
     <!-- Small boxes (Stat box) -->
     <?php if($type == 'all' || $type == 'room_revenue'): ?>
-    <div class="row">
+    <div class="stat-cards-row">
         <!-- Daily Revenue -->
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-success shadow-sm">
-                <div class="inner">
-                    <h3><?php echo number_format($daily_revenue); ?> <sup style="font-size: 20px">₭</sup></h3>
-                    <p>ລາຍຮັບມື້ນີ້</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-hand-holding-usd"></i>
-                </div>
+        <div class="stat-card gc-green">
+            <div class="stat-card-top">
+                <div class="stat-card-label">ລາຍຮັບມື້ນີ້</div>
+                <div class="stat-card-value"><?php echo number_format($daily_revenue); ?> <sup style="font-size: 1rem">₭</sup></div>
             </div>
+            <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
         </div>
         
         <!-- Monthly Revenue -->
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-info shadow-sm">
-                <div class="inner">
-                    <h3><?php echo number_format($monthly_revenue); ?> <sup style="font-size: 20px">₭</sup></h3>
-                    <p>ລາຍຮັບເດືອນນີ້</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-chart-bar"></i>
-                </div>
+        <div class="stat-card gc-blue">
+            <div class="stat-card-top">
+                <div class="stat-card-label">ລາຍຮັບເດືອນນີ້</div>
+                <div class="stat-card-value"><?php echo number_format($monthly_revenue); ?> <sup style="font-size: 1rem">₭</sup></div>
             </div>
+            <div class="stat-card-icon"><i class="fas fa-chart-bar"></i></div>
         </div>
 
         <!-- Available Rooms -->
-        <div class="col-lg-2 col-6">
-            <div class="small-box bg-warning shadow-sm">
-                <div class="inner text-white">
-                    <h3><?php echo $available_rooms; ?></h3>
-                    <p>ຫ້ອງຫວ່າງພ້ອມໃຊ້</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-door-open"></i>
-                </div>
+        <div class="stat-card gc-amber">
+            <div class="stat-card-top">
+                <div class="stat-card-label">ຫ້ອງຫວ່າງພ້ອມໃຊ້</div>
+                <div class="stat-card-value"><?php echo $available_rooms; ?> <sup style="font-size: 1rem">ຫ້ອງ</sup></div>
             </div>
+            <div class="stat-card-icon"><i class="fas fa-door-open"></i></div>
         </div>
 
         <!-- Today Customers -->
-        <div class="col-lg-2 col-6">
-            <div class="small-box bg-danger shadow-sm">
-                <div class="inner">
-                    <h3><?php echo $today_customers; ?></h3>
-                    <p>ຈຳນວນລູກຄ້າ (Bill)</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-users"></i>
-                </div>
+        <div class="stat-card gc-teal">
+            <div class="stat-card-top">
+                <div class="stat-card-label">ຈຳນວນລູກຄ້າ (Bill)</div>
+                <div class="stat-card-value"><?php echo $today_customers; ?> <sup style="font-size: 1rem">ບິນ</sup></div>
             </div>
+            <div class="stat-card-icon"><i class="fas fa-users"></i></div>
         </div>
 
         <!-- Total Guests -->
-        <div class="col-lg-2 col-6">
-            <div class="small-box bg-primary shadow-sm">
-                <div class="inner">
-                    <h3><?php echo $total_guests; ?></h3>
-                    <p>ຈຳນວນແຂກພັກຕົວຈິງ</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-user-friends"></i>
-                </div>
+        <div class="stat-card gc-indigo">
+            <div class="stat-card-top">
+                <div class="stat-card-label">ແຂກພັກຕົວຈິງ</div>
+                <div class="stat-card-value"><?php echo $total_guests; ?> <sup style="font-size: 1rem">ຄົນ</sup></div>
             </div>
+            <div class="stat-card-icon"><i class="fas fa-user-friends"></i></div>
         </div>
     </div>
     <?php endif; ?>
@@ -287,6 +306,66 @@ while($row = $stmtRT->fetch()) {
 
     </div>
 
+    <!-- Unavailable Rooms Table -->
+    <?php if($type == 'all' || $type == 'room_history'): ?>
+    <div class="row mb-4" id="unavailableRooms">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="card-title"><i class="fas fa-door-closed"></i> ລາຍງານຫ້ອງບໍ່ຫວ່າງ (ຈອງ ແລະ ກຳລັງພັກ)</h3>
+                </div>
+                <div class="card-body p-2 p-md-3">
+                    <div class="table-responsive">
+                    <table id="unavailableTable" class="table table-bordered table-striped text-center mb-0" style="min-width: 650px;">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>ເລກຫ້ອງ</th>
+                                <th>ຊື່ລູກຄ້າ</th>
+                                <th>ສະຖານະ</th>
+                                <th>ວັນທີເຂົ້າ</th>
+                                <th>ວັນທີອອກ</th>
+                                <th>ຈຳນວນຄືນ</th>
+                                <th>ຍອດລວມ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if(count($unavailable_list) > 0): ?>
+                                <?php foreach($unavailable_list as $row): ?>
+                                    <tr>
+                                        <td><strong><?php echo htmlspecialchars($row['room_number']); ?></strong><br><small><?php echo htmlspecialchars($row['room_type']); ?></small></td>
+                                        <td class="text-left font-weight-bold"><?php echo htmlspecialchars($row['customer_name']); ?></td>
+                                        <td>
+                                            <?php if($row['status'] == 'Booked'): ?>
+                                                <span class="badge badge-primary px-3"><i class="fas fa-calendar-check"></i> ຈອງ</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-warning text-white px-3"><i class="fas fa-clock"></i> ກຳລັງພັກ</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-success"><?php echo date('d/m/Y', strtotime($row['check_in_date'])); ?></td>
+                                        <td class="text-danger"><?php echo date('d/m/Y', strtotime($row['check_out_date'])); ?></td>
+                                        <td>
+                                            <?php 
+                                                $diff = date_diff(date_create($row['check_in_date']), date_create($row['check_out_date']));
+                                                echo $diff->format("%a"); 
+                                            ?>
+                                        </td>
+                                        <td class="text-right font-weight-bold"><?php echo number_format($row['total_price']); ?> ₭</td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="7" class="py-4 text-muted">ບໍ່ມີຫ້ອງທີ່ບໍ່ຫວ່າງໃນເວລານີ້</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Recent Transactions Table -->
     <?php if($type == 'all' || $type == 'room_history'): ?>
     <div class="row mt-4" id="roomHistory">
@@ -303,6 +382,7 @@ while($row = $stmtRT->fetch()) {
                                 <th>ວັນທີ Check-in</th>
                                 <th>ເລກຫ້ອງ</th>
                                 <th>ຊື່ລູກຄ້າ</th>
+                                <th>ຈຳນວນຄືນ</th>
                                 <th>ຈຳນວນແຂກ</th>
                                 <th>ຄ່າຫ້ອງ</th>
                                 <th>ຄ່າອາຫານ</th>
@@ -321,6 +401,12 @@ while($row = $stmtRT->fetch()) {
                                     <td><?php echo date('d/m/Y', strtotime($row['check_in_date'])); ?></td>
                                     <td><strong><?php echo htmlspecialchars($row['room_number']); ?></strong></td>
                                     <td class="text-left"><?php echo htmlspecialchars($row['customer_name']); ?></td>
+                                    <td>
+                                        <?php 
+                                            $diff = date_diff(date_create($row['check_in_date']), date_create($row['check_out_date']));
+                                            echo $diff->format("%a"); 
+                                        ?>
+                                    </td>
                                     <td><?php echo $row['guest_count']; ?> ຄົນ</td>
                                     <td class="text-right"><?php echo number_format($row['total_price']); ?></td>
                                     <td class="text-right text-info"><?php echo number_format($row['food_charge']); ?></td>
@@ -328,6 +414,8 @@ while($row = $stmtRT->fetch()) {
                                     <td>
                                         <?php if($row['status'] == 'Completed'): ?>
                                             <span class="badge badge-success"><i class="fas fa-check"></i> ຊຳລະແລ້ວ</span>
+                                        <?php elseif($row['status'] == 'Booked'): ?>
+                                            <span class="badge badge-primary"><i class="fas fa-calendar-check"></i> ຈອງ</span>
                                         <?php else: ?>
                                             <span class="badge badge-warning text-white"><i class="fas fa-clock"></i> ກຳລັງພັກ</span>
                                         <?php endif; ?>
@@ -416,6 +504,7 @@ $(document).ready(function() {
     };
     $('#reportTable').DataTable(dtConfig);
     $('#posTable').DataTable(dtConfig);
+    $('#unavailableTable').DataTable(dtConfig);
 
     // Chart.js Configuration
     Chart.defaults.global.defaultFontFamily = "'Noto Sans Lao Looped', sans-serif";

@@ -14,10 +14,25 @@ if (isset($_SESSION['checked'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ເຂົ້າສູ່ລະບົບ - Hotel Management</title>
+    <title><?php echo htmlspecialchars($hotel_name); ?> - ເຂົ້າສູ່ລະບົບ</title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
-    <link rel="shortcut icon" href="assets/img/logo.png" type="image/x-icon">
+<?php 
+    require_once 'config/db.php';
+    try {
+        $stmtLogo = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'hotel_logo'");
+        $logo_val = $stmtLogo->fetchColumn();
+        
+        $stmtName = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'hotel_name'");
+        $hotel_name = $stmtName->fetchColumn() ?? 'ລະບົບໂຮງແຮມ';
+        
+        $hotel_logo = !empty($logo_val) ? 'assets/img/logo/' . $logo_val : 'assets/img/logo/logo.png';
+    } catch (Exception $e) { 
+        $hotel_logo = 'assets/img/logo/logo.png';
+        $hotel_name = 'ລະບົບໂຮງແຮມ';
+    }
+?>
+    <link rel="shortcut icon" href="<?php echo $hotel_logo; ?>" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
@@ -98,12 +113,15 @@ if (isset($_SESSION['checked'])) {
             background-color: #f0f7ff;
             transition: all 0.3s;
             box-sizing: border-box;
-            font-family: 'Noto Sans Lao Looped', sans-serif !important;
+            height: 48px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+            transition: all 0.3s;
         }
         .form-control:focus {
-            background-color: #fff;
             border-color: var(--primary-blue);
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
         }
         .password-container {
             position: relative;
@@ -118,19 +136,30 @@ if (isset($_SESSION['checked'])) {
         }
         .btn-login {
             background-color: var(--primary-blue);
-            border: none;
-            color: white;
-            padding: 14px;
-            border-radius: 10px;
+            color: #fff;
+            height: 48px;
+            border-radius: 8px;
             font-weight: 700;
-            font-size: 1.1rem;
             width: 100%;
             margin-top: 20px;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            border: none;
         }
         .btn-login:hover {
             background-color: var(--blue-hover);
-            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+        }
+        
+        @media (max-width: 576px) {
+            .login-card { padding: 25px; max-width: 90%; }
+            .login-header h2 { font-size: 1.3rem; }
+            .login-header p { font-size: 0.8rem; }
+            .form-label { font-size: 0.85rem; }
+            .form-control { height: 42px; font-size: 0.9rem; }
+            .btn-login { height: 42px; font-size: 0.9rem; }
+            .hero-bg { height: 35vh; }
+            .login-wrapper { margin-top: -15vh; }
         }
         .remember-me {
             margin-top: 15px;

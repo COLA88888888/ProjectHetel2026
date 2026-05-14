@@ -23,13 +23,15 @@ $flags = [
 ];
 $active_flag = $flags[$current_lang] ?? $flags['la'];
 
-if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
-    $_SESSION['checked'] = 1;
-    $_SESSION['fname'] = 'Admin';
-    $_SESSION['lname'] = 'System';
-    $_SESSION['user_id'] = 1;
-    $_SESSION['status'] = 'Administrator';
-    $_SESSION['permissions'] = '["room_types","rooms","bookings","housekeeping","reports","settings","users"]';
+if (!isset($_SESSION['checked']) || $_SESSION['checked'] !== 1) {
+    header("Location: index.php");
+    exit();
+}
+
+// Security: Only allow 'ຜູ້ບໍລິຫານ' (Admin) to access this page
+if ($_SESSION['status'] !== 'ຜູ້ບໍລິຫານ') {
+    header("Location: menu_user.php");
+    exit();
 }
 
 $perms = json_decode($_SESSION['permissions'] ?? '[]', true);
@@ -40,7 +42,7 @@ require_once 'config/db.php';
 try {
     $stmtLogo = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('hotel_logo', 'hotel_name')");
     $hotel_settings = $stmtLogo->fetchAll(PDO::FETCH_KEY_PAIR);
-    $hotel_logo = !empty($hotel_settings['hotel_logo']) ? 'assets/img/' . $hotel_settings['hotel_logo'] : 'https://via.placeholder.com/150?text=Logo';
+    $hotel_logo = !empty($hotel_settings['hotel_logo']) ? 'assets/img/logo/' . $hotel_settings['hotel_logo'] : 'https://via.placeholder.com/150?text=Logo';
     $hotel_name = $hotel_settings['hotel_name'] ?? 'ລະບົບໂຮງແຮມ';
 } catch (Exception $e) {
     $hotel_logo = 'https://via.placeholder.com/150?text=Logo';
@@ -75,12 +77,14 @@ try {
  .content-wrapper { overflow: hidden !important; padding: 0 !important; height: calc(100vh - 57px) !important; }
  .content-wrapper iframe { display: block; width: 100%; height: 100%; border: 0; overflow: auto; }
  
- @media (max-width: 768px) {
-    .brand-text { font-size: 0.9rem !important; }
-    .nav-sidebar .nav-link p { font-size: 0.8rem !important; }
-    .main-header .navbar-nav .nav-link { font-size: 0.85rem !important; }
-    .user-panel .info a { font-size: 0.85rem !important; }
- }
+  @media (max-width: 768px) {
+     html { font-size: 14px !important; }
+     .brand-text { font-size: 0.9rem !important; font-weight: 700; }
+     .nav-sidebar .nav-link p { font-size: 0.85rem !important; }
+     .main-header .navbar-nav .nav-link { font-size: 0.85rem !important; }
+     .brand-link img { width: 50px !important; height: 50px !important; }
+     .user-panel .info a { font-size: 0.8rem !important; }
+  }
 
  /* ===== Light Blue Theme for Navbar ===== */
  .main-header.navbar {
@@ -145,7 +149,8 @@ try {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ລະບົບບໍລິຫານ ໂຮງແຮມ (Hotel Management)</title>
+  <title><?php echo htmlspecialchars($hotel_name); ?></title>
+  <link rel="shortcut icon" href="<?php echo $hotel_logo; ?>" type="image/x-icon">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
   <!-- Ionicons -->
@@ -221,11 +226,25 @@ try {
 
       <li class="dropdown dropdown-user">
           <a class="nav-link dropdown-toggle link " data-toggle="dropdown">
-            <img src="./assets/img/admin-avatar.png" height="30px" width="30px">
-            <span></span><?php echo $_SESSION['status']; ?>
+            <?php 
+              $session_img = !empty($_SESSION['profile_img']) ? $_SESSION['profile_img'] : 'default.png';
+              $nav_img_path = 'assets/img/' . $session_img;
+              if (!file_exists($nav_img_path)) {
+                $nav_img_path = 'UserImg/default.png';
+              }
+            ?>
+            <img src="<?php echo $nav_img_path; ?>" height="30px" width="30px" class="rounded-circle mr-2" style="object-fit: cover; border: 1px solid rgba(255,255,255,0.5);">
+            <span><?php echo $_SESSION['fname']; ?></span>
           </a>
-          <ul class="dropdown-menu dropdown-menu-right">
-              <a class="dropdown-item" href="javascript:void(0);" onclick="confirmLogout()"><i class="fa fa-power-off"></i> <?php echo $lang['logout']; ?></a>
+          <ul class="dropdown-menu dropdown-menu-right shadow-lg border-0" style="width: 220px; border-radius: 12px; margin-top: 10px;">
+              <li class="dropdown-header text-center p-3 border-bottom mb-2 bg-light" style="border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                  <img src="<?php echo $nav_img_path; ?>" class="rounded-circle shadow-sm mb-2" style="width: 60px; height: 60px; object-fit: cover; border: 3px solid #fff;">
+                  <div class="font-weight-bold text-dark"><?php echo $_SESSION['fname'] . ' ' . $_SESSION['lname']; ?></div>
+                  <small class="text-primary font-weight-bold"><i class="fas fa-id-badge"></i> <?php echo $_SESSION['status']; ?></small>
+              </li>
+              <a class="dropdown-item py-2" href="javascript:void(0);" onclick="confirmLogout()">
+                  <i class="fa fa-power-off mr-2 text-danger"></i> <?php echo $lang['logout']; ?>
+              </a>
           </ul>
       </li>
     </ul>
@@ -513,7 +532,7 @@ function confirmLogout() {
         showCancelButton: true,
         confirmButtonColor: '#007bff',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'ຕົກລົງ, ອອກຈາກລະບົບ',
+        confirmButtonText: 'ອອກຈາກລະບົບ',
         cancelButtonText: 'ຍົກເລີກ'
     }).then((result) => {
         if (result.isConfirmed) {

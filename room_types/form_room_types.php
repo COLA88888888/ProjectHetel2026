@@ -5,10 +5,11 @@ require_once '../config/db.php';
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
     $room_type_name = $_POST['room_type_name'];
+    $room_type_code = $_POST['room_type_code'];
     $description = $_POST['description'];
 
-    $stmt = $pdo->prepare("INSERT INTO room_types (room_type_name, description) VALUES (?, ?)");
-    if ($stmt->execute([$room_type_name, $description])) {
+    $stmt = $pdo->prepare("INSERT INTO room_types (room_type_name, room_type_code, description) VALUES (?, ?, ?)");
+    if ($stmt->execute([$room_type_name, $room_type_code, $description])) {
         logActivity($pdo, "ເພີ່ມປະເພດຫ້ອງໃໝ່", "ຊື່: $room_type_name");
         $_SESSION['success'] = "ບັນທຶກຂໍ້ມູນສຳເລັດ";
         header("Location: form_room_types.php");
@@ -112,6 +113,10 @@ $room_types = $stmt->fetchAll();
                 <form action="" method="post" id="roomTypeForm">
                     <div class="card-body">
                         <div class="form-group">
+                            <label>ລະຫັດປະເພດຫ້ອງ</label>
+                            <input type="text" name="room_type_code" id="room_type_code" class="form-control" placeholder="ກະລຸນາປ້ອນລະຫັດປະເພດຫ້ອງ...">
+                        </div>
+                        <div class="form-group">
                             <label>ຊື່ປະເພດຫ້ອງ</label>
                             <input type="text" name="room_type_name" id="room_type_name" class="form-control" placeholder="ກະລຸນາປ້ອນປະເພດຫ້ອງ...">
                         </div>
@@ -139,6 +144,7 @@ $room_types = $stmt->fetchAll();
                         <thead class="bg-light">
                             <tr>
                                 <th>#</th>
+                                <th>ລະຫັດ</th>
                                 <th>ຊື່ປະເພດຫ້ອງ</th>
                                 <th>ລາຍລະອຽດ</th>
                                 <th width="150" class="text-center">ຈັດການ</th>
@@ -149,6 +155,7 @@ $room_types = $stmt->fetchAll();
                                 <?php $i = 1; foreach ($room_types as $row): ?>
                                     <tr>
                                         <td><?php echo $i++; ?></td>
+                                        <td><span class="badge badge-secondary"><?php echo htmlspecialchars($row['room_type_code'] ?? '-'); ?></span></td>
                                         <td><strong><?php echo htmlspecialchars($row['room_type_name'] ?? ''); ?></strong></td>
                                         <td><?php echo htmlspecialchars($row['description'] ?? ''); ?></td>
                                         <td class="text-center">
@@ -159,7 +166,7 @@ $room_types = $stmt->fetchAll();
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">ບໍ່ມີຂໍ້ມູນ</td>
+                                    <td colspan="5" class="text-center text-muted">ບໍ່ມີຂໍ້ມູນ</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>

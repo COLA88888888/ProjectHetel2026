@@ -101,7 +101,7 @@ $logs = $stmt->fetchAll();
             "info": true,
             "autoWidth": false,
             "responsive": true,
-            "pageLength": 25,
+            "pageLength": 10,
             "language": {
                 "search": "ຄົ້ນຫາ:",
                 "lengthMenu": "ສະແດງ _MENU_ ລາຍການ",

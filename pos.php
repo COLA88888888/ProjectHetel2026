@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'config/session_check.php';
 require_once 'config/db.php';
 
 // Handle Checkout
@@ -14,6 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['checkout_pos']) || is
             // Get current tax percent
             $stmtTax = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
             $tax_p = (float)($stmtTax->fetchColumn() ?: 0);
+
+            $payment_method = $_POST['payment_method'] ?? 'ເງິນສົດ';
+            $received = (float)($_POST['received'] ?? 0);
+            $change_amount = (float)($_POST['change_amount'] ?? 0);
 
             // Generate Bill ID: YYYYNNNN (e.g. 20260001)
             $year = date('Y');
@@ -36,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['checkout_pos']) || is
                 $item_tax = round($subtotal * ($tax_p / 100));
                 $total_with_tax = $subtotal + $item_tax;
                 
-                $stmt = $pdo->prepare("INSERT INTO orders (bill_id, prod_id, o_qty, amount, o_date) VALUES (?, ?, ?, ?, CURDATE())");
-                $stmt->execute([$bill_id, $pid, $q, $total_with_tax]);
+                $stmt = $pdo->prepare("INSERT INTO orders (bill_id, prod_id, o_qty, amount, received, change_amount, payment_method, o_date) VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())");
+                $stmt->execute([$bill_id, $pid, $q, $total_with_tax, $received, $change_amount, $payment_method]);
                 
                 $upd = $pdo->prepare("UPDATE products SET qty = qty - ? WHERE prod_id = ?");
                 $upd->execute([$q, $pid]);
@@ -96,7 +101,7 @@ foreach ($products as $p) {
         if (window.top === window.self) { window.location.href = 'menu_admin.php'; }
     </script>
     <style>
-        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', 'Phetsarath OT', 'Saysettha OT', sans-serif !important; }
         .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
         body { background-color: #f8f9fa; padding: 10px; }
         
@@ -126,31 +131,28 @@ foreach ($products as $p) {
         /* Product Cards */
         .product-card {
             cursor: pointer;
-            border: 1px solid #eee;
-            border-radius: 4px;
+            border: none !important;
+            border-radius: 12px !important;
             overflow: hidden;
             position: relative;
             background: #fff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+            transition: all 0.2s ease;
         }
-        .product-card:active { background: #f0f0f0; }
+        .product-card:active { transform: scale(0.96); background: #f8f9fa; }
         .product-img {
             width: 100%;
-            height: 100px;
+            height: 120px;
             object-fit: cover;
+            border-bottom: 1px solid #f0f0f0;
         }
         .product-placeholder {
             width: 100%;
-            height: 100px;
+            height: 120px;
+            background: #f8f9fa;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            color: #ccc;
-            background: #fdfdfd;
-        }
-        .product-card .card-body { padding: 10px; }
         .product-name { font-size: 0.82rem; font-weight: 600; color: #444; line-height: 1.4; min-height: 2.8em; }
         .product-price { font-size: 0.92rem; font-weight: 700; color: #2ecc71; }
         .product-stock { font-size: 0.7rem; color: #aaa; margin-top: 4px; }
@@ -177,13 +179,15 @@ foreach ($products as $p) {
         .cart-container { height: 55vh; overflow-y: auto; background: #fff; border-radius: 4px; }
         .cart-item { border-bottom: 1px solid #f8f8f8; padding: 12px 10px; }
         
-        /* Responsive */
+        /* Mobile Adjustments */
         @media (max-width: 768px) {
-            h2 { font-size: 1.15rem; }
-            .product-placeholder, .product-img { height: 85px; }
-            .product-name { font-size: 0.75rem; }
-            .product-price { font-size: 0.82rem; }
-            .cat-btn { padding: 6px 12px; font-size: 0.78rem; }
+            body { padding: 5px; }
+            h2 { font-size: 1.25rem !important; }
+            .product-name { font-size: 0.75rem !important; min-height: 2em !important; }
+            .product-price { font-size: 0.85rem !important; }
+            .product-stock { font-size: 0.65rem !important; }
+            .product-img, .product-placeholder { height: 100px !important; }
+            .cat-btn { padding: 6px 12px; font-size: 0.75rem; }
             .cart-container { height: 42vh; }
         }
     </style>
@@ -257,7 +261,7 @@ foreach ($products as $p) {
                 <div class="card-body p-2" style="max-height: 70vh; overflow-y: auto;" id="productGrid">
                     <div class="row" id="productList">
                         <?php foreach($products as $p): ?>
-                            <div class="col-xl-3 col-lg-4 col-md-6 col-4 mb-3 product-item" data-category="<?php echo htmlspecialchars($p['category']); ?>">
+                            <div class="col-xl-3 col-lg-4 col-md-6 col-6 mb-3 product-item" data-category="<?php echo htmlspecialchars($p['category']); ?>">
                                 <div class="card product-card shadow-sm h-100" onclick="addToCart(<?php echo $p['prod_id']; ?>, '<?php echo htmlspecialchars(addslashes($p['prod_name'])); ?>', <?php echo $p['sprice']; ?>, <?php echo $p['qty']; ?>, '<?php echo $p['image']; ?>')">
                                     <!-- Category Label -->
                                     <span class="cat-label"><?php echo htmlspecialchars($p['category'] ?: 'ອື່ນໆ'); ?></span>
@@ -484,28 +488,110 @@ function renderCart() {
 // Payment confirmation
 $('#posForm').on('submit', function(e) {
     e.preventDefault();
-    var total = $('#cartTotal').text();
+    var totalStr = $('#cartTotal').text();
+    var totalVal = parseFloat(totalStr.replace(/,/g, '')) || 0;
+    
     Swal.fire({
-        title: 'ຢືນຢັນການຊຳລະເງິນ',
+        title: 'ຊຳລະເງິນ',
         html: `
-            <div class="mb-1" style="font-size: 1rem; color: #666;">ຍອດເງິນທີ່ຕ້ອງຊຳລະທັງໝົດ:</div>
-            <div style="font-size: 2rem; font-weight: 800; color: #28a745; letter-spacing: 0.5px;">
-                ${total} <span style="font-size: 1.1rem;">${currencySymbol}</span>
+            <div class="text-left mb-3">
+                <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                    <span class="font-weight-bold">ຍອດລວມທັງໝົດ:</span>
+                    <strong class="text-danger" style="font-size: 1.5rem;">${totalStr} ${currencySymbol}</strong>
+                </div>
+                <div class="form-group mb-2">
+                    <label class="small font-weight-bold">ວິທີຊຳລະ</label>
+                    <select id="swal_payment_method" class="form-control">
+                        <option value="ເງິນສົດ">ເງິນສົດ</option>
+                        <option value="ເງິນໂອນ">ເງິນໂອນ</option>
+                    </select>
+                </div>
+                <div class="form-group mb-2">
+                    <label class="small font-weight-bold">ຮັບເງິນມາ</label>
+                    <div class="input-group">
+                        <input type="text" id="swal_received" class="form-control text-right font-weight-bold" placeholder="0">
+                        <div class="input-group-append">
+                            <button type="button" id="swal_btn_full" class="btn btn-primary btn-sm px-2">ຮັບເຕັມ</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="small font-weight-bold">ເງິນທອນ</label>
+                    <input type="text" id="swal_change" class="form-control text-right text-danger font-weight-bold" value="0" readonly>
+                </div>
             </div>
         `,
         showCancelButton: true,
         confirmButtonColor: '#28a745',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'ຢືນຢັນການຮັບເງິນ',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'ຢືນຢັນການຂາຍ',
         cancelButtonText: 'ຍົກເລີກ',
-        reverseButtons: true,
-        padding: '2rem',
-        customClass: {
-            title: 'font-weight-bold text-dark',
-            popup: 'rounded-lg'
+        didOpen: () => {
+            const popup = Swal.getPopup();
+            const receivedInput = popup.querySelector('#swal_received');
+            const changeInput = popup.querySelector('#swal_change');
+            const methodSelect = popup.querySelector('#swal_payment_method');
+            const fullBtn = popup.querySelector('#swal_btn_full');
+            
+            const calc = () => {
+                let r = parseFloat(receivedInput.value.replace(/,/g, '')) || 0;
+                let c = r - totalVal;
+                if (c < 0) c = 0;
+                changeInput.value = c.toLocaleString('en-US');
+            };
+
+            receivedInput.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/[^0-9]/g, '');
+                if (val !== '') {
+                    e.target.value = parseInt(val).toLocaleString('en-US');
+                }
+                calc();
+            });
+
+            methodSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'ເງິນໂອນ') {
+                    receivedInput.value = totalVal.toLocaleString('en-US');
+                    receivedInput.readOnly = true;
+                    fullBtn.disabled = true;
+                } else {
+                    receivedInput.value = '';
+                    receivedInput.readOnly = false;
+                    fullBtn.disabled = false;
+                }
+                calc();
+            });
+
+            fullBtn.addEventListener('click', () => {
+                receivedInput.value = totalVal.toLocaleString('en-US');
+                calc();
+            });
+
+            receivedInput.focus();
+        },
+        preConfirm: () => {
+            const popup = Swal.getPopup();
+            const receivedStr = popup.querySelector('#swal_received').value;
+            const received = parseFloat(receivedStr.replace(/,/g, '')) || 0;
+            const method = popup.querySelector('#swal_payment_method').value;
+            const change = parseFloat(popup.querySelector('#swal_change').value.replace(/,/g, '')) || 0;
+
+            if (received < totalVal && method === 'ເງິນສົດ') {
+                Swal.showValidationMessage('ຍອດເງິນບໍ່ພຽງພໍ!');
+                return false;
+            }
+            return { received, method, change };
         }
     }).then((result) => {
-        if (result.isConfirmed) { this.submit(); }
+        if (result.isConfirmed) {
+            $('#hiddenInputs').html(`
+                <input type="hidden" name="payment_method" value="${result.value.method}">
+                <input type="hidden" name="received" value="${result.value.received}">
+                <input type="hidden" name="change_amount" value="${result.value.change}">
+            `);
+            // Add existing items
+            renderCart(); // Re-render to ensure all items are in hidden inputs
+            $('#posForm')[0].submit();
+        }
     });
 });
 

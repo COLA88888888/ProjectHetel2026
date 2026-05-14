@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'config/session_check.php';
 require_once 'config/db.php';
 
 // Handle Checkout Confirmation
@@ -151,23 +152,30 @@ if (isset($_GET['booking_id'])) {
         <!-- List of Occupied Rooms -->
         <div class="col-md-4">
             <div class="card card-primary card-outline shadow-sm">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-bed"></i> ຫ້ອງທີ່ກຳລັງເຂົ້າພັກ</h3>
+                <div class="card-header p-2">
+                    <div class="input-group">
+                        <input type="text" id="room_search_input" class="form-control form-control-sm" placeholder="ຄົ້ນຫາຫ້ອງ ຫຼື ຊື່ລູກຄ້າ...">
+                        <div class="input-group-append">
+                            <span class="input-group-text"><i class="fas fa-search text-primary"></i></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <ul class="nav nav-pills flex-column">
                         <?php if (count($active_bookings) > 0): ?>
+                            <div id="room_list_container">
                             <?php foreach($active_bookings as $b): ?>
-                                <li class="nav-item">
+                                <li class="nav-item room-item">
                                     <a href="?booking_id=<?php echo $b['id']; ?>" class="nav-link <?php echo (isset($_GET['booking_id']) && $_GET['booking_id'] == $b['id']) ? 'active bg-primary' : ''; ?>" style="border-bottom: 1px solid #eee;">
-                                        <i class="fas fa-door-closed mr-2"></i> ຫ້ອງ <strong><?php echo htmlspecialchars($b['room_number']); ?></strong>
+                                        <i class="fas fa-door-closed mr-2"></i> ຫ້ອງ <strong class="room-num"><?php echo htmlspecialchars($b['room_number']); ?></strong>
                                         <span class="float-right badge <?php echo (isset($_GET['booking_id']) && $_GET['booking_id'] == $b['id']) ? 'badge-light' : 'badge-primary'; ?>">ເລືອກ</span>
                                         <div class="small mt-1 text-muted <?php echo (isset($_GET['booking_id']) && $_GET['booking_id'] == $b['id']) ? 'text-white' : ''; ?>">
-                                            <i class="fas fa-user"></i> <?php echo htmlspecialchars($b['customer_name']); ?>
+                                            <i class="fas fa-user"></i> <span class="guest-name"><?php echo htmlspecialchars($b['customer_name']); ?></span>
                                         </div>
                                     </a>
                                 </li>
                             <?php endforeach; ?>
+                            </div>
                         <?php else: ?>
                             <li class="nav-item p-3 text-center text-muted">
                                 ບໍ່ມີຫ້ອງເຂົ້າພັກໃນຂະນະນີ້
@@ -307,7 +315,7 @@ if (isset($_GET['booking_id'])) {
                                         <label>ເລືອກວິທີຊຳລະ</label>
                                         <select name="payment_method" id="payment_method" class="form-control">
                                             <option value="ເງິນສົດ">ເງິນສົດ</option>
-                                            <option value="ໂອນ">ໂອນເງິນ </option>
+                                            <option value="ເງິນໂອນ">ເງິນໂອນ</option>
                                         </select>
                                     </div>
                                 </div>
@@ -317,7 +325,7 @@ if (isset($_GET['booking_id'])) {
                                         <div class="input-group">
                                             <input type="text" name="amount_received" id="amount_received" class="form-control number-format text-right font-weight-bold" placeholder="0">
                                             <div class="input-group-append">
-                                                <button type="button" id="btn_full_pay" class="btn btn-primary btn-sm px-3" style="font-size: 0.8rem;">ຮັບເຕັມ</button>
+                                                <button type="button" id="btn_full_pay" class="btn btn-primary btn-sm px-3" style="font-size: 0.8rem;">ຮັບລາຄາເຕັມ</button>
                                             </div>
                                         </div>
                                     </div>
@@ -369,7 +377,8 @@ $(document).ready(function() {
     $('#btn_full_pay').on('click', function() {
         $('#amount_received').val(grandTotal.toLocaleString('en-US'));
         calculateChange();
-        $('#amount_received').focus();
+        // Trigger checkout confirmation immediately
+        $('#checkoutForm').submit();
     });
 
     // Number formatting
@@ -385,7 +394,7 @@ $(document).ready(function() {
 
     $('#payment_method').on('change', function() {
         var method = $(this).val();
-        if (method === 'ໂອນ' || method === 'ບັດ') {
+        if (method === 'ເງິນໂອນ' || method === 'ບັດ') {
             $('#amount_received').val(grandTotal.toLocaleString('en-US'));
             $('#amount_received').prop('readonly', true);
             calculateChange();
@@ -433,6 +442,23 @@ $(document).ready(function() {
                 $('#checkoutForm')[0].submit();
             }
         });
+    });
+
+    // Room List Live Search
+    $('#room_search_input').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        var visibleCount = 0;
+        
+        $(".room-item").each(function() {
+            var isVisible = $(this).text().toLowerCase().indexOf(value) > -1;
+            $(this).toggle(isVisible);
+            if (isVisible) visibleCount++;
+        });
+
+        $('#no_room_msg').remove();
+        if (visibleCount === 0) {
+            $('#room_list_container').append('<li id="no_room_msg" class="nav-item p-3 text-center text-muted">ບໍ່ມີຂໍ້ມູນ</li>');
+        }
     });
 });
 </script>

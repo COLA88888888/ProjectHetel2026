@@ -11,10 +11,10 @@ if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
 ?>
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
 <script src="jquery.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped+Looped:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
     <style>
     * {
-      font-family: 'Noto Sans Lao Looped', sans-serif;
+      font-family: 'Noto Sans Lao Looped', 'Phetsarath OT', 'Saysettha OT', sans-serif;
     }
 
     #save {
@@ -76,10 +76,19 @@ require_once 'config/db.php';
 
 try {
     // Hotel Metrics
+    // Hotel Metrics
     $total_rooms = $pdo->query("SELECT COUNT(*) FROM rooms")->fetchColumn() ?: 0;
-    $available_rooms = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້' OR housekeeping_status = 'Ready')")->fetchColumn() ?: 0;
-    // Unavailable rooms = Occupied + Cleaning + Maintenance/Broken
-    $unavailable_rooms = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status != 'Available' OR (housekeeping_status != 'ພ້ອມໃຊ້' AND housekeeping_status != 'Ready')")->fetchColumn() ?: 0;
+    
+    // Rooms that are NOT available (Occupied, Cleaning, or Reserved)
+    // The user wants to count BOTH Reservations (Booked) and Staying (Occupied) as Unavailable
+    $unavailable_rooms = $pdo->query("
+        SELECT COUNT(DISTINCT id) FROM rooms 
+        WHERE status != 'Available' 
+        OR (housekeeping_status != 'ພ້ອມໃຊ້' AND housekeeping_status != 'Ready')
+        OR id IN (SELECT room_id FROM bookings WHERE status IN ('Booked', 'Occupied', 'Checked In'))
+    ")->fetchColumn() ?: 0;
+    
+    $available_rooms = $total_rooms - $unavailable_rooms;
     $guest_count = $pdo->query("SELECT COALESCE(SUM(guest_count), 0) FROM bookings WHERE status IN ('Occupied', 'Checked In')")->fetchColumn() ?: 0;
     
     // Revenue calculations (Room + POS)
@@ -147,119 +156,99 @@ try {
       body { font-family: 'Noto Sans Lao Looped', sans-serif; background: #f0f4f8; }
       .dashboard-page { padding: 24px 20px 20px; }
 
-      /* ===== Modern Stat Cards ===== */
-      .stat-cards-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+      /* ===== Modern & Compact Stat Cards ===== */
+      .stat-cards-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
 
       .stat-card {
         position: relative;
-        border-radius: 18px;
-        padding: 22px 20px 16px;
+        border-radius: 12px;
+        padding: 16px 18px 14px;
         color: #fff;
         overflow: hidden;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         text-decoration: none;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-height: 140px;
+        min-height: 110px;
+        border: 1px solid rgba(255,255,255,0.1);
       }
 
-      /* Freeze all mouse/touch states — no hover, no underline, no color change */
-      .stat-card:hover,
-      .stat-card:focus,
-      .stat-card:active,
-      .stat-card:visited {
+      /* No Hover - Keep static */
+      .stat-card:hover, .stat-card:focus, .stat-card:active {
         color: #fff !important;
         text-decoration: none !important;
-        outline: none;
-      }
-      /* Lock child elements color too */
-      .stat-card:hover *,
-      .stat-card:focus *,
-      .stat-card:active * {
-        color: #fff !important;
-        text-decoration: none !important;
+        transform: none !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
       }
 
-      /* Gradient presets */
-      .stat-card.gc-green  { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-      .stat-card.gc-amber  { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); }
-      .stat-card.gc-blue   { background: linear-gradient(135deg, #2980b9 0%, #6dd5fa 100%); }
-      .stat-card.gc-indigo { background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%); }
-      .stat-card.gc-teal   { background: linear-gradient(135deg, #11998e 0%, #00b4db 100%); }
+      /* Premium Gradient presets */
+      .stat-card.gc-green  { background: linear-gradient(135deg, #1D976C 0%, #93F9B9 100%); }
+      .stat-card.gc-amber  { background: linear-gradient(135deg, #FF8008 0%, #FFC837 100%); }
+      .stat-card.gc-blue   { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); }
+      .stat-card.gc-indigo { background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%); }
+      .stat-card.gc-teal   { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); }
       .stat-card.gc-dark   { background: linear-gradient(135deg, #232526 0%, #414345 100%); }
-
-      /* Decorative circle */
-      .stat-card::before {
-        content: '';
-        position: absolute;
-        width: 120px; height: 120px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.12);
-        top: -30px; right: -30px;
-      }
-      .stat-card::after {
-        content: '';
-        position: absolute;
-        width: 80px; height: 80px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.08);
-        bottom: 10px; right: 20px;
-      }
 
       .stat-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
       .stat-card-label {
-        font-size: 0.78rem;
-        font-weight: 600;
-        letter-spacing: 0.8px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
         text-transform: uppercase;
-        opacity: 0.85;
+        opacity: 0.95;
         margin-bottom: 6px;
+        white-space: nowrap;
       }
       .stat-card-value {
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 800;
-        line-height: 1.15;
-        letter-spacing: -0.5px;
+        line-height: 1.1;
+        letter-spacing: -0.2px;
       }
       .stat-card-icon {
-        font-size: 2.2rem;
-        opacity: 0.3;
+        font-size: 1.8rem;
+        opacity: 0.25;
         z-index: 1;
-        margin-top: 2px;
+        position: absolute;
+        top: 10px;
+        right: 12px;
       }
       .stat-card-footer {
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-size: 0.78rem;
+        gap: 5px;
+        font-size: 0.68rem;
         font-weight: 600;
-        opacity: 0.9;
-        margin-top: 14px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(255,255,255,0.25);
+        opacity: 0.85;
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255,255,255,0.2);
         z-index: 1;
       }
-      .stat-card-footer i { font-size: 0.75rem; }
+      .stat-card-footer i { font-size: 0.65rem; }
 
       /* ===== Chart Section ===== */
       .card-title { font-size: 0.9rem !important; }
       .table { font-size: 0.8rem !important; }
 
-      /* ===== Responsive ===== */
+      /* ===== Responsive: Force 2 Columns on Mobile ===== */
       @media (max-width: 768px) {
         .dashboard-page { padding: 14px 10px; }
-        .stat-cards-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .stat-card-value { font-size: 1.4rem; }
-        .stat-card { min-height: 120px; padding: 16px 14px 12px; }
-        .stat-card-icon { font-size: 1.6rem; }
+        .section-header h4 { font-size: 1.1rem; }
+        .stat-cards-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .stat-card-value { font-size: 1.15rem; }
+        .stat-card { min-height: 80px; padding: 10px 12px; }
+        .stat-card-icon { font-size: 1.3rem; }
+        .stat-card-label { font-size: 0.65rem; }
+        .stat-card-footer { font-size: 0.65rem; margin-top: 8px; padding-top: 6px; }
       }
       @media (max-width: 480px) {
+        .dashboard-page { padding: 8px 6px; }
+        .section-header h4 { font-size: 1rem; }
         .stat-cards-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-        .stat-card-value { font-size: 1.15rem; }
-        .stat-card { min-height: 105px; padding: 12px 11px 10px; }
-        .stat-card-label { font-size: 0.68rem; }
-        .stat-card-footer { font-size: 0.68rem; margin-top: 8px; padding-top: 7px; }
+        .stat-card-value { font-size: 1rem; }
+        .stat-card { min-height: 75px; padding: 8px 10px; }
       }
     </style>
   <body class="hold-transition sidebar-mini layout-fixed">

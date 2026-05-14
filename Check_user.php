@@ -49,6 +49,7 @@ try {
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['status'] = $user['status'];
             $_SESSION['permissions'] = $user['permissions'];
+            $_SESSION['profile_img'] = $user['profile_img'];
 
             $redirect = ($user['status'] == "ຜູ້ບໍລິຫານ") ? 'menu_admin.php' : 'menu_user.php';
             

@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'config/session_check.php';
 require_once 'config/db.php';
 
 // Fetch room types
@@ -75,6 +76,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
     $check_out = $_POST['check_out_date'];
     $deposit = (float)str_replace(',', '', $_POST['deposit_amount']);
     
+    // Overlap Check for Update
+    $stmtRoomId = $pdo->prepare("SELECT room_id FROM bookings WHERE id = ?");
+    $stmtRoomId->execute([$booking_id]);
+    $current_room_id = $stmtRoomId->fetchColumn();
+
+    $stmtCheck = $pdo->prepare("
+        SELECT COUNT(*) FROM bookings 
+        WHERE room_id = ? 
+        AND status IN ('Booked', 'Occupied', 'Checked In') 
+        AND id != ?
+        AND check_in_date < ? 
+        AND check_out_date > ?
+    ");
+    $stmtCheck->execute([$current_room_id, $booking_id, $check_out, $check_in]);
+    $is_occupied = $stmtCheck->fetchColumn() > 0;
+
+    if ($is_occupied) {
+        $_SESSION['error'] = "ຂໍອະໄພ, ວັນທີທີ່ທ່ານປ່ຽນໃໝ່ມີຄົນຈອງຫ້ອງນີ້ແລ້ວ!";
+        header("Location: reserve.php");
+        exit();
+    }
+
     // Get room price to recalculate total
     $stmtPrice = $pdo->prepare("SELECT r.price FROM rooms r JOIN bookings b ON r.id = b.room_id WHERE b.id = ?");
     $stmtPrice->execute([$booking_id]);
@@ -113,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
         $stmtCheck = $pdo->prepare("
             SELECT COUNT(*) FROM bookings 
             WHERE room_id = ? 
-            AND status IN ('Booked', 'Occupied') 
+            AND status IN ('Booked', 'Occupied', 'Checked In') 
             AND check_in_date < ? 
             AND check_out_date > ?
         ");
@@ -143,14 +166,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
         exit();
     }
 
-// Get list of current reservations
-$stmtReserved = $pdo->query("
-    SELECT b.*, r.room_number, r.room_type 
+// Pagination Logic
+$limit = 10;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if($page < 1) $page = 1;
+$offset = ($page - 1) * $limit;
+
+// Get total count for pagination
+$stmtCount = $pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'Booked'");
+$total_records = $stmtCount->fetchColumn();
+$total_pages = ceil($total_records / $limit);
+
+$stmtReserved = $pdo->prepare("
+    SELECT b.*, r.room_number, r.room_type,
+    (SELECT COUNT(*) FROM bookings b2 
+     WHERE ((b2.customer_phone = b.customer_phone AND b.customer_phone != '' AND b.customer_phone != '-') 
+            OR (b2.customer_name = b.customer_name AND b2.customer_phone = b.customer_phone))
+     AND b2.status IN ('Booked', 'Occupied') 
+     AND b2.id != b.id
+     AND b2.check_in_date < b.check_out_date 
+     AND b2.check_out_date > b.check_in_date) as other_bookings
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
     WHERE b.status = 'Booked' 
     ORDER BY b.check_in_date ASC
+    LIMIT :limit OFFSET :offset
 ");
+$stmtReserved->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmtReserved->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmtReserved->execute();
 $reservations = $stmtReserved->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -322,7 +366,17 @@ $reservations = $stmtReserved->fetchAll();
     <!-- Current Reservations List -->
     <?php if (count($reservations) > 0): ?>
     <div class="card card-outline card-info shadow-sm">
-        <div class="card-header"><h3 class="card-title"><i class="fas fa-list"></i> ລາຍການຈອງລ່ວງໜ້າ (<?php echo count($reservations); ?>)</h3></div>
+        <div class="card-header d-flex align-items-center">
+            <h3 class="card-title"><i class="fas fa-list"></i> ລາຍການຈອງລ່ວງໜ້າ (<?php echo count($reservations); ?>)</h3>
+            <div class="card-tools ml-auto">
+                <div class="input-group input-group-sm" style="width: 220px;">
+                    <input type="text" id="res_search_input" class="form-control" placeholder="ຄົ້ນຫາຊື່ ຫຼື ເບີໂທ...">
+                    <div class="input-group-append">
+                        <span class="input-group-text bg-white"><i class="fas fa-search text-warning"></i></span>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="card-body p-2 p-md-3">
             <div class="table-responsive">
             <table class="table table-bordered table-striped text-center mb-0" style="min-width: 600px;">
@@ -333,19 +387,31 @@ $reservations = $stmtReserved->fetchAll();
                         <th>ເບີໂທ</th>
                         <th>ວັນເຂົ້າ</th>
                         <th>ວັນອອກ</th>
+                        <th>ຄືນ</th>
                         <th>ຍອດລວມ</th>
                         <th>ມັດຈຳ</th>
                         <th>ຈັດການ</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="res_table_body">
                     <?php foreach($reservations as $res): ?>
-                    <tr>
+                    <tr class="res-row">
                         <td><strong><?php echo htmlspecialchars($res['room_number']); ?></strong><br><small class="text-muted"><?php echo htmlspecialchars($res['room_type']); ?></small></td>
-                        <td class="text-left"><?php echo htmlspecialchars($res['customer_name']); ?></td>
-                        <td><?php echo htmlspecialchars($res['customer_phone']); ?></td>
+                        <td class="text-left">
+                            <span class="customer-name-text"><?php echo htmlspecialchars($res['customer_name']); ?></span>
+                            <?php if($res['other_bookings'] > 0): ?>
+                                <br><span class="badge badge-danger" title="ລູກຄ້ານີ້ມີການຈອງ ຫຼື ເຂົ້າພັກຫ້ອງອື່ນອີກ"><i class="fas fa-users"></i> ຈອງ <?php echo $res['other_bookings'] + 1; ?> ຫ້ອງ</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="customer-phone-text"><?php echo htmlspecialchars($res['customer_phone']); ?></td>
                         <td class="text-success font-weight-bold"><?php echo date('d/m/Y', strtotime($res['check_in_date'])); ?></td>
                         <td class="text-danger"><?php echo date('d/m/Y', strtotime($res['check_out_date'])); ?></td>
+                        <td>
+                            <?php 
+                                $diff = date_diff(date_create($res['check_in_date']), date_create($res['check_out_date']));
+                                echo $diff->format("%a"); 
+                            ?>
+                        </td>
                         <td class="text-right"><?php echo number_format($res['total_price']); ?> ₭</td>
                         <td class="text-right text-info"><?php echo number_format($res['deposit_amount']); ?> ₭</td>
                         <td class="align-middle text-center">
@@ -388,6 +454,30 @@ $reservations = $stmtReserved->fetchAll();
                 </tbody>
             </table>
             </div>
+
+            <!-- Pagination UI -->
+            <?php if ($total_pages > 1): ?>
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    ສະແດງ <?php echo $offset + 1; ?> ຫາ <?php echo min($offset + $limit, $total_records); ?> ຈາກທັງໝົດ <?php echo $total_records; ?> ລາຍການ
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm m-0">
+                        <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+                            <a class="page-item page-link" href="?page=<?php echo $page - 1; ?>"><i class="fas fa-chevron-left"></i></a>
+                        </li>
+                        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                            <li class="page-item <?php echo ($page == $i) ? 'active' : ''; ?>">
+                                <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo $page + 1; ?>"><i class="fas fa-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
@@ -681,6 +771,24 @@ $(document).ready(function() {
         var val = $(this).val().replace(/,/g, '');
         if(!isNaN(val) && val !== '') {
             $(this).val(new Intl.NumberFormat().format(val));
+        }
+    });
+
+    // Reservation Table Live Search
+    $('#res_search_input').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        var visibleRows = 0;
+        
+        $("#res_table_body tr.res-row").each(function() {
+            var isVisible = $(this).text().toLowerCase().indexOf(value) > -1;
+            $(this).toggle(isVisible);
+            if (isVisible) visibleRows++;
+        });
+
+        // Show/Hide "No results" message
+        $('#no_res_row').remove();
+        if (visibleRows === 0) {
+            $("#res_table_body").append('<tr id="no_res_row"><td colspan="8" class="py-4 text-center text-muted"><strong><i class="fas fa-search-minus"></i> ບໍ່ມີຂໍ້ມູນທີ່ທ່ານຄົ້ນຫາ!</strong></td></tr>');
         }
     });
 });

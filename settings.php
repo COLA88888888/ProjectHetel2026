@@ -54,10 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
         
         if (in_array($ext, $allowed)) {
             $newname = 'logo_' . time() . '.' . $ext;
-            if (move_uploaded_file($_FILES['hotel_logo']['tmp_name'], 'assets/img/' . $newname)) {
+            if (move_uploaded_file($_FILES['hotel_logo']['tmp_name'], 'assets/img/logo/' . $newname)) {
                 // Delete old logo if exists
                 if (!empty($settings_data['hotel_logo'])) {
-                    $oldPath = 'assets/img/' . $settings_data['hotel_logo'];
+                    $oldPath = 'assets/img/logo/' . $settings_data['hotel_logo'];
                     if (file_exists($oldPath) && $settings_data['hotel_logo'] != 'admin-avatar.png') {
                         unlink($oldPath);
                     }
@@ -74,10 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
         
         if (in_array($ext, $allowed)) {
             $newname = 'qr_' . time() . '.' . $ext;
-            if (move_uploaded_file($_FILES['hotel_qr']['tmp_name'], 'assets/img/' . $newname)) {
+            if (move_uploaded_file($_FILES['hotel_qr']['tmp_name'], 'assets/img/QR/' . $newname)) {
                 // Delete old QR if exists
                 if (!empty($settings_data['hotel_qr'])) {
-                    $oldPath = 'assets/img/' . $settings_data['hotel_qr'];
+                    $oldPath = 'assets/img/QR/' . $settings_data['hotel_qr'];
                     if (file_exists($oldPath)) {
                         unlink($oldPath);
                     }
@@ -121,14 +121,31 @@ foreach($currencies as $c) {
     <!-- Noto Sans Lao Looped -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
+        body { 
+            font-family: 'Noto Sans Lao Looped', sans-serif !important; 
+            background-color: #f4f6f9; 
+            padding: 15px; 
+            font-size: 0.9rem;
+        }
+        h2 { font-size: 1.5rem; font-weight: 700; }
+        .card-title { font-size: 1.1rem; font-weight: 600; }
         .logo-preview {
-            width: 150px;
-            height: 150px;
+            width: 120px;
+            height: 120px;
             object-fit: cover;
             border-radius: 8px;
             border: 2px dashed #ccc;
             margin-bottom: 10px;
+        }
+        .form-group label { font-weight: 500; color: #555; }
+        
+        @media (max-width: 576px) {
+            body { padding: 10px; font-size: 0.85rem; }
+            h2 { font-size: 1.25rem; }
+            .logo-preview { width: 100px; height: 100px; }
+            .col-form-label { text-align: left !important; padding-bottom: 0; }
+            .card-body { padding: 15px; }
+            .btn { font-size: 0.85rem; }
         }
     </style>
 </head>
@@ -167,7 +184,7 @@ foreach($currencies as $c) {
                         <div class="row mb-4">
                             <div class="col-sm-6 text-center border-right">
                                 <?php if(!empty($settings_data['hotel_logo'])): ?>
-                                    <img id="previewLogo" src="assets/img/<?php echo $settings_data['hotel_logo']; ?>" class="logo-preview shadow-sm">
+                                    <img id="previewLogo" src="assets/img/logo/<?php echo $settings_data['hotel_logo']; ?>" class="logo-preview shadow-sm">
                                 <?php else: ?>
                                     <img id="previewLogo" src="https://via.placeholder.com/150?text=Logo" class="logo-preview shadow-sm">
                                 <?php endif; ?>
@@ -181,7 +198,7 @@ foreach($currencies as $c) {
                             </div>
                             <div class="col-sm-6 text-center">
                                 <?php if(!empty($settings_data['hotel_qr'])): ?>
-                                    <img id="previewQR" src="assets/img/<?php echo $settings_data['hotel_qr']; ?>" class="logo-preview shadow-sm">
+                                    <img id="previewQR" src="assets/img/QR/<?php echo $settings_data['hotel_qr']; ?>" class="logo-preview shadow-sm">
                                 <?php else: ?>
                                     <img id="previewQR" src="https://via.placeholder.com/150?text=QR+Code" class="logo-preview shadow-sm">
                                 <?php endif; ?>
