@@ -25,10 +25,10 @@ $active_flag = $flags[$current_lang] ?? $flags['la'];
 
 if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
     $_SESSION['checked'] = 1;
-    $_SESSION['fname'] = 'ຜູ້ບໍລິຫານ';
-    $_SESSION['lname'] = 'ລະບົບ';
+    $_SESSION['fname'] = 'Admin';
+    $_SESSION['lname'] = 'System';
     $_SESSION['user_id'] = 1;
-    $_SESSION['status'] = 'ຜູ້ບໍລິຫານ';
+    $_SESSION['status'] = 'Administrator';
     $_SESSION['permissions'] = '["room_types","rooms","bookings","housekeeping","reports","settings","users"]';
 }
 
@@ -68,6 +68,12 @@ try {
  .os-scrollbar-handle { background: rgba(93,173,226,0.4) !important; }
  .sidebar { height: calc(100vh - 240px) !important; }
  .nav-sidebar { padding-bottom: 30px !important; }
+
+ /* ===== Fix Scrollbar: ປິດ scroll ຂອງ body ແລະ content-wrapper, ໃຫ້ iframe scroll ດຽວ ===== */
+ html, body { overflow: hidden !important; height: 100% !important; }
+ .wrapper { height: 100vh !important; overflow: hidden !important; }
+ .content-wrapper { overflow: hidden !important; padding: 0 !important; height: calc(100vh - 57px) !important; }
+ .content-wrapper iframe { display: block; width: 100%; height: 100%; border: 0; overflow: auto; }
  
  @media (max-width: 768px) {
     .brand-text { font-size: 0.9rem !important; }
@@ -173,7 +179,7 @@ try {
         <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
       </li>
       <li class="nav-item d-none d-sm-inline-block">
-        <a href="walkin.php" target="frame" class="nav-link"><b>ໜ້າຫຼັກ</b></a>
+        <a href="Homepage.php" target="frame" class="nav-link"><b>ໜ້າຫຼັກ</b></a>
       </li>
     </ul>
 
@@ -229,9 +235,9 @@ try {
   <!-- Main Sidebar Container -->
   <aside class="main-sidebar elevation-4">
     <!-- Brand Logo -->
-    <a href="menu_admin.php" class="brand-link text-center" style="padding: 25px 10px; height: auto; display: block; border-bottom: 1px solid #4b545c;">
-      <img src="<?php echo $hotel_logo; ?>" alt="Hotel Logo" class="elevation-3" style="width: 150px; height: 150px; object-fit: cover; margin: 0 auto; opacity: 1;">
-      <span class="brand-text font-weight-light d-block mt-3" style="font-size: 18px;"><b><?php echo htmlspecialchars($hotel_name); ?></b></span>
+    <a href="menu_admin.php" class="brand-link text-center" style="padding: 14px 10px; height: auto; display: block; border-bottom: 1px solid #4b545c;">
+      <img src="<?php echo $hotel_logo; ?>" alt="Hotel Logo" class="elevation-3" style="width: 80px; height: 80px; object-fit: cover; margin: 0 auto; opacity: 1; border-radius: 5px;">
+      <span class="brand-text font-weight-light d-block mt-2" style="font-size: 15px;"><b><?php echo htmlspecialchars($hotel_name); ?></b></span>
     </a>
 
     <!-- Sidebar -->

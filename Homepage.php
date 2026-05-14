@@ -144,133 +144,216 @@ try {
 }
 ?> 
     <style>
-      body { font-family: 'Noto Sans Lao Looped', sans-serif; }
-      .container-fluid { padding: 30px; }
-      .bg-teal { background-color: #20c997 !important; }
+      body { font-family: 'Noto Sans Lao Looped', sans-serif; background: #f0f4f8; }
+      .dashboard-page { padding: 24px 20px 20px; }
 
-      @media (max-width: 768px) {
-        .container-fluid { padding: 10px; }
-        .small-box .inner h3 { font-size: 1.3rem !important; }
-        .small-box .inner p { font-size: 0.78rem !important; }
-        .small-box .icon { font-size: 40px !important; top: 5px !important; right: 8px !important; }
-        .small-box .small-box-footer { font-size: 0.75rem !important; padding: 4px 0 !important; }
-        .card-title { font-size: 0.9rem !important; }
-        .table { font-size: 0.8rem !important; }
-        .btn-sm { font-size: 0.75rem !important; }
+      /* ===== Modern Stat Cards ===== */
+      .stat-cards-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+
+      .stat-card {
+        position: relative;
+        border-radius: 18px;
+        padding: 22px 20px 16px;
+        color: #fff;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 140px;
       }
 
+      /* Freeze all mouse/touch states — no hover, no underline, no color change */
+      .stat-card:hover,
+      .stat-card:focus,
+      .stat-card:active,
+      .stat-card:visited {
+        color: #fff !important;
+        text-decoration: none !important;
+        outline: none;
+      }
+      /* Lock child elements color too */
+      .stat-card:hover *,
+      .stat-card:focus *,
+      .stat-card:active * {
+        color: #fff !important;
+        text-decoration: none !important;
+      }
+
+      /* Gradient presets */
+      .stat-card.gc-green  { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+      .stat-card.gc-amber  { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); }
+      .stat-card.gc-blue   { background: linear-gradient(135deg, #2980b9 0%, #6dd5fa 100%); }
+      .stat-card.gc-indigo { background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%); }
+      .stat-card.gc-teal   { background: linear-gradient(135deg, #11998e 0%, #00b4db 100%); }
+      .stat-card.gc-dark   { background: linear-gradient(135deg, #232526 0%, #414345 100%); }
+
+      /* Decorative circle */
+      .stat-card::before {
+        content: '';
+        position: absolute;
+        width: 120px; height: 120px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.12);
+        top: -30px; right: -30px;
+      }
+      .stat-card::after {
+        content: '';
+        position: absolute;
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.08);
+        bottom: 10px; right: 20px;
+      }
+
+      .stat-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+      .stat-card-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        opacity: 0.85;
+        margin-bottom: 6px;
+      }
+      .stat-card-value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -0.5px;
+      }
+      .stat-card-icon {
+        font-size: 2.2rem;
+        opacity: 0.3;
+        z-index: 1;
+        margin-top: 2px;
+      }
+      .stat-card-footer {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        opacity: 0.9;
+        margin-top: 14px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255,255,255,0.25);
+        z-index: 1;
+      }
+      .stat-card-footer i { font-size: 0.75rem; }
+
+      /* ===== Chart Section ===== */
+      .card-title { font-size: 0.9rem !important; }
+      .table { font-size: 0.8rem !important; }
+
+      /* ===== Responsive ===== */
+      @media (max-width: 768px) {
+        .dashboard-page { padding: 14px 10px; }
+        .stat-cards-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .stat-card-value { font-size: 1.4rem; }
+        .stat-card { min-height: 120px; padding: 16px 14px 12px; }
+        .stat-card-icon { font-size: 1.6rem; }
+      }
       @media (max-width: 480px) {
-        .container-fluid { padding: 6px; }
-        .small-box .inner { padding: 8px 10px; }
-        .small-box .inner h3 { font-size: 1.05rem !important; }
-        .small-box .inner p { font-size: 0.7rem !important; margin-bottom: 0 !important; }
-        .small-box .icon { font-size: 30px !important; }
-        .small-box .small-box-footer { font-size: 0.7rem !important; }
-        .col-6 { padding-left: 4px; padding-right: 4px; }
-        .row { margin-left: -4px; margin-right: -4px; }
+        .stat-cards-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .stat-card-value { font-size: 1.15rem; }
+        .stat-card { min-height: 105px; padding: 12px 11px 10px; }
+        .stat-card-label { font-size: 0.68rem; }
+        .stat-card-footer { font-size: 0.68rem; margin-top: 8px; padding-top: 7px; }
       }
     </style>
   <body class="hold-transition sidebar-mini layout-fixed">
-    <div class="container-fluid">
-      <div class="row">
-        <!-- Card 1: Available Rooms -->
-        <div class="col-lg-4 col-6">
-          <div class="small-box bg-success">
-            <div class="inner">
-              <h3><?= number_format($available_rooms); ?> ຫ້ອງ</h3>
-              <p>ຫ້ອງຫວ່າງ</p>
-            </div>
-            <div class="icon">
-              <i class="fas fa-door-open"></i>
-            </div>
-            <a href="rooms/select_rooms.php" class="small-box-footer">ຈັດການຂໍ້ມູນຫ້ອງ <i class="fas fa-arrow-circle-right"></i></a>
-          </div>
-        </div>
+    <div class="dashboard-page">
 
-        <!-- Card 2: Booked Rooms -->
-        <div class="col-lg-4 col-6">
-          <div class="small-box bg-warning">
-            <div class="inner">
-              <h3><?= number_format($unavailable_rooms); ?> ຫ້ອງ</h3>
-              <p>ຫ້ອງບໍ່ຫວ່າງ</p>
+      <!-- ===== Modern Stats Cards ===== -->
+      <div class="stat-cards-row">
+
+        <!-- Card 1: Available Rooms -->
+        <a href="rooms/select_rooms.php" class="stat-card gc-green">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-card-label">ຫ້ອງຫວ່າງ</div>
+              <div class="stat-card-value"><?= number_format($available_rooms) ?> <span style="font-size:1rem;font-weight:600;">ຫ້ອງ</span></div>
             </div>
-            <div class="icon">
-              <i class="fas fa-door-closed"></i>
-            </div>
-            <a href="report.php?type=room_history" class="small-box-footer">ປະຫວັດການຈອງ <i class="fas fa-arrow-circle-right"></i></a>
+            <div class="stat-card-icon"><i class="fas fa-door-open"></i></div>
           </div>
-        </div>
+          <div class="stat-card-footer">
+            <i class="fas fa-arrow-right"></i> ຈັດການຂໍ້ມູນຫ້ອງ
+          </div>
+        </a>
+
+        <!-- Card 2: Unavailable Rooms -->
+        <a href="report.php?type=room_history" class="stat-card gc-amber">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-card-label">ຫ້ອງບໍ່ຫວ່າງ</div>
+              <div class="stat-card-value"><?= number_format($unavailable_rooms) ?> <span style="font-size:1rem;font-weight:600;">ຫ້ອງ</span></div>
+            </div>
+            <div class="stat-card-icon"><i class="fas fa-door-closed"></i></div>
+          </div>
+          <div class="stat-card-footer">
+            <i class="fas fa-arrow-right"></i> ປະຫວັດການຈອງ
+          </div>
+        </a>
 
         <!-- Card 3: Total Rooms -->
-        <div class="col-lg-4 col-6">
-          <div class="small-box bg-info">
-            <div class="inner">
-              <h3><?= number_format($total_rooms); ?> ຫ້ອງ</h3>
-              <p>ຈຳນວນຫ້ອງທັງໝົດ</p>
+        <a href="rooms/select_rooms.php" class="stat-card gc-blue">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-card-label">ຫ້ອງທັງໝົດ</div>
+              <div class="stat-card-value"><?= number_format($total_rooms) ?> <span style="font-size:1rem;font-weight:600;">ຫ້ອງ</span></div>
             </div>
-            <div class="icon">
-              <i class="fas fa-hotel"></i>
-            </div>
-            <a href="rooms/select_rooms.php" class="small-box-footer">ຈັດການຂໍ້ມູນຫ້ອງ <i class="fas fa-arrow-circle-right"></i></a>
+            <div class="stat-card-icon"><i class="fas fa-hotel"></i></div>
           </div>
-        </div>
+          <div class="stat-card-footer">
+            <i class="fas fa-arrow-right"></i> ຈັດການຂໍ້ມູນຫ້ອງ
+          </div>
+        </a>
 
         <!-- Card 4: Total Guests -->
-        <div class="col-lg-4 col-6">
-          <div class="small-box bg-primary text-white">
-            <div class="inner">
-              <h3><?= number_format($guest_count); ?> ຄົນ</h3>
-              <p>ຈຳນວນແຂກທັງໝົດ</p>
+        <a href="report.php?type=room_history" class="stat-card gc-indigo">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-card-label">ແຂກທັງໝົດ</div>
+              <div class="stat-card-value"><?= number_format($guest_count) ?> <span style="font-size:1rem;font-weight:600;">ຄົນ</span></div>
             </div>
-            <div class="icon">
-              <i class="fas fa-users"></i>
-            </div>
-            <a href="report.php?type=room_history" class="small-box-footer">ແຂກເຂົ້າພັກ <i class="fas fa-arrow-circle-right"></i></a>
+            <div class="stat-card-icon"><i class="fas fa-users"></i></div>
           </div>
-        </div>
+          <div class="stat-card-footer">
+            <i class="fas fa-arrow-right"></i> ແຂກເຂົ້າພັກ
+          </div>
+        </a>
 
-        <!-- Card 5: Today's Revenue -->
-        <div class="col-lg-4 col-6">
-          <div class="small-box bg-teal text-white">
-            <div class="inner">
-              <h3><?= number_format($today_revenue); ?> ກີບ</h3>
-              <p>ລາຍຮັບມື້ນີ້</p>
+        <!-- Card 5: Today Revenue -->
+        <a href="report.php?type=room_revenue" class="stat-card gc-teal">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-card-label">ລາຍຮັບມື້ນີ້</div>
+              <div class="stat-card-value"><?= number_format($today_revenue) ?> <span style="font-size:0.9rem;font-weight:600;">ກີບ</span></div>
             </div>
-            <div class="icon">
-              <i class="fas fa-wallet"></i>
-            </div>
-            <a href="report.php?type=room_revenue" class="small-box-footer">ເບິ່ງລາຍງານ <i class="fas fa-arrow-circle-right"></i></a>
+            <div class="stat-card-icon"><i class="fas fa-wallet"></i></div>
           </div>
-        </div>
+          <div class="stat-card-footer">
+            <i class="fas fa-arrow-right"></i> ເບິ່ງລາຍງານ
+          </div>
+        </a>
 
         <!-- Card 6: Total Revenue -->
-        <div class="col-lg-4 col-6">
-          <div class="small-box bg-dark text-white">
-            <div class="inner">
-              <h3><?= number_format($total_revenue); ?> ກີບ</h3>
-              <p>ລາຍຮັບລາຍເດືອນ</p>
+        <a href="report.php?type=finance" class="stat-card gc-dark">
+          <div class="stat-card-top">
+            <div>
+              <div class="stat-card-label">ລາຍຮັບລາຍເດືອນ</div>
+              <div class="stat-card-value"><?= number_format($total_revenue) ?> <span style="font-size:0.9rem;font-weight:600;">ກີບ</span></div>
             </div>
-            <div class="icon">
-              <i class="fas fa-dollar-sign"></i>
-            </div>
-            <a href="report.php?type=finance" class="small-box-footer">ເບິ່ງລາຍງານ <i class="fas fa-arrow-circle-right"></i></a>
+            <div class="stat-card-icon"><i class="fas fa-dollar-sign"></i></div>
           </div>
-        </div>
+          <div class="stat-card-footer">
+            <i class="fas fa-arrow-right"></i> ເບິ່ງລາຍງານ
+          </div>
+        </a>
 
-        <!-- Card 7: Today's Arrivals (Notification) -->
-        <!-- <div class="col-lg-4 col-6">
-          <div class="small-box bg-indigo text-white" style="background-color: #6610f2 !important;">
-            <div class="inner">
-              <h3><?= number_format($arrivals_count); ?> ລາຍການ</h3>
-              <p>ແຂກທີ່ສິມາພັກມື້ນີ້</p>
-            </div>
-            <div class="icon">
-              <i class="fas fa-calendar-day"></i>
-            </div>
-            <a href="reserve.php" class="small-box-footer">ເບິ່ງລາຍຊື່ແຂກຈອງ <i class="fas fa-arrow-circle-right"></i></a>
-          </div>
-        </div> -->
-    </div>
+      </div>
+      <!-- /.stat-cards-row -->
 
       <!-- Chart Section -->
       <div class="row mt-3">
