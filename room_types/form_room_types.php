@@ -2,15 +2,32 @@
 session_start();
 require_once '../config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "../lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "../lang/la.php";
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
-    $room_type_name = $_POST['room_type_name'];
+    $room_type_name_la = $_POST['room_type_name_la'];
+    $room_type_name_en = $_POST['room_type_name_en'];
+    $room_type_name_cn = $_POST['room_type_name_cn'];
     $room_type_code = $_POST['room_type_code'];
-    $description = $_POST['description'];
+    $description_la = $_POST['description_la'];
+    $description_en = $_POST['description_en'];
+    $description_cn = $_POST['description_cn'];
 
-    $stmt = $pdo->prepare("INSERT INTO room_types (room_type_name, room_type_code, description) VALUES (?, ?, ?)");
-    if ($stmt->execute([$room_type_name, $room_type_code, $description])) {
-        logActivity($pdo, "ເພີ່ມປະເພດຫ້ອງໃໝ່", "ຊື່: $room_type_name");
+    // Also update the original columns for backward compatibility
+    $room_type_name = $room_type_name_la;
+    $description = $description_la;
+
+    $stmt = $pdo->prepare("INSERT INTO room_types (room_type_name, room_type_name_la, room_type_name_en, room_type_name_cn, room_type_code, description, description_la, description_en, description_cn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    if ($stmt->execute([$room_type_name, $room_type_name_la, $room_type_name_en, $room_type_name_cn, $room_type_code, $description, $description_la, $description_en, $description_cn])) {
+        logActivity($pdo, "ເພີ່ມປະເພດຫ້ອງໃໝ່", "ຊື່: $room_type_name_la");
         $_SESSION['success'] = "ບັນທຶກຂໍ້ມູນສຳເລັດ";
         header("Location: form_room_types.php");
         exit();
@@ -52,6 +69,10 @@ if (isset($_GET['delete'])) {
 
 $stmt = $pdo->query("SELECT * FROM room_types ORDER BY id DESC");
 $room_types = $stmt->fetchAll();
+
+$current_lang = $_SESSION['lang'] ?? 'la';
+$name_col = "room_type_name_" . $current_lang;
+$desc_col = "description_" . $current_lang;
 ?>
 <!DOCTYPE html>
 <html lang="lo">
@@ -116,17 +137,43 @@ $room_types = $stmt->fetchAll();
                 <form action="" method="post" id="roomTypeForm">
                     <div class="card-body">
                         <div class="form-group">
-                            <label>ລະຫັດປະເພດຫ້ອງ</label>
-                            <input type="text" name="room_type_code" id="room_type_code" class="form-control" placeholder="ກະລຸນາປ້ອນລະຫັດປະເພດຫ້ອງ...">
+                            <label><?php echo $lang['room_type_code_label']; ?></label>
+                            <input type="text" name="room_type_code" id="room_type_code" class="form-control" placeholder="Code...">
                         </div>
                         <div class="form-group">
-                            <label>ຊື່ປະເພດຫ້ອງ</label>
-                            <input type="text" name="room_type_name" id="room_type_name" class="form-control" placeholder="ກະລຸນາປ້ອນປະເພດຫ້ອງ...">
+                            <label><?php echo $lang['room_type_label']; ?> (Lao) <span class="text-danger">*</span></label>
+                            <input type="text" name="room_type_name_la" id="room_type_name_la" class="form-control" placeholder="ຊື່ພາສາລາວ..." required>
                         </div>
                         <div class="form-group">
-                            <label>ລາຍລະອຽດ</label>
-                            <textarea name="description" id="description" class="form-control" rows="3" placeholder="ລາຍລະອຽດ..."></textarea>
+                            <label><?php echo $lang['details']; ?> (Lao)</label>
+                            <textarea name="description_la" id="description_la" class="form-control" rows="2" placeholder="ລາຍລະອຽດພາສາລາວ..."></textarea>
                         </div>
+
+                        <!-- Advanced Multi-language Options -->
+                        <!-- <div class="mt-3">
+                            <a href="javascript:void(0)" class="text-primary small font-weight-bold" data-toggle="collapse" data-target="#advancedOptions">
+                                <i class="fas fa-cog mr-1"></i> <?php echo $lang['advanced_options']; ?>
+                            </a>
+                        </div>
+
+                        <div id="advancedOptions" class="collapse mt-3 border-top pt-3">
+                            <div class="form-group">
+                                <label>Room Type Name (English)</label>
+                                <input type="text" name="room_type_name_en" class="form-control" placeholder="English name...">
+                            </div>
+                            <div class="form-group">
+                                <label>客房类型名称 (Chinese)</label>
+                                <input type="text" name="room_type_name_cn" class="form-control" placeholder="Chinese name...">
+                            </div>
+                            <div class="form-group">
+                                <label>Description (English)</label>
+                                <textarea name="description_en" class="form-control" rows="2" placeholder="English description..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>描述 (Chinese)</label>
+                                <textarea name="description_cn" class="form-control" rows="2" placeholder="Chinese description..."></textarea>
+                            </div>
+                        </div> -->
                     </div>
                     <div class="card-footer">
                         <button type="submit" name="save" class="btn btn-primary"><i class="fas fa-save"></i> ບັນທຶກ</button>
@@ -159,8 +206,8 @@ $room_types = $stmt->fetchAll();
                                     <tr>
                                         <td><?php echo $i++; ?></td>
                                         <td><span class="badge badge-secondary"><?php echo htmlspecialchars($row['room_type_code'] ?? '-'); ?></span></td>
-                                        <td><strong><?php echo htmlspecialchars($row['room_type_name'] ?? ''); ?></strong></td>
-                                        <td><?php echo htmlspecialchars($row['description'] ?? ''); ?></td>
+                                        <td><strong><?php echo htmlspecialchars($row[$name_col] ?: $row['room_type_name']); ?></strong></td>
+                                        <td><?php echo htmlspecialchars($row[$desc_col] ?: $row['description']); ?></td>
                                         <td class="text-center">
                                             <a href="edit_room_type.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning" title="ແກ້ໄຂ"><i class="fas fa-edit"></i></a>
                                             <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $row['id']; ?>" title="ລົບ"><i class="fas fa-trash"></i></a>
@@ -219,24 +266,14 @@ $room_types = $stmt->fetchAll();
 //     });
 
     $('#roomTypeForm').on('submit', function(e) {
-        var roomTypeName = $('#room_type_name').val().trim();
-        var description = $('#description').val().trim();
+        var roomTypeNameLa = $('#room_type_name_la').val().trim();
         
-        if (roomTypeName === '' && description === '') {
+        if (roomTypeNameLa === '') {
             e.preventDefault();
             Swal.fire({
                 icon: 'warning',
                 title: 'ແຈ້ງເຕືອນ',
-                text: 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ!',
-                confirmButtonText: 'ຕົກລົງ'
-            });
-            return false;
-        } else if (roomTypeName === '') {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'warning',
-                title: 'ແຈ້ງເຕືອນ',
-                text: 'ກະລຸນາປ້ອນຊື່ປະເພດຫ້ອງ!',
+                text: 'ກະລຸນາປ້ອນຊື່ປະເພດຫ້ອງ (ພາສາລາວ)!',
                 confirmButtonText: 'ຕົກລົງ'
             });
             return false;

@@ -4,11 +4,17 @@ require_once 'config/db.php';
 
 // Handle Add Category
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_category'])) {
-    $name = trim($_POST['name']);
+    $name_la = trim($_POST['name_la']);
+    $name_en = trim($_POST['name_en']);
+    $name_cn = trim($_POST['name_cn']);
     $category_code = trim($_POST['category_code']);
-    if (!empty($name)) {
-        $stmt = $pdo->prepare("INSERT INTO product_categories (name, category_code) VALUES (?, ?)");
-        if ($stmt->execute([$name, $category_code])) {
+    
+    // Original column for compatibility
+    $name = $name_la;
+
+    if (!empty($name_la)) {
+        $stmt = $pdo->prepare("INSERT INTO product_categories (name, name_la, name_en, name_cn, category_code) VALUES (?, ?, ?, ?, ?)");
+        if ($stmt->execute([$name, $name_la, $name_en, $name_cn, $category_code])) {
             $_SESSION['success'] = "ເພີ່ມປະເພດສິນຄ້າສຳເລັດແລ້ວ!";
         } else {
             $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ!";
@@ -21,17 +27,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_category'])) {
 // Handle Edit Category
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_category'])) {
     $id = (int)$_POST['id'];
-    $new_name = trim($_POST['name']);
+    $name_la = trim($_POST['name_la']);
+    $name_en = trim($_POST['name_en']);
+    $name_cn = trim($_POST['name_cn']);
     $old_name = trim($_POST['old_name']);
+    $category_code = trim($_POST['category_code']);
     
-    if (!empty($new_name)) {
-        $category_code = trim($_POST['category_code']);
-        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, category_code = ? WHERE id = ?");
-        if ($stmt->execute([$new_name, $category_code, $id])) {
+    // Original column for compatibility
+    $name = $name_la;
+    
+    if (!empty($name_la)) {
+        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, name_la = ?, name_en = ?, name_cn = ?, category_code = ? WHERE id = ?");
+        if ($stmt->execute([$name, $name_la, $name_en, $name_cn, $category_code, $id])) {
             // Update all products that use this category only if name changed
-            if ($new_name !== $old_name) {
+            if ($name !== $old_name) {
                 $updateProducts = $pdo->prepare("UPDATE products SET category = ? WHERE category = ?");
-                $updateProducts->execute([$new_name, $old_name]);
+                $updateProducts->execute([$name, $old_name]);
             }
             $_SESSION['success'] = "ແກ້ໄຂປະເພດສິນຄ້າສຳເລັດແລ້ວ!";
         } else {
@@ -55,6 +66,9 @@ if (isset($_GET['delete'])) {
 
 $stmt = $pdo->query("SELECT * FROM product_categories ORDER BY id DESC");
 $categories = $stmt->fetchAll();
+
+$current_lang = $_SESSION['lang'] ?? 'la';
+$name_col = "name_" . $current_lang;
 ?>
 <!DOCTYPE html>
 <html lang="lo">
@@ -107,8 +121,16 @@ $categories = $stmt->fetchAll();
                             <input type="text" name="category_code" class="form-control" placeholder="ກະລຸນາປ້ອນລະຫັດປະເພດ...">
                         </div>
                         <div class="form-group">
-                            <label>ຊື່ປະເພດສິນຄ້າ</label>
-                            <input type="text" name="name" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ປະເພດສິນຄ້າ..." required>
+                            <label>ຊື່ປະເພດສິນຄ້າ (Lao)</label>
+                            <input type="text" name="name_la" class="form-control" placeholder="ຊື່ພາສາລາວ..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category Name (English)</label>
+                            <input type="text" name="name_en" class="form-control" placeholder="English name...">
+                        </div>
+                        <div class="form-group">
+                            <label>类别名称 (Chinese)</label>
+                            <input type="text" name="name_cn" class="form-control" placeholder="Chinese name...">
                         </div>
                     </div>
                     <div class="card-footer">
@@ -137,11 +159,13 @@ $categories = $stmt->fetchAll();
                                 <tr>
                                     <td><?php echo $index + 1; ?></td>
                                     <td><span class="badge badge-secondary"><?php echo htmlspecialchars($c['category_code'] ?? '-'); ?></span></td>
-                                    <td class="text-left font-weight-bold text-primary"><?php echo htmlspecialchars($c['name']); ?></td>
+                                    <td class="text-left font-weight-bold text-primary"><?php echo htmlspecialchars($c[$name_col] ?: $c['name']); ?></td>
                                     <td>
                                         <button class="btn btn-sm btn-warning text-white btn-edit" 
                                             data-id="<?php echo $c['id']; ?>" 
-                                            data-name="<?php echo htmlspecialchars($c['name']); ?>"
+                                            data-name-la="<?php echo htmlspecialchars($c['name_la'] ?: $c['name']); ?>"
+                                            data-name-en="<?php echo htmlspecialchars($c['name_en'] ?? ''); ?>"
+                                            data-name-cn="<?php echo htmlspecialchars($c['name_cn'] ?? ''); ?>"
                                             data-code="<?php echo htmlspecialchars($c['category_code'] ?? ''); ?>"
                                             title="ແກ້ໄຂ">
                                             <i class="fas fa-edit"></i>
@@ -182,8 +206,16 @@ $categories = $stmt->fetchAll();
                   <input type="text" name="category_code" id="edit_code" class="form-control">
               </div>
               <div class="form-group">
-                  <label>ຊື່ປະເພດສິນຄ້າ</label>
-                  <input type="text" name="name" id="edit_name" class="form-control" required>
+                  <label>ຊື່ປະເພດສິນຄ້າ (Lao)</label>
+                  <input type="text" name="name_la" id="edit_name_la" class="form-control" required>
+              </div>
+              <div class="form-group">
+                  <label>Category Name (English)</label>
+                  <input type="text" name="name_en" id="edit_name_en" class="form-control">
+              </div>
+              <div class="form-group">
+                  <label>类别名称 (Chinese)</label>
+                  <input type="text" name="name_cn" id="edit_name_cn" class="form-control">
               </div>
           </div>
           <div class="modal-footer">
@@ -201,12 +233,16 @@ $categories = $stmt->fetchAll();
 <script>
 $('.btn-edit').on('click', function() {
     var id = $(this).data('id');
-    var name = $(this).data('name');
+    var nameLa = $(this).data('name-la');
+    var nameEn = $(this).data('name-en');
+    var nameCn = $(this).data('name-cn');
     var code = $(this).data('code');
     
     $('#edit_id').val(id);
-    $('#edit_name').val(name);
-    $('#edit_old_name').val(name);
+    $('#edit_name_la').val(nameLa);
+    $('#edit_name_en').val(nameEn);
+    $('#edit_name_cn').val(nameCn);
+    $('#edit_old_name').val(nameLa);
     $('#edit_code').val(code);
     
     $('#editCategoryModal').modal('show');

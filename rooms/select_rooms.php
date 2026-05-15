@@ -53,7 +53,22 @@ if (isset($_POST['update_housekeeping'])) {
     exit();
 }
 
-$stmt = $pdo->query("SELECT * FROM rooms ORDER BY id DESC");
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "../lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "../lang/la.php";
+}
+
+$rt_name_col = "room_type_name_" . $current_lang;
+$bed_name_col = "bed_type_" . $current_lang;
+
+$stmt = $pdo->query("SELECT r.*, rt.room_type_name_la, rt.room_type_name_en, rt.room_type_name_cn 
+                     FROM rooms r 
+                     LEFT JOIN room_types rt ON r.room_type = rt.room_type_name 
+                     ORDER BY r.id DESC");
 $rooms = $stmt->fetchAll();
 
 // Fetch room types for dropdown
@@ -65,7 +80,7 @@ $room_types = $stmtTypes->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ລາຍລະອຽດຫ້ອງ</title>
+    <title><?php echo $lang['room_details']; ?></title>
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
@@ -149,46 +164,46 @@ $room_types = $stmtTypes->fetchAll();
         <div class="col-md-3">
             <div class="card card-primary card-outline">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-plus-circle"></i> ເພີ່ມຫ້ອງໃໝ່</h3>
+                    <h3 class="card-title"><i class="fas fa-plus-circle"></i> <?php echo $lang['add_new_room']; ?></h3>
                 </div>
                 <form action="" method="post" id="roomForm">
                     <div class="card-body">
                         <div class="form-group">
-                            <label>ເລກຫ້ອງ</label>
-                            <input type="text" name="room_number" id="room_number" class="form-control" placeholder="ກະລຸນາປ້ອນເລກຫ້ອງ...">
+                            <label><?php echo $lang['room_number_label']; ?></label>
+                            <input type="text" name="room_number" id="room_number" class="form-control" placeholder="<?php echo $lang['enter_room_number']; ?>">
                         </div>
                         <div class="form-group">
-                            <label>ປະເພດຫ້ອງ</label>
+                            <label><?php echo $lang['room_type_label']; ?></label>
                             <select name="room_type" id="room_type" class="form-control">
-                                <option value="">-- ເລືອກປະເພດ --</option>
+                                <option value=""><?php echo $lang['select_type']; ?></option>
                                 <?php foreach($room_types as $rt): ?>
-                                    <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>"><?php echo htmlspecialchars($rt['room_type_name']); ?></option>
+                                    <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>"><?php echo htmlspecialchars($rt[$rt_name_col] ?: $rt['room_type_name']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>ປະເພດຕຽງ</label>
+                            <label><?php echo $lang['bed_type_label']; ?></label>
                             <select name="bed_type" id="bed_type" class="form-control">
-                                <option value="">-- ເລືອກຕຽງ --</option>
-                                <option value="ຕຽງດ່ຽວ">ຕຽງດ່ຽວ</option>
-                                <option value="ຕຽງຄູ່">ຕຽງຄູ່</option>
+                                <option value=""><?php echo $lang['select_bed']; ?></option>
+                                <option value="ຕຽງດ່ຽວ"><?php echo $lang['single_bed']; ?></option>
+                                <option value="ຕຽງຄູ່"><?php echo $lang['double_bed']; ?></option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>ລາຄາຕໍ່ຄືນ (ກີບ)</label>
-                            <input type="text" name="price" id="price" class="form-control number-format" placeholder="ກະລຸນາປ້ອນລາຄາ...">
+                            <label><?php echo $lang['price_per_night']; ?> (₭)</label>
+                            <input type="text" name="price" id="price" class="form-control number-format" placeholder="<?php echo $lang['enter_price']; ?>">
                         </div>
                         <div class="form-group">
-                            <label>ສະຖານະຄວາມພ້ອມ</label>
+                            <label><?php echo $lang['housekeeping_status_label']; ?></label>
                             <select name="housekeeping_status" id="housekeeping_status" class="form-control">
-                                <option value="ພ້ອມໃຊ້">ຫ້ອງສະອາດ</option>
-                                <option value="Cleaning">ຫ້ອງກຳລັງທຳຄວາມສະອາດ</option>
-                                <option value="Maintenance">ຫ້ອງເສຍ</option>
+                                <option value="ພ້ອມໃຊ້"><?php echo $lang['ready']; ?></option>
+                                <option value="Cleaning"><?php echo $lang['cleaning']; ?></option>
+                                <option value="Maintenance"><?php echo $lang['maintenance']; ?></option>
                             </select>
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button type="submit" name="save" class="btn btn-primary btn-block"><i class="fas fa-save"></i> ບັນທຶກ</button>
+                        <button type="submit" name="save" class="btn btn-primary btn-block"><i class="fas fa-save"></i> <?php echo $lang['save']; ?></button>
                     </div>
                 </form>
             </div>
@@ -204,14 +219,14 @@ $room_types = $stmtTypes->fetchAll();
                     <table id="roomTable" class="table table-bordered table-striped table-hover text-center">
                         <thead class="bg-light">
                             <tr>
-                                <th>#</th>
-                                <th>ເລກຫ້ອງ</th>
-                                <th>ປະເພດຫ້ອງ</th>
-                                <th>ປະເພດຕຽງ</th>
-                                <th>ລາຄາ/ຄືນ</th>
-                                <th>ສະຖານະ</th>
-                                <th>ຄວາມພ້ອມ</th>
-                                <th>ຈັດການ</th>
+                                <th><?php echo $lang['no']; ?></th>
+                                <th><?php echo $lang['room']; ?></th>
+                                <th><?php echo $lang['room_types'] ?? 'ປະເພດຫ້ອງ'; ?></th>
+                                <th><?php echo $lang['bed_type'] ?? 'ປະເພດຕຽງ'; ?></th>
+                                <th><?php echo $lang['price']; ?></th>
+                                <th><?php echo $lang['status']; ?></th>
+                                <th><?php echo $lang['housekeeping'] ?? 'ຄວາມພ້ອມ'; ?></th>
+                                <th><?php echo $lang['action']; ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -220,25 +235,25 @@ $room_types = $stmtTypes->fetchAll();
                                     <tr>
                                         <td><?php echo $i++; ?></td>
                                         <td class="room-number-cell"><?php echo htmlspecialchars($row['room_number']); ?></td>
-                                        <td><?php echo htmlspecialchars($row['room_type']); ?></td>
-                                        <td><?php echo htmlspecialchars($row['bed_type']); ?></td>
+                                        <td><?php echo htmlspecialchars($row[$rt_name_col] ?: $row['room_type']); ?></td>
+                                        <td><?php echo htmlspecialchars($row[$bed_name_col] ?: $row['bed_type']); ?></td>
                                         <td class="price-cell">
                                             <?php echo number_format($row['price']); ?>
-                                            <span class="currency-label">ກີບ</span>
+                                            <span class="currency-label">₭</span>
                                         </td>
                                         <td>
                                             <?php if($row['status'] == 'Available'): ?>
                                                 <?php if($row['housekeeping_status'] == 'ພ້ອມໃຊ້' || $row['housekeeping_status'] == 'Ready'): ?>
-                                                    <span class="badge badge-available badge-status">ຫ້ອງຫວ່າງ</span>
+                                                    <span class="badge badge-available badge-status"><?php echo $lang['available']; ?></span>
                                                 <?php elseif($row['housekeeping_status'] == 'Cleaning'): ?>
-                                                    <span class="badge badge-booked badge-status">ກຳລັງອະນາໄມ</span>
+                                                    <span class="badge badge-booked badge-status"><?php echo $lang['cleaning']; ?></span>
                                                 <?php else: ?>
-                                                    <span class="badge badge-secondary badge-status">ຫ້ອງເສຍ/ປິດປຸງ</span>
+                                                    <span class="badge badge-secondary badge-status"><?php echo $lang['maintenance']; ?></span>
                                                 <?php endif; ?>
                                             <?php elseif($row['status'] == 'Booked'): ?>
-                                                <span class="badge badge-booked badge-status">ຈອງລ່ວງໜ້າ</span>
+                                                <span class="badge badge-booked badge-status"><?php echo $lang['booked']; ?></span>
                                             <?php elseif($row['status'] == 'Occupied'): ?>
-                                                <span class="badge badge-occupied badge-status">ເຂົ້າພັກແລ້ວ</span>
+                                                <span class="badge badge-occupied badge-status"><?php echo $lang['occupied']; ?></span>
                                             <?php else: ?>
                                                 <span class="badge badge-secondary badge-status"><?php echo htmlspecialchars($row['status']); ?></span>
                                             <?php endif; ?>
@@ -302,15 +317,15 @@ $(document).ready(function() {
       "responsive": true,
       "pageLength": 10,
       "language": {
-          "search": "ຄົ້ນຫາ:",
-          "info": "ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ",
-          "infoEmpty": "ສະແດງ 0 ຫາ 0 ຈາກທັງໝົດ 0 ລາຍການ",
-          "zeroRecords": "ບໍ່ພົບຂໍ້ມູນທີ່ຄົ້ນຫາ",
+          "search": "<?php echo $lang['search']; ?>:",
+          "info": "<?php echo $lang['table_info']; ?>",
+          "infoEmpty": "<?php echo $lang['table_info_empty']; ?>",
+          "zeroRecords": "<?php echo $lang['table_zero_records']; ?>",
           "paginate": {
-              "first": "ໜ້າທຳອິດ",
-              "last": "ໜ້າສຸດທ້າຍ",
-              "next": "ຕໍ່ໄປ",
-              "previous": "ກ່ອນໜ້າ"
+              "first": "<?php echo $lang['first']; ?>",
+              "last": "<?php echo $lang['last']; ?>",
+              "next": "<?php echo $lang['next']; ?>",
+              "previous": "<?php echo $lang['previous']; ?>"
           }
       }
     });

@@ -386,10 +386,10 @@ $reservations = $stmtReserved->fetchAll();
     <?php if (count($reservations) > 0): ?>
     <div class="card card-outline card-info shadow-sm">
         <div class="card-header d-flex flex-wrap align-items-center">
-            <h3 class="card-title mr-auto mb-1 mb-md-0"><i class="fas fa-list"></i> ລາຍການຈອງລ່ວງໜ້າ (<?php echo count($reservations); ?>)</h3>
+            <h3 class="card-title mr-auto mb-1 mb-md-0"><i class="fas fa-list"></i> <?php echo $lang['bookings']; ?> (<?php echo count($reservations); ?>)</h3>
             <div class="card-tools" style="flex: 1; min-width: 200px; max-width: 300px;">
                 <div class="input-group input-group-sm">
-                    <input type="text" id="res_search_input" class="form-control" placeholder="ຄົ້ນຫາຊື່ ຫຼື ເບີໂທ...">
+                    <input type="text" id="res_search_input" class="form-control" placeholder="<?php echo $lang['search']; ?>...">
                     <div class="input-group-append">
                         <span class="input-group-text bg-white"><i class="fas fa-search text-warning"></i></span>
                     </div>
@@ -401,15 +401,15 @@ $reservations = $stmtReserved->fetchAll();
             <table class="table table-bordered table-striped text-center mb-0" style="min-width: 600px;">
                 <thead class="bg-warning text-white">
                     <tr>
-                        <th>ຫ້ອງ</th>
-                        <th>ລູກຄ້າ</th>
-                        <th>ເບີໂທ</th>
-                        <th>ວັນເຂົ້າ</th>
-                        <th>ວັນອອກ</th>
-                        <th>ຄືນ</th>
-                        <th>ຍອດລວມ</th>
-                        <th>ມັດຈຳ</th>
-                        <th>ຈັດການ</th>
+                        <th><?php echo $lang['room']; ?></th>
+                        <th><?php echo $lang['customer']; ?> / <?php echo $lang['guests']; ?></th>
+                        <th><?php echo $lang['phone']; ?></th>
+                        <th><?php echo $lang['checkin_date']; ?></th>
+                        <th><?php echo $lang['checkout_date']; ?></th>
+                        <th><?php echo $lang['nights']; ?></th>
+                        <th><?php echo $lang['total']; ?></th>
+                        <th><?php echo $lang['deposit']; ?></th>
+                        <th><?php echo $lang['action']; ?></th>
                     </tr>
                 </thead>
                 <tbody id="res_table_body">
@@ -417,10 +417,8 @@ $reservations = $stmtReserved->fetchAll();
                     <tr class="res-row">
                         <td><strong><?php echo htmlspecialchars($res['room_number']); ?></strong><br><small class="text-muted"><?php echo htmlspecialchars($res['room_type']); ?></small></td>
                         <td class="text-left">
-                            <span class="customer-name-text"><?php echo htmlspecialchars($res['customer_name']); ?></span>
-                            <?php if($res['other_bookings'] > 0): ?>
-                                <br><span class="badge badge-danger" title="ລູກຄ້ານີ້ມີການຈອງ ຫຼື ເຂົ້າພັກຫ້ອງອື່ນອີກ"><i class="fas fa-users"></i> ຈອງ <?php echo $res['other_bookings'] + 1; ?> ຫ້ອງ</span>
-                            <?php endif; ?>
+                            <div class="font-weight-bold customer-name-text"><?php echo htmlspecialchars($res['customer_name']); ?></div>
+                            <div class="small text-muted"><i class="fas fa-users mr-1"></i> ມາ: <strong><?php echo $res['guest_count']; ?></strong> ຄົນ</div>
                         </td>
                         <td class="customer-phone-text"><?php echo htmlspecialchars($res['customer_phone']); ?></td>
                         <td class="text-success font-weight-bold"><?php echo date('d/m/Y', strtotime($res['check_in_date'])); ?></td>
@@ -514,59 +512,59 @@ $reservations = $stmtReserved->fetchAll();
                 <input type="hidden" name="check_in_date" id="modal_checkin">
                 <input type="hidden" name="nights_count" id="modal_nights">
                 <div class="modal-header bg-warning text-white">
-                    <h5 class="modal-title"><i class="fas fa-calendar-check"></i> ຈອງຫ້ອງ <span id="modal_room_label"></span></h5>
+                    <h5 class="modal-title"><i class="fas fa-calendar-check"></i> <?php echo $lang['booking_info']; ?> <span id="modal_room_label"></span></h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info py-2 mb-3">
-                        <strong><i class="fas fa-info-circle"></i> ຂໍ້ມູນການຈອງ:</strong> 
-                        ຫ້ອງ <span id="info_room" class="font-weight-bold"></span> | 
-                        ວັນທີ: <span id="info_date" class="text-success"></span> | 
-                        <span id="info_nights"></span> ຄືນ | 
-                        ລວມ: <span id="info_total" class="text-danger font-weight-bold"></span> ກີບ
+                        <strong><i class="fas fa-info-circle"></i> <?php echo $lang['booking_info']; ?>:</strong> 
+                        <?php echo $lang['room']; ?> <span id="info_room" class="font-weight-bold"></span> | 
+                        <?php echo $lang['date'] ?? 'ວັນທີ'; ?>: <span id="info_date" class="text-success"></span> | 
+                        <span id="info_nights"></span> <?php echo $lang['nights']; ?> | 
+                        <?php echo $lang['total']; ?>: <span id="info_total" class="text-danger font-weight-bold"></span> ₭
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>ຊື່ ແລະ ນາມສະກຸນ <span class="text-danger">*</span></label>
-                                <input type="text" name="customer_name" id="res_name" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ລູກຄ້າ" required>
+                                <label><?php echo $lang['full_name']; ?> <span class="text-danger">*</span></label>
+                                <input type="text" name="customer_name" id="res_name" class="form-control" placeholder="<?php echo $lang['enter_name']; ?>" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>ເບີໂທຕິດຕໍ່ <span class="text-danger">*</span></label>
+                                <label><?php echo $lang['phone']; ?> <span class="text-danger">*</span></label>
                                 <input type="text" name="customer_phone" id="res_phone" class="form-control" placeholder="020 XXXXXXXX" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>ເລກບັດ / ພາສປອດ <span class="text-danger">*</span></label>
-                                <input type="text" name="passport_number" class="form-control" placeholder="ກະລຸນາກອກເລກບັດ" required>
+                                <label><?php echo $lang['passport']; ?> <span class="text-danger">*</span></label>
+                                <input type="text" name="passport_number" class="form-control" placeholder="<?php echo $lang['enter_passport']; ?>" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>ຈຳນວນຜູ້ເຂົ້າພັກ <span class="text-danger">*</span></label>
+                                <label><?php echo $lang['guests']; ?> <span class="text-danger">*</span></label>
                                 <input type="number" name="guest_count" class="form-control" value="1" min="1" required>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="form-group">
-                                <label>ທີ່ຢູ່ປັດຈຸບັນ <span class="text-danger">*</span></label>
-                                <textarea name="address" class="form-control" rows="2" placeholder="ບ້ານ, ເມືອງ, ແຂວງ..." required></textarea>
+                                <label><?php echo $lang['address']; ?> <span class="text-danger">*</span></label>
+                                <textarea name="address" class="form-control" rows="2" placeholder="<?php echo $lang['enter_address']; ?>" required></textarea>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>ເງິນມັດຈຳ (ກີບ)</label>
+                                <label><?php echo $lang['deposit']; ?> (₭)</label>
                                 <input type="text" name="deposit_amount" id="modal_deposit" class="form-control number-format" value="0">
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fas fa-times"></i> ຍົກເລີກ</button>
-                    <button type="submit" name="reserve" class="btn btn-warning text-white px-4"><i class="fas fa-calendar-check"></i> ຢືນຢັນການຈອງ</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fas fa-times"></i> <?php echo $lang['cancel']; ?></button>
+                    <button type="submit" name="reserve" class="btn btn-warning text-white px-4"><i class="fas fa-calendar-check"></i> <?php echo $lang['confirm']; ?></button>
                 </div>
             </form>
         </div>
@@ -578,7 +576,7 @@ $reservations = $stmtReserved->fetchAll();
     <div class="modal-dialog">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fas fa-user-circle"></i> ລາຍລະອຽດການຈອງ</h5>
+                <h5 class="modal-title"><i class="fas fa-user-circle"></i> <?php echo $lang['details']; ?></h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
@@ -588,15 +586,15 @@ $reservations = $stmtReserved->fetchAll();
                     <span class="badge badge-info" id="v_room_info"></span>
                 </div>
                 <table class="table table-sm table-borderless">
-                    <tr><td width="40%" class="text-muted">ເບີໂທຕິດຕໍ່:</td><td class="font-weight-bold" id="v_phone"></td></tr>
-                    <tr><td class="text-muted">ເລກບັດ/ພາສປອດ:</td><td class="font-weight-bold" id="v_passport"></td></tr>
-                    <tr><td class="text-muted">ທີ່ຢູ່:</td><td id="v_address"></td></tr>
-                    <tr><td class="text-muted">ຈຳນວນແຂກ:</td><td class="font-weight-bold"><span id="v_guests"></span> ຄົນ</td></tr>
+                    <tr><td width="40%" class="text-muted"><?php echo $lang['phone']; ?>:</td><td class="font-weight-bold" id="v_phone"></td></tr>
+                    <tr><td class="text-muted"><?php echo $lang['passport']; ?>:</td><td class="font-weight-bold" id="v_passport"></td></tr>
+                    <tr><td class="text-muted"><?php echo $lang['address']; ?>:</td><td id="v_address"></td></tr>
+                    <tr><td class="text-muted"><?php echo $lang['guests']; ?>:</td><td class="font-weight-bold"><span id="v_guests"></span> <?php echo $lang['person_unit']; ?></td></tr>
                     <tr><td colspan="2"><hr class="my-1"></td></tr>
-                    <tr><td class="text-muted">ວັນທີເຂົ້າພັກ:</td><td class="text-success font-weight-bold" id="v_checkin"></td></tr>
-                    <tr><td class="text-muted">ວັນທີອອກ:</td><td class="text-danger font-weight-bold" id="v_checkout"></td></tr>
-                    <tr><td class="text-muted">ຍອດລວມທັງໝົດ:</td><td class="font-weight-bold text-primary" id="v_total"></td></tr>
-                    <tr><td class="text-muted">ມັດຈຳແລ້ວ:</td><td class="font-weight-bold text-info" id="v_deposit"></td></tr>
+                    <tr><td class="text-muted"><?php echo $lang['checkin_date']; ?>:</td><td class="text-success font-weight-bold" id="v_checkin"></td></tr>
+                    <tr><td class="text-muted"><?php echo $lang['checkout_date']; ?>:</td><td class="text-danger font-weight-bold" id="v_checkout"></td></tr>
+                    <tr><td class="text-muted"><?php echo $lang['total']; ?>:</td><td class="font-weight-bold text-primary" id="v_total"></td></tr>
+                    <tr><td class="text-muted"><?php echo $lang['deposit']; ?>:</td><td class="font-weight-bold text-info" id="v_deposit"></td></tr>
                 </table>
             </div>
             <div class="modal-footer bg-light">

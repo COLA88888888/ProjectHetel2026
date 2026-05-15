@@ -36,11 +36,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
     $currency_id = (int)$_POST['currency_id'];
 
     // Update text settings
-    $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'hotel_name'")->execute([$hotel_name]);
-    $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'hotel_phone'")->execute([$hotel_phone]);
-    $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'hotel_address'")->execute([$hotel_address]);
-    $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'receipt_footer'")->execute([$receipt_footer]);
-    $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'tax_percent'")->execute([$tax_percent]);
+    $keys_to_update = [
+        'hotel_name', 'hotel_name_la', 'hotel_name_en', 'hotel_name_cn',
+        'hotel_phone',
+        'hotel_address', 'hotel_address_la', 'hotel_address_en', 'hotel_address_cn',
+        'receipt_footer', 'receipt_footer_la', 'receipt_footer_en', 'receipt_footer_cn',
+        'tax_percent'
+    ];
+
+    foreach ($keys_to_update as $k) {
+        if (isset($_POST[$k])) {
+            $val = $_POST[$k];
+            $pdo->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = ?")->execute([$val, $k]);
+        }
+    }
 
     // Update Default Currency
     $pdo->query("UPDATE currency SET is_default = 0");
@@ -215,9 +224,18 @@ foreach($currencies as $c) {
                         </div>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label text-right">ຊື່ໂຮງແຮມ / ເຮືອນພັກ <span class="text-danger">*</span></label>
+                            <label class="col-sm-3 col-form-label text-right">ຊື່ໂຮງແຮມ (Lao) <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" name="hotel_name" class="form-control" value="<?php echo htmlspecialchars($settings_data['hotel_name'] ?? ''); ?>" required>
+                                <input type="text" name="hotel_name" class="form-control mb-2" value="<?php echo htmlspecialchars($settings_data['hotel_name'] ?? ''); ?>" required placeholder="ຊື່ພາສາລາວ (ຫຼັກ)">
+                                <input type="hidden" name="hotel_name_la" value="<?php echo htmlspecialchars($settings_data['hotel_name'] ?? ''); ?>">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="text" name="hotel_name_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_name_en'] ?? ''); ?>" placeholder="Hotel Name (EN)">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" name="hotel_name_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_name_cn'] ?? ''); ?>" placeholder="酒店名称 (CN)">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -231,14 +249,32 @@ foreach($currencies as $c) {
                         <div class="form-group row">
                             <label class="col-sm-3 col-form-label text-right">ທີ່ຢູ່ / ສະຖານທີ່ຕັ້ງ</label>
                             <div class="col-sm-9">
-                                <textarea name="hotel_address" class="form-control" rows="3"><?php echo htmlspecialchars($settings_data['hotel_address'] ?? ''); ?></textarea>
+                                <textarea name="hotel_address" class="form-control mb-2" rows="2" placeholder="ທີ່ຢູ່ພາສາລາວ"><?php echo htmlspecialchars($settings_data['hotel_address'] ?? ''); ?></textarea>
+                                <input type="hidden" name="hotel_address_la" value="<?php echo htmlspecialchars($settings_data['hotel_address'] ?? ''); ?>">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="text" name="hotel_address_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_address_en'] ?? ''); ?>" placeholder="Address (EN)">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" name="hotel_address_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_address_cn'] ?? ''); ?>" placeholder="地址 (CN)">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label text-right">ຂໍ້ຄວາມທ້າຍໃບຮັບເງິນ</label>
+                            <label class="col-sm-3 col-form-label text-right">ທ້າຍໃບຮັບເງິນ</label>
                             <div class="col-sm-9">
-                                <input type="text" name="receipt_footer" class="form-control" value="<?php echo htmlspecialchars($settings_data['receipt_footer'] ?? ''); ?>" placeholder="ຕົວຢ່າງ: ຂໍຂອບໃຈທີ່ໃຊ້ບໍລິການ ໂອກາດໜ້າເຊີນໃໝ່">
+                                <input type="text" name="receipt_footer" class="form-control mb-2" value="<?php echo htmlspecialchars($settings_data['receipt_footer'] ?? ''); ?>" placeholder="ຂໍ້ຄວາມພາສາລາວ">
+                                <input type="hidden" name="receipt_footer_la" value="<?php echo htmlspecialchars($settings_data['receipt_footer'] ?? ''); ?>">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="text" name="receipt_footer_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['receipt_footer_en'] ?? ''); ?>" placeholder="Footer (EN)">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" name="receipt_footer_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['receipt_footer_cn'] ?? ''); ?>" placeholder="页脚 (CN)">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

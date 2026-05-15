@@ -22,11 +22,15 @@ $stmtCur = $pdo->query("SELECT * FROM currency WHERE is_default = 1 LIMIT 1");
 $default_currency = $stmtCur->fetch();
 $currency_symbol = $default_currency['symbol'] ?? '₭';
 
-// Fetch Booking details
+// Fetch Booking details with localized room type
+$current_lang = $_SESSION['lang'] ?? 'la';
+$room_type_col = "room_type_name_" . $current_lang;
+
 $stmt = $pdo->prepare("
-    SELECT b.*, r.room_number, r.room_type 
+    SELECT b.*, r.room_number, rt.$room_type_col as room_type_localized, rt.room_type_name as room_type_base
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
+    JOIN room_types rt ON r.room_type = rt.room_type_name
     WHERE b.id = ?
 ");
 $stmt->execute([$booking_id]);
@@ -36,9 +40,11 @@ if (!$booking) {
     die("Booking details not found.");
 }
 
-// Fetch Room Services (Food/Drink)
+// Fetch Room Services (Food/Drink) with localized names
+$prod_name_col = "prod_name_" . $current_lang;
 $svcStmt = $pdo->prepare("
-    SELECT rs.item_name, rs.price, SUM(rs.qty) as qty, SUM(rs.total_price) as total_price, MAX(p.prod_code) as prod_code
+    SELECT rs.item_name, rs.price, SUM(rs.qty) as qty, SUM(rs.total_price) as total_price, 
+           MAX(p.prod_code) as prod_code, MAX(p.$prod_name_col) as prod_name_localized
     FROM room_services rs 
     LEFT JOIN products p ON rs.prod_id = p.prod_id 
     WHERE rs.booking_id = ?
@@ -134,7 +140,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
     </div>
     <div class="info-row">
         <span>ຫ້ອງ:</span>
-        <span><?php echo htmlspecialchars($booking['room_number']); ?> (<?php echo htmlspecialchars($booking['room_type']); ?>)</span>
+        <span><?php echo htmlspecialchars($booking['room_number']); ?> (<?php echo htmlspecialchars($booking['room_type_localized'] ?: $booking['room_type_base']); ?>)</span>
     </div>
     <div class="info-row">
         <span>ເຂົ້າ:</span>
@@ -164,7 +170,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
                 <?php foreach($services as $s): ?>
                 <tr>
                     <td style="padding-left: 10px;">
-                        <?php echo htmlspecialchars($s['item_name']); ?> (x<?php echo $s['qty']; ?>)
+                        <?php echo htmlspecialchars($s['prod_name_localized'] ?: $s['item_name']); ?> (x<?php echo $s['qty']; ?>)
                     </td>
                     <td class="text-right"><?php echo number_format($s['total_price']); ?></td>
                 </tr>

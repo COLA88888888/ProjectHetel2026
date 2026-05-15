@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 // Check if accessing directly or via Walk-in
 $room_id = isset($_GET['room_id']) ? (int)$_GET['room_id'] : 0;
 $nights = isset($_GET['nights']) ? (int)$_GET['nights'] : 1;
@@ -13,7 +22,7 @@ if ($room_id > 0) {
     $room = $stmt->fetch();
 
     if (!$room) {
-        $_SESSION['error'] = "ຂໍອະໄພ! ຫ້ອງນີ້ບໍ່ຫວ່າງແລ້ວ ຫຼື ຖືກຈອງໄປແລ້ວ.";
+        $_SESSION['error'] = $lang['room_not_available_msg'] ?? "ຂໍອະໄພ! ຫ້ອງນີ້ບໍ່ຫວ່າງແລ້ວ ຫຼື ຖືກຈອງໄປແລ້ວ.";
         header("Location: walkin.php");
         exit();
     }
@@ -66,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
         $updateRoom = $pdo->prepare("UPDATE rooms SET status = 'Occupied' WHERE id = ?");
         $updateRoom->execute([$room_id]);
         
-        $_SESSION['success'] = "ດຳເນີນການ Check-in ເຂົ້າພັກສຳເລັດແລ້ວ!";
+        $_SESSION['success'] = $lang['checkin_success'];
         $_SESSION['print_booking'] = $booking_id;
         
         logActivity($pdo, "Check-in ເຂົ້າພັກ", "ລູກຄ້າ: $customer_name, ຫ້ອງ: " . $room['room_number']);
@@ -83,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check-in ເຂົ້າພັກ</title>
+    <title><?php echo $lang['check_in']; ?></title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free-5.15.3-web/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
@@ -117,32 +126,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
                     <div class="display-3 text-info mb-3">
                         <i class="fas fa-door-open"></i>
                     </div>
-                    <h3 class="profile-username text-center">ຫ້ອງ <?php echo htmlspecialchars($room['room_number']); ?></h3>
+                    <h3 class="profile-username text-center"><?php echo $lang['room']; ?> <?php echo htmlspecialchars($room['room_number']); ?></h3>
                     <p class="text-muted text-center"><?php echo htmlspecialchars($room['room_type']); ?> (<?php echo htmlspecialchars($room['bed_type']); ?>)</p>
                     
                     <ul class="list-group list-group-unbordered mb-3 text-left">
                         <li class="list-group-item">
-                            <b>ລາຄາ / ຄືນ:</b> <a class="float-right text-dark"><?php echo number_format($room['price']); ?> ກີບ</a>
+                            <b><?php echo $lang['price']; ?> / <?php echo $lang['nights_count']; ?>:</b> <a class="float-right text-dark"><?php echo number_format($room['price']); ?> ₭</a>
                         </li>
                         <li class="list-group-item">
-                            <b>ຈຳນວນຄືນ (Nights):</b> <a class="float-right text-dark"><?php echo $nights; ?> ຄືນ</a>
+                            <b><?php echo $lang['nights']; ?>:</b> <a class="float-right text-dark"><?php echo $nights; ?> <?php echo $lang['nights_count']; ?></a>
                         </li>
                         <li class="list-group-item">
-                            <b>ວັນທີເຂົ້າພັກ:</b> <a class="float-right text-success"><?php echo date('d/m/Y', strtotime($check_in_date)); ?></a>
+                            <b><?php echo $lang['checkin_date']; ?>:</b> <a class="float-right text-success"><?php echo date('d/m/Y', strtotime($check_in_date)); ?></a>
                         </li>
                         <li class="list-group-item">
-                            <b>ວັນທີອອກ:</b> <a class="float-right text-danger"><?php echo date('d/m/Y', strtotime($check_out_date)); ?></a>
+                            <b><?php echo $lang['checkout_date']; ?>:</b> <a class="float-right text-danger"><?php echo date('d/m/Y', strtotime($check_out_date)); ?></a>
                         </li>
                         <li class="list-group-item bg-light">
-                            <b>ລາຄາລວມ (Subtotal):</b> <a class="float-right text-dark"><?php echo number_format($total_price); ?> ກີບ</a>
+                            <b><?php echo $lang['subtotal']; ?>:</b> <a class="float-right text-dark"><?php echo number_format($total_price); ?> ₭</a>
                         </li>
                         <?php if($tax_percent > 0): ?>
                         <li class="list-group-item">
-                            <b>ພາສີອາກອນ (Tax <?php echo $tax_percent; ?>%):</b> <a class="float-right text-info"><?php echo number_format($tax_amount); ?> ກີບ</a>
+                            <b><?php echo $lang['tax_percent'] ?? 'Tax'; ?> (<?php echo $tax_percent; ?>%):</b> <a class="float-right text-info"><?php echo number_format($tax_amount); ?> ₭</a>
                         </li>
                         <?php endif; ?>
                         <li class="list-group-item bg-dark">
-                            <b>ຍອດລວມທັງໝົດ (Grand Total):</b> <a class="float-right text-warning font-weight-bold" style="font-size: 1.1rem;"><?php echo number_format($grand_total); ?> ກີບ</a>
+                            <b><?php echo $lang['grand_total']; ?>:</b> <a class="float-right text-warning font-weight-bold" style="font-size: 1.1rem;"><?php echo number_format($grand_total); ?> ₭</a>
                         </li>
                     </ul>
                 </div>
@@ -153,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
         <div class="col-md-8">
             <div class="card card-success card-outline shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-user-edit"></i> ຂໍ້ມູນລູກຄ້າ (Check-in)</h3>
+                    <h3 class="card-title"><i class="fas fa-user-edit"></i> <?php echo $lang['booking_info']; ?> (Check-in)</h3>
                 </div>
                 <form action="" method="post" id="checkinForm">
                     <div class="card-body">
@@ -164,40 +173,40 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>ຊື່ ແລະ ນາມສະກຸນ <span class="text-danger">*</span></label>
+                                    <label><?php echo $lang['full_name']; ?> <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-user"></i></span>
                                         </div>
-                                        <input type="text" name="customer_name" id="customer_name" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ລູກຄ້າ">
+                                        <input type="text" name="customer_name" id="customer_name" class="form-control" placeholder="<?php echo $lang['enter_name']; ?>">
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>ເບີໂທຕິດຕໍ່ <span class="text-danger">*</span></label>
+                                    <label><?php echo $lang['phone']; ?> <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-phone"></i></span>
                                         </div>
-                                        <input type="text" name="customer_phone" id="customer_phone" class="form-control" placeholder="ກະລຸນາປ້ອນເບີໂທ">
+                                        <input type="text" name="customer_phone" id="customer_phone" class="form-control" placeholder="<?php echo $lang['enter_phone']; ?>">
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>ເລກບັດປະຈຳຕົວ / ພາສປອດ (ທາງເລືອກ)</label>
+                                    <label><?php echo $lang['passport']; ?></label>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-id-card"></i></span>
                                         </div>
-                                        <input type="text" name="passport_number" class="form-control" placeholder="ເອກະສານຢັ້ງຢືນ">
+                                        <input type="text" name="passport_number" class="form-control" placeholder="<?php echo $lang['enter_passport']; ?>">
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>ຈຳນວນຜູ້ເຂົ້າພັກ</label>
+                                    <label><?php echo $lang['guests']; ?></label>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-users"></i></span>
@@ -208,20 +217,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
                             </div>
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label>ທີ່ຢູ່ລູກຄ້າ (ທາງເລືອກ)</label>
-                                    <textarea name="address" class="form-control" rows="2" placeholder="ບ້ານ, ເມືອງ, ແຂວງ..."></textarea>
+                                    <label><?php echo $lang['address']; ?></label>
+                                    <textarea name="address" class="form-control" rows="2" placeholder="<?php echo $lang['enter_address']; ?>"></textarea>
                                 </div>
                             </div>
                             
                             <div class="col-md-12 mt-2">
-                                <h5 class="text-info border-bottom pb-2"><i class="fas fa-money-bill-wave"></i> ການຊຳລະເງິນ</h5>
+                                <h5 class="text-info border-bottom pb-2"><i class="fas fa-money-bill-wave"></i> <?php echo $lang['payment_info']; ?></h5>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>ວິທີຊຳລະເງິນ <span class="text-danger">*</span></label>
+                                    <label><?php echo $lang['payment_method_label']; ?> <span class="text-danger">*</span></label>
                                     <select name="payment_method" class="form-control" required>
-                                        <option value="Cash">ເງິນສົດ</option>
-                                        <option value="Transfer">ໂອນເງິນ</option>
+                                        <option value="Cash"><?php echo $lang['cash'] ?? 'Cash'; ?></option>
+                                        <option value="Transfer"><?php echo $lang['transfer'] ?? 'Transfer'; ?></option>
                                     </select>
                                 </div>
                             </div>
@@ -240,9 +249,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
                         </div>
                     </div>
                     <div class="card-footer text-right bg-white border-top">
-                        <a href="walkin.php" class="btn btn-default"><i class="fas fa-times"></i> ຍົກເລີກ</a>
+                        <a href="walkin.php" class="btn btn-default"><i class="fas fa-times"></i> <?php echo $lang['cancel']; ?></a>
                         <button type="submit" name="checkin" class="btn btn-success ml-2" style="padding-left: 30px; padding-right: 30px;">
-                            <i class="fas fa-check"></i> ຍືນຍັນການເຂົ້າພັກ (Check-in)
+                            <i class="fas fa-check"></i> <?php echo $lang['confirm_checkin']; ?>
                         </button>
                     </div>
                 </form>

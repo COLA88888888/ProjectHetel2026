@@ -5,13 +5,21 @@ require_once '../config/db.php';
 // Add new currency
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_currency'])) {
     $code = trim($_POST['currency_code']);
-    $name = trim($_POST['currency_name']);
+    $name_la = trim($_POST['currency_name_la']);
+    $name_en = trim($_POST['currency_name_en']);
+    $name_cn = trim($_POST['currency_name_cn']);
     $rate = (float)str_replace(',', '', $_POST['exchange_rate']);
-    $symbol = trim($_POST['symbol']);
+    $symbol_la = trim($_POST['symbol_la']);
+    $symbol_en = trim($_POST['symbol_en']);
+    $symbol_cn = trim($_POST['symbol_cn']);
+    
+    // Original columns
+    $name = $name_la;
+    $symbol = $symbol_la;
 
-    if (!empty($code) && !empty($name)) {
-        $stmt = $pdo->prepare("INSERT INTO currency (currency_code, currency_name, exchange_rate, symbol) VALUES (?, ?, ?, ?)");
-        if ($stmt->execute([$code, $name, $rate, $symbol])) {
+    if (!empty($code) && !empty($name_la)) {
+        $stmt = $pdo->prepare("INSERT INTO currency (currency_code, currency_name, currency_name_la, currency_name_en, currency_name_cn, exchange_rate, symbol, symbol_la, symbol_en, symbol_cn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$code, $name, $name_la, $name_en, $name_cn, $rate, $symbol, $symbol_la, $symbol_en, $symbol_cn])) {
             $_SESSION['success'] = "ເພີ່ມສະກຸນເງິນສຳເລັດແລ້ວ!";
         } else {
             $_SESSION['error'] = "ບໍ່ສາມາດເພີ່ມໄດ້!";
@@ -25,13 +33,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_currency'])) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_currency'])) {
     $id = (int)$_POST['id'];
     $code = trim($_POST['currency_code']);
-    $name = trim($_POST['currency_name']);
+    $name_la = trim($_POST['currency_name_la']);
+    $name_en = trim($_POST['currency_name_en']);
+    $name_cn = trim($_POST['currency_name_cn']);
     $rate = (float)str_replace(',', '', $_POST['exchange_rate']);
-    $symbol = trim($_POST['symbol']);
+    $symbol_la = trim($_POST['symbol_la']);
+    $symbol_en = trim($_POST['symbol_en']);
+    $symbol_cn = trim($_POST['symbol_cn']);
 
     if ($id > 0) {
-        $stmt = $pdo->prepare("UPDATE currency SET currency_code = ?, currency_name = ?, exchange_rate = ?, symbol = ? WHERE id = ?");
-        if ($stmt->execute([$code, $name, $rate, $symbol, $id])) {
+        $stmt = $pdo->prepare("UPDATE currency SET currency_code = ?, currency_name = ?, currency_name_la = ?, currency_name_en = ?, currency_name_cn = ?, exchange_rate = ?, symbol = ?, symbol_la = ?, symbol_en = ?, symbol_cn = ? WHERE id = ?");
+        if ($stmt->execute([$code, $name_la, $name_la, $name_en, $name_cn, $rate, $symbol_la, $symbol_la, $symbol_en, $symbol_cn, $id])) {
             $_SESSION['success'] = "ແກ້ໄຂຂໍ້ມູນສຳເລັດແລ້ວ!";
         }
     }
@@ -63,6 +75,10 @@ if (isset($_GET['delete'])) {
 // Fetch all currencies
 $stmt = $pdo->query("SELECT * FROM currency ORDER BY is_default DESC, id ASC");
 $currencies = $stmt->fetchAll();
+
+$current_lang = $_SESSION['lang'] ?? 'la';
+$name_col = "currency_name_" . $current_lang;
+$symbol_col = "symbol_" . $current_lang;
 ?>
 <!DOCTYPE html>
 <html lang="lo">
@@ -135,22 +151,51 @@ $currencies = $stmt->fetchAll();
                 </div>
                 <form action="" method="post">
                     <div class="card-body">
-                        <div class="form-group">
-                            <label>ຕົວຫຍໍ້ <small>(THB, USD)</small></label>
-                            <input type="text" name="currency_code" class="form-control" required style="text-transform: uppercase;">
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label class="font-weight-bold">ຕົວຫຍໍ້ <small>(LAK, USD)</small></label>
+                                <input type="text" name="currency_code" class="form-control" placeholder="ກະລຸນາປ້ອນຕົວຫຍໍ້ສະກຸນເງິນ" required>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label class="font-weight-bold">ອັດຕາແລກປ່ຽນ <small>(1 = ? ກີບ)</small></label>
+                                <input type="text" name="exchange_rate" class="form-control number-format" placeholder="ກະລຸນາປ້ອນອັດຕາແລກປ່ຽນ" required>
+                            </div>
+                            <div class="col-md-8 form-group">
+                                <label class="font-weight-bold">ຊື່ສະກຸນເງິນ <small>(Lao)</small></label>
+                                <input type="text" name="currency_name_la" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ສະກຸນເງິນ" required>
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label class="font-weight-bold">ສັນຍາລັກ <small>(Symbol)</small></label>
+                                <input type="text" name="symbol_la" class="form-control" placeholder="ກະລຸນາປ້ອນສັນຍາລັກສະກຸນເງິນ">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>ຊື່ສະກຸນເງິນ</label>
-                            <input type="text" name="currency_name" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>ອັດຕາແລກປ່ຽນ (1 = ? ກີບ)</label>
-                            <input type="text" name="exchange_rate" class="form-control number-format" placeholder="ເຊັ່ນ: 650" required>
-                        </div>
-                        <div class="form-group">
-                            <label>ສັນຍາລັກ</label>
-                            <input type="text" name="symbol" class="form-control">
-                        </div>
+
+                        <!-- <button class="btn btn-link btn-sm p-0 mb-3 text-decoration-none" type="button" data-toggle="collapse" data-target="#moreOptions" aria-expanded="false">
+                            <i class="fas fa-plus-circle mr-1"></i> ຕົວເລືອກພາສາອື່ນ (Advanced)
+                        </button>
+
+                        <div class="collapse" id="moreOptions">
+                            <div class="card card-body bg-light border-0 p-3 mb-0">
+                                <div class="row">
+                                    <div class="col-md-6 form-group">
+                                        <label class="small font-weight-bold">Currency Name (EN)</label>
+                                        <input type="text" name="currency_name_en" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label class="small font-weight-bold">币种名称 (CN)</label>
+                                        <input type="text" name="currency_name_cn" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-6 form-group mb-0">
+                                        <label class="small font-weight-bold">Symbol (EN)</label>
+                                        <input type="text" name="symbol_en" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-6 form-group mb-0">
+                                        <label class="small font-weight-bold">Symbol (CN)</label>
+                                        <input type="text" name="symbol_cn" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                            </div>
+                        </div> -->
                     </div>
                     <div class="card-footer">
                         <button type="submit" name="add_currency" class="btn btn-primary btn-block"><i class="fas fa-save"></i> ບັນທຶກ</button>
@@ -181,10 +226,10 @@ $currencies = $stmt->fetchAll();
                                 <?php foreach($currencies as $index => $c): ?>
                                     <tr>
                                         <td><?php echo $index + 1; ?></td>
-                                        <td class="text-left font-weight-bold"><?php echo htmlspecialchars($c['currency_name']); ?></td>
+                                        <td class="text-left font-weight-bold"><?php echo htmlspecialchars($c[$name_col] ?: $c['currency_name']); ?></td>
                                         <td>
                                             <span class="badge badge-secondary"><?php echo htmlspecialchars($c['currency_code']); ?></span>
-                                            <div class="text-muted small">(<?php echo htmlspecialchars($c['symbol']); ?>)</div>
+                                            <div class="text-muted small">(<?php echo htmlspecialchars($c[$symbol_col] ?: $c['symbol']); ?>)</div>
                                         </td>
                                         <td class="text-primary font-weight-bold text-right pr-2 pr-md-4">
                                             <?php if($c['is_default']): ?>
@@ -198,9 +243,13 @@ $currencies = $stmt->fetchAll();
                                                 <button class="btn btn-warning text-white btn-edit" 
                                                     data-id="<?php echo $c['id']; ?>"
                                                     data-code="<?php echo htmlspecialchars($c['currency_code']); ?>"
-                                                    data-name="<?php echo htmlspecialchars($c['currency_name']); ?>"
+                                                    data-name-la="<?php echo htmlspecialchars($c['currency_name_la'] ?: $c['currency_name']); ?>"
+                                                    data-name-en="<?php echo htmlspecialchars($c['currency_name_en'] ?? ''); ?>"
+                                                    data-name-cn="<?php echo htmlspecialchars($c['currency_name_cn'] ?? ''); ?>"
                                                     data-rate="<?php echo number_format($c['exchange_rate']); ?>"
-                                                    data-symbol="<?php echo htmlspecialchars($c['symbol']); ?>"
+                                                    data-symbol-la="<?php echo htmlspecialchars($c['symbol_la'] ?: $c['symbol']); ?>"
+                                                    data-symbol-en="<?php echo htmlspecialchars($c['symbol_en'] ?? ''); ?>"
+                                                    data-symbol-cn="<?php echo htmlspecialchars($c['symbol_cn'] ?? ''); ?>"
                                                     data-default="<?php echo $c['is_default']; ?>">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -236,22 +285,51 @@ $currencies = $stmt->fetchAll();
       <form action="" method="post">
           <div class="modal-body">
               <input type="hidden" name="id" id="edit_id">
-              <div class="form-group">
-                  <label>ຕົວຫຍໍ້ສະກຸນເງິນ</label>
-                  <input type="text" name="currency_code" id="edit_code" class="form-control" required style="text-transform: uppercase;">
+              <div class="row">
+                  <div class="col-md-6 form-group">
+                      <label class="font-weight-bold">ຕົວຫຍໍ້</label>
+                      <input type="text" name="currency_code" id="edit_code" class="form-control" required style="text-transform: uppercase;">
+                  </div>
+                  <div class="col-md-6 form-group" id="rate_group">
+                      <label class="font-weight-bold">ອັດຕາແລກປ່ຽນ</label>
+                      <input type="text" name="exchange_rate" id="edit_rate" class="form-control number-format" required>
+                  </div>
+                  <div class="col-md-8 form-group">
+                      <label class="font-weight-bold">ຊື່ສະກຸນເງິນ (Lao)</label>
+                      <input type="text" name="currency_name_la" id="edit_name_la" class="form-control" required>
+                  </div>
+                  <div class="col-md-4 form-group">
+                      <label class="font-weight-bold">ສັນຍາລັກ</label>
+                      <input type="text" name="symbol_la" id="edit_symbol_la" class="form-control">
+                  </div>
               </div>
-              <div class="form-group">
-                  <label>ຊື່ສະກຸນເງິນ</label>
-                  <input type="text" name="currency_name" id="edit_name" class="form-control" required>
-              </div>
-              <div class="form-group" id="rate_group">
-                  <label>ອັດຕາແລກປ່ຽນ (1 ສະກຸນເງິນ = ? ກີບ)</label>
-                  <input type="text" name="exchange_rate" id="edit_rate" class="form-control number-format" required>
-              </div>
-              <div class="form-group">
-                  <label>ສັນຍາລັກ</label>
-                  <input type="text" name="symbol" id="edit_symbol" class="form-control">
-              </div>
+
+              <!-- <button class="btn btn-link btn-sm p-0 mb-3 text-decoration-none" type="button" data-toggle="collapse" data-target="#editMoreOptions">
+                  <i class="fas fa-plus-circle mr-1"></i> ຕົວເລືອກພາສາອື່ນ (Advanced)
+              </button>
+
+              <div class="collapse" id="editMoreOptions">
+                  <div class="card card-body bg-light border-0 p-3 mb-0">
+                      <div class="row">
+                          <div class="col-md-6 form-group">
+                              <label class="small font-weight-bold">Currency Name (EN)</label>
+                              <input type="text" name="currency_name_en" id="edit_name_en" class="form-control form-control-sm">
+                          </div>
+                          <div class="col-md-6 form-group">
+                              <label class="small font-weight-bold">币种名称 (CN)</label>
+                              <input type="text" name="currency_name_cn" id="edit_name_cn" class="form-control form-control-sm">
+                          </div>
+                          <div class="col-md-6 form-group mb-0">
+                              <label class="small font-weight-bold">Symbol (EN)</label>
+                              <input type="text" name="symbol_en" id="edit_symbol_en" class="form-control form-control-sm">
+                          </div>
+                          <div class="col-md-6 form-group mb-0">
+                              <label class="small font-weight-bold">Symbol (CN)</label>
+                              <input type="text" name="symbol_cn" id="edit_symbol_cn" class="form-control form-control-sm">
+                          </div>
+                      </div>
+                  </div>
+              </div> -->
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">ຍົກເລີກ</button>
@@ -278,9 +356,13 @@ $('.number-format').on('input', function() {
 $('.btn-edit').on('click', function() {
     $('#edit_id').val($(this).data('id'));
     $('#edit_code').val($(this).data('code'));
-    $('#edit_name').val($(this).data('name'));
+    $('#edit_name_la').val($(this).data('name-la'));
+    $('#edit_name_en').val($(this).data('name-en'));
+    $('#edit_name_cn').val($(this).data('name-cn'));
     $('#edit_rate').val($(this).data('rate'));
-    $('#edit_symbol').val($(this).data('symbol'));
+    $('#edit_symbol_la').val($(this).data('symbol-la'));
+    $('#edit_symbol_en').val($(this).data('symbol-en'));
+    $('#edit_symbol_cn').val($(this).data('symbol-cn'));
     
     // Disable rate editing for default currency (LAK)
     if ($(this).data('default') == 1) {

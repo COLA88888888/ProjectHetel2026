@@ -1,8 +1,8 @@
 <?php
-require_once 'config/db.php';
-$tables = ['bookings', 'products', 'room_services'];
-foreach($tables as $t) {
-    echo "\nTable: $t\n";
-    $stmt = $pdo->query("DESCRIBE $t");
-    print_r($stmt->fetchAll(PDO::FETCH_ASSOC));
-}
+$p = new PDO('mysql:host=localhost;dbname=db_hotel', 'root', '');
+echo "BOOKINGS COLUMNS:\n";
+$s = $p->query('DESCRIBE bookings');
+while($r = $s->fetch(PDO::FETCH_ASSOC)) echo $r['Field'] . "\n";
+echo "\nORDERS COLUMNS:\n";
+$s = $p->query('DESCRIBE orders');
+while($r = $s->fetch(PDO::FETCH_ASSOC)) echo $r['Field'] . "\n";

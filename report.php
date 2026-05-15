@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 $type = $_GET['type'] ?? 'all';
 // Fetch Tax Percent
 $stmtTax = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
@@ -9,15 +18,35 @@ $tax_percent = (float)($stmtTax->fetchColumn() ?: 0);
 $tax_mult = 1 + ($tax_percent / 100);
 
 // 1. Daily Revenue (Bookings + POS)
-$stmtDay = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) as daily_revenue FROM bookings WHERE DATE(check_in_date) = CURDATE()");
-$stmtDay->execute();
-$daily_revenue_bookings = $stmtDay->fetch()['daily_revenue'] ?? 0;
+$stmtDaily = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) as daily_revenue FROM bookings WHERE DATE(check_in_date) = CURDATE()");
+$stmtDaily->execute();
+$daily_revenue_bookings = $stmtDaily->fetch()['daily_revenue'] ?? 0;
 
-$stmtPosDay = $pdo->prepare("SELECT SUM(amount) as daily_pos FROM orders WHERE DATE(o_date) = CURDATE()");
-$stmtPosDay->execute();
-$daily_pos = $stmtPosDay->fetch()['daily_pos'] ?? 0;
+$stmtPosDaily = $pdo->prepare("SELECT SUM(amount) as daily_pos FROM orders WHERE DATE(o_date) = CURDATE()");
+$stmtPosDaily->execute();
+$daily_pos = $stmtPosDaily->fetch()['daily_pos'] ?? 0;
 
 $daily_revenue = $daily_revenue_bookings + $daily_pos;
+
+// 1.1 Daily Revenue Breakdown (Cash vs Transfer)
+$stmtCashRoom = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) FROM bookings WHERE DATE(check_in_date) = CURDATE() AND (payment_method LIKE '%ເງິນສົດ%' OR payment_method LIKE '%Cash%')");
+$stmtCashRoom->execute();
+$daily_cash_room = $stmtCashRoom->fetchColumn() ?: 0;
+
+$stmtTransferRoom = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) FROM bookings WHERE DATE(check_in_date) = CURDATE() AND (payment_method LIKE '%ເງິນໂອນ%' OR payment_method LIKE '%Transfer%')");
+$stmtTransferRoom->execute();
+$daily_transfer_room = $stmtTransferRoom->fetchColumn() ?: 0;
+
+$stmtCashPos = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE DATE(o_date) = CURDATE() AND (payment_method LIKE '%ເງິນສົດ%' OR payment_method LIKE '%Cash%')");
+$stmtCashPos->execute();
+$daily_cash_pos = $stmtCashPos->fetchColumn() ?: 0;
+
+$stmtTransferPos = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE DATE(o_date) = CURDATE() AND (payment_method LIKE '%ເງິນໂອນ%' OR payment_method LIKE '%Transfer%')");
+$stmtTransferPos->execute();
+$daily_transfer_pos = $stmtTransferPos->fetchColumn() ?: 0;
+
+$daily_cash_total = $daily_cash_room + $daily_cash_pos;
+$daily_transfer_total = $daily_transfer_room + $daily_transfer_pos;
 
 // 2. Monthly Revenue (Bookings + POS)
 $stmtMonth = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) as monthly_revenue FROM bookings WHERE MONTH(check_in_date) = MONTH(CURDATE()) AND YEAR(check_in_date) = YEAR(CURDATE())");
@@ -57,11 +86,15 @@ $stmtRooms = $pdo->prepare("
 $stmtRooms->execute();
 $available_rooms = $stmtRooms->fetch()['available_rooms'] ?? 0;
 
-// Get recent transactions (Last 10 completed bookings)
+// Get recent transactions (Last 10 completed bookings) with localized room type
+$current_lang = $_SESSION['lang'] ?? 'la';
+$room_type_col = "room_type_name_" . $current_lang;
+
 $stmtRecent = $pdo->query("
-    SELECT b.*, r.room_number 
+    SELECT b.*, r.room_number, rt.$room_type_col as room_type_localized, rt.room_type_name as room_type_base
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
+    JOIN room_types rt ON r.room_type = rt.room_type_name
     ORDER BY b.id DESC LIMIT 20
 ");
 $recent_bookings = $stmtRecent->fetchAll();
@@ -69,9 +102,10 @@ $recent_bookings = $stmtRecent->fetchAll();
 // Fetch Currently Unavailable Rooms (Booked Today or Occupied/Staying)
 $today_val = date('Y-m-d');
 $stmtUnavailable = $pdo->query("
-    SELECT b.*, r.room_number, r.room_type 
+    SELECT b.*, r.room_number, rt.$room_type_col as room_type_localized, rt.room_type_name as room_type_base
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
+    JOIN room_types rt ON r.room_type = rt.room_type_name
     WHERE b.status IN ('Occupied', 'Checked In')
     OR (b.status = 'Booked' AND b.check_in_date <= '$today_val' AND b.check_out_date > '$today_val')
     ORDER BY b.status DESC, b.check_in_date ASC
@@ -79,8 +113,9 @@ $stmtUnavailable = $pdo->query("
 $unavailable_list = $stmtUnavailable->fetchAll();
 
 // Get recent POS transactions
+$prod_name_col = "prod_name_" . $current_lang;
 $stmtRecentPos = $pdo->query("
-    SELECT o.*, p.prod_name, p.category 
+    SELECT o.*, p.prod_name, p.$prod_name_col as prod_name_localized, p.category 
     FROM orders o 
     JOIN products p ON o.prod_id = p.prod_id 
     ORDER BY o.order_id DESC LIMIT 20
@@ -118,24 +153,25 @@ for ($i = 5; $i >= 0; $i--) {
 $room_type_labels = [];
 $room_type_revenue = [];
 $stmtRT = $pdo->query("
-    SELECT r.room_type, SUM((b.total_price + b.food_charge) * $tax_mult) as total 
+    SELECT rt.$room_type_col as room_type, SUM((b.total_price + b.food_charge) * $tax_mult) as total 
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
+    JOIN room_types rt ON r.room_type = rt.room_type_name
     WHERE b.status IN ('Completed', 'Checked In')
-    GROUP BY r.room_type 
+    GROUP BY rt.room_type_name
     ORDER BY total DESC
 ");
 while($row = $stmtRT->fetch()) {
-    $room_type_labels[] = $row['room_type'];
+    $room_type_labels[] = $row['room_type'] ?: 'Unknown';
     $room_type_revenue[] = (float)$row['total'];
 }
 ?>
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="<?php echo $current_lang; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ລາຍງານ ແລະ ສະຫຼຸບຜົນ</title>
+    <title><?php echo $lang['report_title']; ?></title>
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
@@ -208,7 +244,7 @@ while($row = $stmtRT->fetch()) {
 
 <div class="container-fluid">
     <div class="section-header">
-        <h2>ບົດລາຍງານ ແລະ ສະຫຼຸບຜົນ</h2>
+        <h2><?php echo $lang['reports']; ?></h2>
     </div>
 
     <!-- Small boxes (Stat box) -->
@@ -217,32 +253,50 @@ while($row = $stmtRT->fetch()) {
         <!-- Daily Revenue -->
         <div class="stat-card gc-green">
             <div class="stat-card-top">
-                <div class="stat-card-label">ລາຍຮັບມື້ນີ້</div>
+                <div class="stat-card-label"><?php echo $lang['today_revenue_label']; ?></div>
                 <div class="stat-card-value"><?php echo number_format($daily_revenue); ?> <sup style="font-size: 1rem">₭</sup></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
         </div>
-        
-        <!-- Monthly Revenue -->
+
+        <!-- Cash Today -->
         <div class="stat-card gc-blue">
             <div class="stat-card-top">
-                <div class="stat-card-label">ລາຍຮັບເດືອນນີ້</div>
+                <div class="stat-card-label"><?php echo $lang['today_cash_label']; ?></div>
+                <div class="stat-card-value"><?php echo number_format($daily_cash_total); ?> <sup style="font-size: 1rem">₭</sup></div>
+            </div>
+            <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
+        </div>
+
+        <!-- Transfer Today -->
+        <div class="stat-card gc-indigo">
+            <div class="stat-card-top">
+                <div class="stat-card-label"><?php echo $lang['today_transfer_label']; ?></div>
+                <div class="stat-card-value"><?php echo number_format($daily_transfer_total); ?> <sup style="font-size: 1rem">₭</sup></div>
+            </div>
+            <div class="stat-card-icon"><i class="fas fa-university"></i></div>
+        </div>
+        
+        <!-- Monthly Revenue -->
+        <div class="stat-card gc-dark">
+            <div class="stat-card-top">
+                <div class="stat-card-label"><?php echo $lang['monthly_revenue_label']; ?></div>
                 <div class="stat-card-value"><?php echo number_format($monthly_revenue); ?> <sup style="font-size: 1rem">₭</sup></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-chart-bar"></i></div>
         </div>
 
         <!-- Available Rooms -->
-        <div class="stat-card gc-amber">
+        <div class="stat-card gc-green" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
             <div class="stat-card-top">
-                <div class="stat-card-label">ຫ້ອງຫວ່າງພ້ອມໃຊ້</div>
-                <div class="stat-card-value"><?php echo $available_rooms; ?> <sup style="font-size: 1rem">ຫ້ອງ</sup></div>
+                <div class="stat-card-label"><?php echo $lang['available_rooms_label']; ?></div>
+                <div class="stat-card-value"><?php echo $available_rooms; ?> <sup style="font-size: 1rem"><?php echo $lang['room_unit']; ?></sup></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-door-open"></i></div>
         </div>
 
         <!-- Today Customers -->
-        <div class="stat-card gc-teal">
+        <div class="stat-card gc-amber">
             <div class="stat-card-top">
                 <div class="stat-card-label">ຈຳນວນລູກຄ້າ (Bill)</div>
                 <div class="stat-card-value"><?php echo $today_customers; ?> <sup style="font-size: 1rem">ບິນ</sup></div>
@@ -251,7 +305,7 @@ while($row = $stmtRT->fetch()) {
         </div>
 
         <!-- Total Guests -->
-        <div class="stat-card gc-indigo">
+        <div class="stat-card gc-teal">
             <div class="stat-card-top">
                 <div class="stat-card-label">ແຂກພັກຕົວຈິງ</div>
                 <div class="stat-card-value"><?php echo $total_guests; ?> <sup style="font-size: 1rem">ຄົນ</sup></div>
@@ -332,7 +386,7 @@ while($row = $stmtRT->fetch()) {
                             <?php if(count($unavailable_list) > 0): ?>
                                 <?php foreach($unavailable_list as $row): ?>
                                     <tr>
-                                        <td><strong><?php echo htmlspecialchars($row['room_number']); ?></strong><br><small><?php echo htmlspecialchars($row['room_type']); ?></small></td>
+                                        <td><strong><?php echo htmlspecialchars($row['room_number']); ?></strong><br><small><?php echo htmlspecialchars($row['room_type_localized'] ?: $row['room_type_base']); ?></small></td>
                                         <td class="text-left font-weight-bold"><?php echo htmlspecialchars($row['customer_name']); ?></td>
                                         <td>
                                             <?php if($row['status'] == 'Booked'): ?>

@@ -2,9 +2,18 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 // Get active bookings (Occupied rooms)
 $stmt = $pdo->query("
-    SELECT b.id as booking_id, r.room_number, b.customer_name 
+    SELECT b.id as booking_id, r.room_number, b.customer_name, b.customer_phone, r.room_type
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
     WHERE b.status = 'Occupied'
@@ -14,12 +23,20 @@ $active_bookings = $stmt->fetchAll();
 
 $selected_booking_id = isset($_GET['booking_id']) ? (int)$_GET['booking_id'] : (count($active_bookings) > 0 ? $active_bookings[0]['booking_id'] : 0);
 
-// Fetch categories for filtering
-$stmtCate = $pdo->query("SELECT id, name FROM product_categories ORDER BY name ASC");
+// Fetch categories for filtering with localized names
+$current_lang = $_SESSION['lang'] ?? 'la';
+$prod_name_col = "prod_name_" . $current_lang;
+$cat_name_col = "name_" . $current_lang;
+
+$stmtCate = $pdo->query("SELECT id, name, name_la, name_en, name_cn FROM product_categories ORDER BY name ASC");
 $categories = $stmtCate->fetchAll();
 
-// Fetch available products for selection
-$stmtProd = $pdo->query("SELECT * FROM products WHERE qty > 0 ORDER BY prod_name ASC");
+// Fetch available products for selection with localized names
+$stmtProd = $pdo->query("SELECT p.*, pc.name_la as cat_la, pc.name_en as cat_en, pc.name_cn as cat_cn 
+                         FROM products p 
+                         LEFT JOIN product_categories pc ON p.category = pc.name 
+                         WHERE p.qty > 0 
+                         ORDER BY p.prod_name ASC");
 $products_list = $stmtProd->fetchAll();
 
 // Handle form submission
@@ -65,11 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_service'])) {
         $pdo->commit();
 
         if ($is_ajax) {
-            echo json_encode(['status' => 'success', 'message' => 'ບັນທຶກສຳເລັດ!']);
+            echo json_encode(['status' => 'success', 'message' => $lang['ok']]);
             exit();
         }
 
-        $_SESSION['success'] = "ບັນທຶກຄ່າໃຊ້ຈ່າຍເພີ່ມສຳເລັດ!";
+        $_SESSION['success'] = $lang['ok'];
         header("Location: room_service.php?booking_id=" . $booking_id);
         exit();
     } catch (Exception $e) {
@@ -110,7 +127,7 @@ if (isset($_GET['delete'])) {
             }
         }
         $pdo->commit();
-        $_SESSION['success'] = "ລົບລາຍການສຳເລັດ!";
+        $_SESSION['success'] = $lang['ok'];
     } catch (Exception $e) {
         $pdo->rollBack();
         $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ: " . $e->getMessage();
@@ -146,7 +163,7 @@ if (isset($_GET['clear_all'])) {
         $resetBooking->execute([$booking_id]);
 
         $pdo->commit();
-        $_SESSION['success'] = "ຍົກເລີກລາຍການທັງໝົດສຳເລັດ!";
+        $_SESSION['success'] = $lang['ok'];
     } catch (Exception $e) {
         $pdo->rollBack();
         $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ: " . $e->getMessage();
@@ -161,7 +178,8 @@ $total_accumulated = 0;
 if ($selected_booking_id > 0) {
     $stmt = $pdo->prepare("
         SELECT rs.item_name, rs.price, SUM(rs.qty) as qty, SUM(rs.total_price) as total_price, 
-               MAX(rs.id) as id, rs.prod_id, MAX(p.image) as prod_image, MAX(p.category) as prod_category, MAX(p.prod_code) as prod_code
+               MAX(rs.id) as id, rs.prod_id, MAX(p.image) as prod_image, MAX(p.category) as prod_category, MAX(p.prod_code) as prod_code,
+               MAX(p.prod_name_la) as prod_name_la, MAX(p.prod_name_en) as prod_name_en, MAX(p.prod_name_cn) as prod_name_cn
         FROM room_services rs 
         LEFT JOIN products p ON rs.prod_id = p.prod_id 
         WHERE rs.booking_id = ? 
@@ -188,7 +206,7 @@ if ($selected_booking_id > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Room Service POS</title>
+    <title><?php echo $lang['pos_title']; ?></title>
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
@@ -395,29 +413,36 @@ if ($selected_booking_id > 0) {
                 max-height: none;
                 margin-bottom: 0;
             }
-            .room-selector-area { padding: 8px; }
-            .room-selector-area .d-flex { flex-wrap: nowrap !important; }
-            .room-selector-area label { font-size: 0.65rem !important; margin-bottom: 3px !important; }
+            .room-selector-area { padding: 12px; background: #fff; }
+            .room-selector-area .d-flex { flex-wrap: nowrap !important; align-items: stretch !important; gap: 8px !important; }
+            .room-selector-area label { font-size: 0.75rem !important; margin-bottom: 5px !important; color: #718096; }
             .select2-container--bootstrap4 .select2-selection--single { 
-                height: 38px !important; 
-                line-height: 38px !important; 
-                font-size: 0.85rem !important; 
-                padding-left: 8px !important;
+                height: 40px !important; 
+                line-height: 40px !important; 
+                font-size: 0.9rem !important; 
+                padding-left: 10px !important;
+                border-radius: 8px !important;
+                border: 1px solid #edf2f7 !important;
             }
             .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
-                line-height: 36px !important;
+                line-height: 38px !important;
             }
-            #btnShowRoomGrid { height: 38px; width: 38px; flex-shrink: 0; }
+            #btnShowRoomGrid { height: 40px !important; width: 40px !important; border-radius: 8px !important; }
+            
+            /* Compact Barcode/Search on Mobile */
+            .barcode-group { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            #mainSearch { height: 42px !important; font-size: 0.95rem !important; }
+            .barcode-group .input-group-text { padding: 0 12px !important; font-size: 1.1rem !important; }
             
             .order-list { padding: 5px; max-height: 250px; }
             .order-item { padding: 8px; margin-bottom: 5px; }
             .order-item-name { font-size: 0.85rem; }
             .order-item-price { font-size: 0.75rem; }
             
-            .total-box { padding: 10px; margin-bottom: 0; }
-            .total-label { font-size: 0.9rem; }
-            .total-amount { font-size: 1.2rem; }
-            .order-footer p { font-size: 0.7rem; margin-top: 5px !important; }
+            .total-box { padding: 10px; margin-bottom: 10px; }
+            .total-label { font-size: 1rem; }
+            .total-amount { font-size: 1.3rem; }
+            .order-footer p { font-size: 0.75rem; margin-top: 5px !important; }
 
             .product-column {
                 height: auto; 
@@ -439,15 +464,16 @@ if ($selected_booking_id > 0) {
         }
 
         .room-selector-area {
-            padding: 20px;
-            background: #fff;
-            border-bottom: 2px solid #f8f9fa;
+            padding: 22px 20px;
+            background: linear-gradient(to bottom, #ffffff, #fcfcfc);
+            border-bottom: 1px solid #edf2f7;
+            position: relative;
         }
 
         .order-list {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: 12px;
         }
 
         .order-item {
@@ -582,19 +608,48 @@ if ($selected_booking_id > 0) {
         .room-item-card .room-no { font-size: 1.3rem; font-weight: 800; color: #007bff; margin-bottom: 2px; }
         .room-item-card .cust-name { font-size: 0.75rem; color: #555; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* Ensure Select2 height matches the grid button */
+        .select2-container--bootstrap4 { width: 100% !important; flex: 1; }
+        
+        /* Compact Select2 and Button */
         .select2-container--bootstrap4 .select2-selection--single { 
-            height: 48px !important; 
-            line-height: 48px !important; 
-            font-size: 1.1rem !important; 
-            font-weight: 700 !important;
-            border-radius: 8px !important;
-            display: flex !important;
-            align-items: center !important;
-            border-radius: 8px !important;
+            height: 42px !important; 
+            line-height: 42px !important; 
+            font-size: 1rem !important; 
+            font-weight: 600 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
             display: flex !important;
             align-items: center !important;
             padding-left: 12px !important;
+            transition: all 0.3s ease;
+            background-color: #fff !important;
+        }
+        .select2-container--bootstrap4.select2-container--focus .select2-selection--single {
+            border-color: #007bff !important;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+        }
+
+        #btnShowRoomGrid {
+            height: 42px !important;
+            width: 42px !important;
+            border-radius: 10px !important;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+            border: none !important;
+            box-shadow: 0 3px 8px rgba(0, 123, 255, 0.25) !important;
+            transition: all 0.3s ease !important;
+            color: white !important;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #btnShowRoomGrid:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4) !important;
+            filter: brightness(1.1);
+        }
+        #btnShowRoomGrid:active {
+            transform: translateY(0);
         }
 
         /* Barcode Input Styling */
@@ -632,10 +687,10 @@ if ($selected_booking_id > 0) {
 <body>
 
 <div class="header-section d-flex justify-content-between align-items-center">
-    <h4 class="m-0"><i class="fas fa-concierge-bell mr-2"></i> ບໍລິການຂອງຫ້ອງ</h4>
+    <h4 class="m-0"><i class="fas fa-concierge-bell mr-2"></i> <?php echo $lang['pos_title']; ?></h4>
     <div class="d-flex align-items-center">
         <span class="mr-3"><i class="fas fa-calendar-day mr-1"></i> <?php echo date('d/m/Y'); ?></span>
-        <a href="Homepage.php" class="btn btn-light btn-sm rounded-pill px-3"><i class="fas fa-home"></i> ກັບໜ້າຫຼັກ</a>
+        <a href="Homepage.php" class="btn btn-light btn-sm rounded-pill px-3"><i class="fas fa-home"></i> <?php echo $lang['home']; ?></a>
     </div>
 </div>
 
@@ -649,16 +704,16 @@ if ($selected_booking_id > 0) {
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                         </div>
-                        <input type="text" id="mainSearch" class="form-control" placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ ຫຼື ສະແກນບາໂຄ້ດ (Search or Scan Barcode)..." autofocus autocomplete="off" style="height: 50px; font-size: 1.1rem;">
+                        <input type="text" id="mainSearch" class="form-control" placeholder="<?php echo $lang['search_product_placeholder']; ?>" autofocus autocomplete="off" style="height: 50px; font-size: 1.1rem;">
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="category-bar">
-            <div class="cate-pill active" data-cate="all">ທັງໝົດ</div>
+            <div class="cate-pill active" data-cate="all"><?php echo $lang['all_categories']; ?></div>
             <?php foreach($categories as $c): ?>
-                <div class="cate-pill" data-cate="<?php echo htmlspecialchars($c['name']); ?>"><?php echo htmlspecialchars($c['name']); ?></div>
+                <div class="cate-pill" data-cate="<?php echo htmlspecialchars($c['name']); ?>"><?php echo htmlspecialchars($c[$cat_name_col] ?: $c['name']); ?></div>
             <?php endforeach; ?>
         </div>
 
@@ -670,14 +725,14 @@ if ($selected_booking_id > 0) {
             <?php foreach($products_list as $p): ?>
                 <div class="product-card" 
                      data-id="<?php echo $p['prod_id']; ?>" 
-                     data-name="<?php echo htmlspecialchars($p['prod_name']); ?>" 
+                     data-name="<?php echo htmlspecialchars($p[$prod_name_col] ?: $p['prod_name']); ?>" 
                      data-price="<?php echo $p['sprice']; ?>"
                      data-cate="<?php echo htmlspecialchars($p['category']); ?>">
                     
                     <span class="qty-badge" id="qty-badge-<?php echo $p['prod_id']; ?>" style="display: none;">0</span>
                     <div class="product-img-wrapper">
                         <?php if(!empty($p['image']) && file_exists('assets/img/products/'.$p['image'])): ?>
-                            <img src="assets/img/products/<?php echo $p['image']; ?>" alt="<?php echo htmlspecialchars($p['prod_name']); ?>">
+                            <img src="assets/img/products/<?php echo $p['image']; ?>" alt="<?php echo htmlspecialchars($p[$prod_name_col] ?: $p['prod_name']); ?>">
                         <?php else: ?>
                             <div class="icon-placeholder">
                                 <?php 
@@ -694,7 +749,7 @@ if ($selected_booking_id > 0) {
 
                     <div class="product-card-body">
                         <div class="text-muted small mb-1"><?php echo htmlspecialchars($p['prod_code'] ?? '-'); ?></div>
-                        <div class="product-name"><?php echo htmlspecialchars($p['prod_name']); ?></div>
+                        <div class="product-name"><?php echo htmlspecialchars($p[$prod_name_col] ?: $p['prod_name']); ?></div>
                         <div class="product-price"><?php echo number_format($p['sprice']); ?> ກີບ</div>
                         <div class="product-stock">ຄົງເຫຼືອ: <?php echo $p['qty']; ?></div>
                     </div>
@@ -710,17 +765,19 @@ if ($selected_booking_id > 0) {
             <div class="d-flex align-items-center" style="gap: 8px;">
                 <div style="flex: 1;">
                     <select id="roomSelect" class="form-control form-control-lg border-primary select2">
-                        <?php if(empty($active_bookings)): ?>
-                            <option value="">-- ບໍ່ມີຫ້ອງທີ່ເຂົ້າພັກ --</option>
-                        <?php endif; ?>
                         <?php foreach($active_bookings as $b): ?>
-                            <option value="<?php echo $b['booking_id']; ?>" <?php echo ($selected_booking_id == $b['booking_id']) ? 'selected' : ''; ?>>
+                            <option value="<?php echo $b['booking_id']; ?>" 
+                                    data-room="<?php echo htmlspecialchars($b['room_number']); ?>"
+                                    data-cust="<?php echo htmlspecialchars($b['customer_name']); ?>"
+                                    data-phone="<?php echo htmlspecialchars($b['customer_phone'] ?: '-'); ?>"
+                                    data-type="<?php echo htmlspecialchars($b['room_type'] ?: '-'); ?>"
+                                    <?php echo ($selected_booking_id == $b['booking_id']) ? 'selected' : ''; ?>>
                                 ຫ້ອງ <?php echo htmlspecialchars($b['room_number']); ?> - <?php echo htmlspecialchars($b['customer_name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <button type="button" class="btn btn-primary d-flex align-items-center justify-content-center" id="btnShowRoomGrid" style="height: 48px; width: 48px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,123,255,0.2);" title="ເບິ່ງແບບຜັງຫ້ອງ">
+                <button type="button" class="btn btn-primary" id="btnShowRoomGrid" title="ເບິ່ງແບບຜັງຫ້ອງ">
                     <i class="fas fa-th fa-lg"></i>
                 </button>
             </div>
@@ -746,14 +803,14 @@ if ($selected_booking_id > 0) {
                             <?php endif; ?>
                         </div>
                         <div class="order-item-info">
-                            <div class="order-item-name"><?php echo htmlspecialchars($row['item_name']); ?></div>
+                            <div class="order-item-name"><?php echo htmlspecialchars($row['prod_id'] ? ($row[$prod_name_col] ?: $row['item_name']) : $row['item_name']); ?></div>
                             <?php if(!empty($row['prod_code'])): ?>
                                 <div class="text-muted small" style="font-size: 0.7rem;">Code: <?php echo htmlspecialchars($row['prod_code']); ?></div>
                             <?php endif; ?>
-                            <div class="order-item-price text-success font-weight-bold"><?php echo number_format($row['price']); ?> ກີບ x <?php echo $row['qty']; ?></div>
+                            <div class="order-item-price text-success font-weight-bold"><?php echo number_format($row['price']); ?> ₭ x <?php echo $row['qty']; ?></div>
                         </div>
                         <div class="text-right mr-3">
-                            <div class="font-weight-bold"><?php echo number_format($row['total_price']); ?> ກີບ</div>
+                            <div class="font-weight-bold"><?php echo number_format($row['total_price']); ?> ₭</div>
                         </div>
                         <div class="delete-item" onclick="confirmDelete(<?php echo $row['id']; ?>, <?php echo $selected_booking_id; ?>)">
                             <i class="fas fa-times-circle fa-lg"></i>
@@ -763,22 +820,22 @@ if ($selected_booking_id > 0) {
             <?php else: ?>
                 <div class="text-center py-5 text-muted">
                     <i class="fas fa-shopping-cart fa-3x mb-3 opacity-2"></i>
-                    <p>ຍັງບໍ່ມີລາຍການສັ່ງເພີ່ມ</p>
+                    <p><?php echo $lang['no_data']; ?></p>
                 </div>
             <?php endif; ?>
         </div>
 
         <div class="order-footer">
             <div class="total-box">
-                <span class="total-label">ຍອດລວມທັງໝົດ:</span>
-                <span class="total-amount"><?php echo number_format($total_accumulated); ?> ກີບ</span>
+                <span class="total-label"><?php echo $lang['grand_total']; ?>:</span>
+                <span class="total-amount"><?php echo number_format($total_accumulated); ?> ₭</span>
             </div>
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-outline-danger btn-block rounded-pill" onclick="clearAllItems(<?php echo $selected_booking_id; ?>)">
-                    <i class="fas fa-trash-alt mr-1"></i> ຍົກເລີກລາຍການທັງໝົດ
+                    <i class="fas fa-trash-alt mr-1"></i> <?php echo $lang['clear_all_btn']; ?>
                 </button>
             </div>
-            <p class="text-center text-muted small mt-3 mb-0">ຄລິກທີ່ສິນຄ້າເພື່ອເພີ່ມລາຍການໃສ່ຫ້ອງທັນທີ</p>
+            <p class="text-center text-muted small mt-3 mb-0"><?php echo $lang['pos_help_msg'] ?? 'Click on product to add to cart'; ?></p>
         </div>
     </div>
 </div>
@@ -790,32 +847,32 @@ if ($selected_booking_id > 0) {
             <form action="" method="post">
                 <input type="hidden" name="booking_id" id="modal_booking_id">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">ເພີ່ມລາຍການດ້ວຍຕົນເອງ</h5>
+                    <h5 class="modal-title"><?php echo $lang['add_manually'] ?? 'Add Manually'; ?></h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>ຊື່ລາຍການ</label>
-                        <input type="text" name="item_name" class="form-control" required placeholder="ເຊັ່ນ: ຄ່າຊັກລີດ, ຄ່າອາຫານນອກ...">
+                        <label><?php echo $lang['item_label']; ?></label>
+                        <input type="text" name="item_name" class="form-control" required placeholder="...">
                     </div>
                     <div class="row">
                         <div class="col-6">
                             <div class="form-group">
-                                <label>ລາຄາ/ໜ່ວຍ</label>
+                                <label><?php echo $lang['price']; ?></label>
                                 <input type="text" name="price" class="form-control number-format" required value="0">
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="form-group">
-                                <label>ຈຳນວນ</label>
+                                <label><?php echo $lang['total'] ?? 'Qty'; ?></label>
                                 <input type="number" name="qty" class="form-control" value="1" min="1" required>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">ປິດ</button>
-                    <button type="submit" name="add_service" class="btn btn-primary px-4">ບັນທຶກ</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal"><?php echo $lang['close']; ?></button>
+                    <button type="submit" name="add_service" class="btn btn-primary px-4"><?php echo $lang['save']; ?></button>
                 </div>
             </form>
         </div>
@@ -837,7 +894,7 @@ if ($selected_booking_id > 0) {
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fas fa-th-large mr-2"></i> ເລືອກຫ້ອງທີ່ສັ່ງ (Occupied Rooms)</h5>
+                <h5 class="modal-title"><i class="fas fa-th-large mr-2"></i> <?php echo $lang['select_room_guest']; ?></h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body bg-light">
@@ -952,7 +1009,20 @@ $(function() {
     $(document).on('change', '#roomSelect', function() {
         var bid = $(this).val();
         if(bid) {
-            window.location.href = 'room_service.php?booking_id=' + bid;
+            // Use AJAX load to prevent page jump/reload
+            $('#orderContainer').load('room_service.php?booking_id=' + bid + ' #orderContainer > *', function() {
+                initSelect2();
+                updateProductBadges();
+                // Update URL without refreshing the page
+                history.pushState({bid: bid}, '', 'room_service.php?booking_id=' + bid);
+
+                // On mobile, scroll to food items after selecting a room
+                if ($(window).width() < 992) {
+                    $('html, body').animate({
+                        scrollTop: $(".products-column").offset().top - 20
+                    }, 500);
+                }
+            });
         }
     });
 
@@ -962,7 +1032,21 @@ $(function() {
 
     $(document).on('click', '.room-item-card', function() {
         var bid = $(this).data('booking-id');
-        window.location.href = 'room_service.php?booking_id=' + bid;
+        $('#roomGridModal').modal('hide');
+        
+        // Use AJAX load to prevent page jump/reload
+        $('#orderContainer').load('room_service.php?booking_id=' + bid + ' #orderContainer > *', function() {
+            initSelect2();
+            updateProductBadges();
+            history.pushState({bid: bid}, '', 'room_service.php?booking_id=' + bid);
+
+            // On mobile, scroll to food items after selecting a room
+            if ($(window).width() < 992) {
+                $('html, body').animate({
+                    scrollTop: $(".products-column").offset().top - 20
+                }, 500);
+            }
+        });
     });
 
     $('#gridRoomSearch').on('keyup', function() {
@@ -1028,8 +1112,8 @@ $(function() {
         if ($.fn.select2) {
             $('.select2').select2({
                 theme: 'bootstrap4',
-                placeholder: "ຄົນຫາເບີຫ້ອງ...",
-                minimumResultsForSearch: 0
+                placeholder: "ເລືອກຫ້ອງ...",
+                minimumResultsForSearch: Infinity
             });
         }
     }

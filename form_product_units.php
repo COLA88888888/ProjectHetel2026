@@ -4,10 +4,13 @@ require_once 'config/db.php';
 
 // Handle Add Unit
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_unit'])) {
-    $unit_name = trim($_POST['unit_name']);
-    if (!empty($unit_name)) {
-        $stmt = $pdo->prepare("INSERT INTO product_units (unit_name) VALUES (?)");
-        if ($stmt->execute([$unit_name])) {
+    $unit_name_la = trim($_POST['unit_name_la']);
+    $unit_name_en = trim($_POST['unit_name_en']);
+    $unit_name_cn = trim($_POST['unit_name_cn']);
+    
+    if (!empty($unit_name_la)) {
+        $stmt = $pdo->prepare("INSERT INTO product_units (unit_name, unit_name_la, unit_name_en, unit_name_cn) VALUES (?, ?, ?, ?)");
+        if ($stmt->execute([$unit_name_la, $unit_name_la, $unit_name_en, $unit_name_cn])) {
             $_SESSION['success'] = "ເພີ່ມຫົວໜ່ວຍສິນຄ້າສຳເລັດແລ້ວ!";
         } else {
             $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດ ຫຼື ຂໍ້ມູນຊ້ຳກັນ!";
@@ -20,15 +23,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_unit'])) {
 // Handle Edit Unit
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_unit'])) {
     $id = (int)$_POST['id'];
-    $new_name = trim($_POST['unit_name']);
+    $name_la = trim($_POST['unit_name_la']);
+    $name_en = trim($_POST['unit_name_en']);
+    $name_cn = trim($_POST['unit_name_cn']);
     $old_name = trim($_POST['old_name']);
     
-    if (!empty($new_name) && $new_name !== $old_name) {
-        $stmt = $pdo->prepare("UPDATE product_units SET unit_name = ? WHERE id = ?");
-        if ($stmt->execute([$new_name, $id])) {
-            // Update all products that use this unit
+    if (!empty($name_la)) {
+        $stmt = $pdo->prepare("UPDATE product_units SET unit_name = ?, unit_name_la = ?, unit_name_en = ?, unit_name_cn = ? WHERE id = ?");
+        if ($stmt->execute([$name_la, $name_la, $name_en, $name_cn, $id])) {
+            // Update all products that use this unit (matching by base name)
             $updateProducts = $pdo->prepare("UPDATE products SET unit = ? WHERE unit = ?");
-            $updateProducts->execute([$new_name, $old_name]);
+            $updateProducts->execute([$name_la, $old_name]);
             
             $_SESSION['success'] = "ແກ້ໄຂຫົວໜ່ວຍສິນຄ້າສຳເລັດແລ້ວ!";
         } else {
@@ -52,6 +57,9 @@ if (isset($_GET['delete'])) {
 
 $stmt = $pdo->query("SELECT * FROM product_units ORDER BY id DESC");
 $units = $stmt->fetchAll();
+
+$current_lang = $_SESSION['lang'] ?? 'la';
+$unit_name_col = "unit_name_" . $current_lang;
 ?>
 <!DOCTYPE html>
 <html lang="lo">
@@ -104,8 +112,16 @@ $units = $stmt->fetchAll();
                 <form action="" method="post">
                     <div class="card-body">
                         <div class="form-group">
-                            <label>ຊື່ຫົວໜ່ວຍສິນຄ້າ</label>
-                            <input type="text" name="unit_name" class="form-control" placeholder="ຕົວຢ່າງ: ປ໋ອງ, ແກ້ວ, ຈານ..." required>
+                            <label>ຊື່ຫົວໜ່ວຍ (Lao)</label>
+                            <input type="text" name="unit_name_la" class="form-control" placeholder="ຕົວຢ່າງ: ປ໋ອງ, ແກ້ວ..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Unit Name (English)</label>
+                            <input type="text" name="unit_name_en" class="form-control" placeholder="e.g. Can, Bottle...">
+                        </div>
+                        <div class="form-group">
+                            <label>单位名称 (Chinese)</label>
+                            <input type="text" name="unit_name_cn" class="form-control" placeholder="例如：罐, 瓶...">
                         </div>
                     </div>
                     <div class="card-footer bg-white border-0">
@@ -132,11 +148,13 @@ $units = $stmt->fetchAll();
                                 <?php foreach($units as $index => $u): ?>
                                 <tr>
                                     <td><?php echo $index + 1; ?></td>
-                                    <td class="text-left font-weight-bold text-dark"><?php echo htmlspecialchars($u['unit_name']); ?></td>
+                                    <td class="text-left font-weight-bold text-dark"><?php echo htmlspecialchars($u[$unit_name_col] ?: $u['unit_name']); ?></td>
                                     <td>
                                         <button class="btn btn-sm btn-warning text-white btn-edit" 
                                             data-id="<?php echo $u['id']; ?>" 
-                                            data-name="<?php echo htmlspecialchars($u['unit_name']); ?>"
+                                            data-name-la="<?php echo htmlspecialchars($u['unit_name_la'] ?: $u['unit_name']); ?>"
+                                            data-name-en="<?php echo htmlspecialchars($u['unit_name_en'] ?? ''); ?>"
+                                            data-name-cn="<?php echo htmlspecialchars($u['unit_name_cn'] ?? ''); ?>"
                                             title="ແກ້ໄຂ">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -174,8 +192,16 @@ $units = $stmt->fetchAll();
               <input type="hidden" name="id" id="edit_id">
               <input type="hidden" name="old_name" id="edit_old_name">
               <div class="form-group">
-                  <label>ຊື່ຫົວໜ່ວຍສິນຄ້າ</label>
-                  <input type="text" name="unit_name" id="edit_name" class="form-control" required>
+                  <label>ຊື່ຫົວໜ່ວຍ (Lao)</label>
+                  <input type="text" name="unit_name_la" id="edit_name_la" class="form-control" required>
+              </div>
+              <div class="form-group">
+                  <label>Unit Name (English)</label>
+                  <input type="text" name="unit_name_en" id="edit_name_en" class="form-control">
+              </div>
+              <div class="form-group">
+                  <label>单位名称 (Chinese)</label>
+                  <input type="text" name="unit_name_cn" id="edit_name_cn" class="form-control">
               </div>
           </div>
           <div class="modal-footer border-0">
@@ -192,12 +218,11 @@ $units = $stmt->fetchAll();
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
 <script>
 $('.btn-edit').on('click', function() {
-    var id = $(this).data('id');
-    var name = $(this).data('name');
-    
-    $('#edit_id').val(id);
-    $('#edit_name').val(name);
-    $('#edit_old_name').val(name);
+    $('#edit_id').val($(this).data('id'));
+    $('#edit_name_la').val($(this).data('name-la'));
+    $('#edit_name_en').val($(this).data('name-en'));
+    $('#edit_name_cn').val($(this).data('name-cn'));
+    $('#edit_old_name').val($(this).data('name-la'));
     
     $('#editUnitModal').modal('show');
 });

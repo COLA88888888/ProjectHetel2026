@@ -3,6 +3,15 @@ session_start();
 require_once '../config/session_check.php';
 require_once '../config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "../lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "../lang/la.php";
+}
+
 // Add User
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
     $username = trim($_POST['username']);
@@ -100,11 +109,11 @@ $stmt = $pdo->query("SELECT * FROM users ORDER BY user_id DESC");
 $users = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="<?php echo $current_lang; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ຈັດການຜູ້ໃຊ້ລະບົບ</title>
+    <title><?php echo $lang['user_management_title']; ?></title>
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
@@ -163,25 +172,25 @@ $users = $stmt->fetchAll();
     <?php if(isset($_SESSION['success'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'success', title: 'ສຳເລັດ', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 1500 });
+                Swal.fire({ icon: 'success', title: '<?php echo $lang['ok'] ?? 'Success'; ?>', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 1500 });
             });
         </script>
     <?php unset($_SESSION['success']); endif; ?>
     <?php if(isset($_SESSION['error'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'error', title: 'ຜິດພາດ', text: '<?php echo $_SESSION['error']; ?>' });
+                Swal.fire({ icon: 'error', title: '<?php echo $lang['error'] ?? 'Error'; ?>', text: '<?php echo $_SESSION['error']; ?>' });
             });
         </script>
     <?php unset($_SESSION['error']); endif; ?>
 
     <div class="row mb-3 align-items-center page-header">
         <div class="col">
-            <h2><i class="fas fa-users-cog text-primary"></i> ຈັດການຜູ້ໃຊ້ ແລະ ພະນັກງານ</h2>
+            <h2><i class="fas fa-users-cog text-primary"></i> <?php echo $lang['user_management_title']; ?></h2>
         </div>
         <div class="col-auto col-text-right">
             <button class="btn btn-primary shadow-sm" data-toggle="modal" data-target="#addModal">
-                <i class="fas fa-user-plus"></i> ເພີ່ມຜູ້ໃຊ້ໃໝ່
+                <i class="fas fa-user-plus"></i> <?php echo $lang['add_user_btn']; ?>
             </button>
         </div>
     </div>
@@ -193,13 +202,13 @@ $users = $stmt->fetchAll();
             <table class="table table-hover table-striped text-center mb-0">
                 <thead class="bg-primary text-white">
                     <tr>
-                        <th>ໂປຣໄຟລ໌</th>
-                        <th class="text-left">ຊື່ ແລະ ນາມສະກຸນ</th>
-                        <th>ຊື່ເຂົ້າລະບົບ</th>
-                        <th>ເບີໂທຕິດຕໍ່</th>
-                        <th>ທີ່ຢູ່</th>
-                        <th>ສະຖານະ</th>
-                        <th>ຈັດການ</th>
+                        <th><?php echo $lang['profile_label']; ?></th>
+                        <th class="text-left"><?php echo $lang['full_name']; ?></th>
+                        <th><?php echo $lang['username_label']; ?></th>
+                        <th><?php echo $lang['phone']; ?></th>
+                        <th><?php echo $lang['address']; ?></th>
+                        <th><?php echo $lang['status']; ?></th>
+                        <th><?php echo $lang['action']; ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -239,11 +248,11 @@ $users = $stmt->fetchAll();
                                     data-address="<?php echo htmlspecialchars($u['address'] ?? ''); ?>"
                                     data-img="<?php echo $img_path; ?>"
                                     data-permissions='<?php echo $u['permissions'] ?? '[]'; ?>'
-                                    title="ແກ້ໄຂ">
+                                    title="<?php echo $lang['edit']; ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <?php if($u['user_id'] != 1): ?>
-                                    <a href="#" class="btn btn-sm btn-danger btn-delete shadow-sm" data-id="<?php echo $u['user_id']; ?>" title="ລຶບ"><i class="fas fa-trash-alt"></i></a>
+                                    <a href="#" class="btn btn-sm btn-danger btn-delete shadow-sm" data-id="<?php echo $u['user_id']; ?>" title="<?php echo $lang['delete']; ?>"><i class="fas fa-trash-alt"></i></a>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -311,7 +320,7 @@ $users = $stmt->fetchAll();
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title"><i class="fas fa-user-plus"></i> ເພີ່ມຜູ້ໃຊ້ໃໝ່</h5>
+        <h5 class="modal-title"><i class="fas fa-user-plus"></i> <?php echo $lang['add_user_btn']; ?></h5>
         <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
       </div>
       <form action="" method="post" enctype="multipart/form-data">
@@ -327,41 +336,41 @@ $users = $stmt->fetchAll();
               </div>
               <div class="row">
                   <div class="col-md-6 form-group">
-                      <label>ຊື່ <span class="text-danger">*</span></label>
+                      <label><?php echo $lang['first_name']; ?> <span class="text-danger">*</span></label>
                       <input type="text" name="fname" class="form-control" required>
                   </div>
                   <div class="col-md-6 form-group">
-                      <label>ນາມສະກຸນ <span class="text-danger">*</span></label>
+                      <label><?php echo $lang['last_name']; ?> <span class="text-danger">*</span></label>
                       <input type="text" name="lname" class="form-control" required>
                   </div>
                   <div class="col-md-6 form-group">
-                      <label>Username (ໄວ້ເຂົ້າລະບົບ) <span class="text-danger">*</span></label>
+                      <label><?php echo $lang['username_label']; ?> <span class="text-danger">*</span></label>
                       <input type="text" name="username" class="form-control" required>
                   </div>
                   <div class="col-md-6 form-group">
-                      <label>Password (ລະຫັດຜ່ານ) <span class="text-danger">*</span></label>
+                      <label><?php echo $lang['password_label']; ?> <span class="text-danger">*</span></label>
                       <input type="password" name="password" class="form-control" required>
                   </div>
                   <div class="col-md-6 form-group">
-                      <label>ເບີໂທຕິດຕໍ່</label>
+                      <label><?php echo $lang['phone']; ?></label>
                       <input type="text" name="phone" class="form-control">
                   </div>
                   <div class="col-md-6 form-group">
-                      <label>ອີເມວ (Email)</label>
+                      <label><?php echo $lang['email_label']; ?></label>
                       <input type="email" name="email" class="form-control">
                   </div>
                   <div class="col-md-12 form-group">
-                      <label><i class="fas fa-map-marker-alt text-danger"></i> ທີ່ຢູ່</label>
-                      <textarea name="address" class="form-control" rows="2" placeholder="ບ້ານ, ເມືອງ, ແຂວງ..."></textarea>
+                      <label><i class="fas fa-map-marker-alt text-danger"></i> <?php echo $lang['address']; ?></label>
+                      <textarea name="address" class="form-control" rows="2" placeholder="<?php echo $lang['enter_address']; ?>"></textarea>
                   </div>
                   <div class="col-md-12 form-group">
-                      <label>ສິດທິການໃຊ້ງານ (Role) <span class="text-danger">*</span></label>
+                      <label><?php echo $lang['role_label']; ?> <span class="text-danger">*</span></label>
                       <select name="status" class="form-control mb-3" required>
                           <option value="ພະນັກງານ">ພະນັກງານ (Staff)</option>
                           <option value="ຜູ້ບໍລິຫານ">ຜູ້ບໍລິຫານ (Admin)</option>
                       </select>
 
-                      <label class="d-block mt-3 border-bottom pb-2 mb-3">ກຳນົດສິດການເຂົ້າເຖິງ (Permissions)</label>
+                      <label class="d-block mt-3 border-bottom pb-2 mb-3"><?php echo $lang['permissions_label']; ?></label>
                       <div class="row px-3">
                           <div class="col-6 col-md-4 custom-control custom-checkbox mb-2">
                               <input type="checkbox" name="permissions[]" value="bookings" class="custom-control-input" id="p_add_bookings" checked>
@@ -404,7 +413,7 @@ $users = $stmt->fetchAll();
               </div>
           </div>
           <div class="modal-footer bg-light">
-            <button type="submit" name="add_user" class="btn btn-primary px-4"><i class="fas fa-save"></i> ບັນທຶກ</button>
+            <button type="submit" name="add_user" class="btn btn-primary px-4"><i class="fas fa-save"></i> <?php echo $lang['save']; ?></button>
           </div>
       </form>
     </div>
@@ -416,7 +425,7 @@ $users = $stmt->fetchAll();
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header bg-warning text-white">
-        <h5 class="modal-title"><i class="fas fa-edit"></i> ແກ້ໄຂຂໍ້ມູນຜູ້ໃຊ້</h5>
+        <h5 class="modal-title"><i class="fas fa-edit"></i> <?php echo $lang['edit']; ?></h5>
         <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
       </div>
       <form action="" method="post" enctype="multipart/form-data">
@@ -550,13 +559,13 @@ $('.btn-delete').on('click', function(e) {
     e.preventDefault();
     var id = $(this).data('id');
     Swal.fire({
-        title: 'ຍືນຍັນການລຶບຜູ້ໃຊ້?',
-        text: 'ຫາກລຶບແລ້ວ ຜູ້ໃຊ້ນີ້ຈະບໍ່ສາມາດເຂົ້າສູ່ລະບົບໄດ້ອີກ!',
+        title: '<?php echo $lang['delete_user_confirm']; ?>',
+        text: '<?php echo $lang['delete_user_warning']; ?>',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        confirmButtonText: 'ລຶບເລີຍ!'
+        confirmButtonText: '<?php echo $lang['delete']; ?>'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = "?delete=" + id;

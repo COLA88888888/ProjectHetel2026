@@ -61,8 +61,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['checkout_pos']) || is
     }
 }
 
-// Fetch available products
-$stmt = $pdo->query("SELECT * FROM products WHERE qty > 0 ORDER BY category ASC, prod_name ASC");
+// Fetch available products with localized names
+$current_lang = $_SESSION['lang'] ?? 'la';
+$prod_name_col = "prod_name_" . $current_lang;
+$cat_name_col = "name_" . $current_lang;
+
+$stmt = $pdo->query("SELECT p.*, pc.name_la as cat_la, pc.name_en as cat_en, pc.name_cn as cat_cn 
+                     FROM products p 
+                     LEFT JOIN product_categories pc ON p.category = pc.name 
+                     WHERE p.qty > 0 
+                     ORDER BY p.category ASC, p.prod_name ASC");
 $products = $stmt->fetchAll();
 
 // Fetch categories
@@ -304,7 +312,7 @@ foreach ($products as $p) {
                     ?>
                         <button class="cat-btn" data-cat="<?php echo htmlspecialchars($catName); ?>">
                             <i class="fas <?php echo $icon; ?> mr-1"></i>
-                            <?php echo htmlspecialchars($catName); ?>
+                            <?php echo htmlspecialchars($cat[$cat_name_col] ?: $catName); ?>
                             <span class="badge badge-danger ml-1"><?php echo $count; ?></span>
                         </button>
                     <?php endforeach; ?>
@@ -321,10 +329,10 @@ foreach ($products as $p) {
                         </div>
                         <?php foreach($products as $p): ?>
                             <div class="col-xl-3 col-lg-4 col-md-6 col-6 mb-3 product-item" data-category="<?php echo htmlspecialchars($p['category']); ?>">
-                                <div class="card product-card shadow-sm h-100" id="prod-card-<?php echo $p['prod_id']; ?>" onclick="addToCart(<?php echo $p['prod_id']; ?>, '<?php echo htmlspecialchars(addslashes($p['prod_name'])); ?>', <?php echo $p['sprice']; ?>, <?php echo $p['qty']; ?>, '<?php echo $p['image']; ?>', '<?php echo htmlspecialchars($p['prod_code']); ?>')">
+                                <div class="card product-card shadow-sm h-100" id="prod-card-<?php echo $p['prod_id']; ?>" onclick="addToCart(<?php echo $p['prod_id']; ?>, '<?php echo htmlspecialchars(addslashes($p[$prod_name_col] ?: $p['prod_name'])); ?>', <?php echo $p['sprice']; ?>, <?php echo $p['qty']; ?>, '<?php echo $p['image']; ?>', '<?php echo htmlspecialchars($p['prod_code']); ?>')">
                                     <span class="qty-badge" id="qty-badge-<?php echo $p['prod_id']; ?>" style="display: none;">0</span>
                                     <!-- Category Label -->
-                                    <span class="cat-label"><?php echo htmlspecialchars($p['category'] ?: 'ອື່ນໆ'); ?></span>
+                                    <span class="cat-label"><?php echo htmlspecialchars($p['cat_'.$current_lang] ?? $p['category'] ?? 'ອື່ນໆ'); ?></span>
                                     <!-- Stock Badge -->
                                     <?php if($p['qty'] <= 10): ?>
                                         <span class="stock-badge badge badge-danger">ໃກ້ໝົດ</span>
@@ -341,7 +349,7 @@ foreach ($products as $p) {
                                         </div>
                                     <?php endif; ?>
                                     <div class="card-body text-center">
-                                        <div class="product-name text-truncate"><?php echo htmlspecialchars($p['prod_name']); ?></div>
+                                        <div class="product-name text-truncate"><?php echo htmlspecialchars($p[$prod_name_col] ?: $p['prod_name']); ?></div>
                                         <div class="text-muted small mb-1"><?php echo htmlspecialchars($p['prod_code'] ?? '-'); ?></div>
                                         <div class="product-price mt-1"><?php echo number_format($p['sprice']); ?> <?php echo $currency_symbol; ?></div>
                                         <div class="product-stock">ເຫຼືອ: <?php echo number_format($p['qty']); ?></div>
@@ -408,7 +416,16 @@ foreach ($products as $p) {
 let cart = JSON.parse(localStorage.getItem('pos_cart')) || {};
 const taxPercent = <?php echo $tax_percent; ?>;
 const currencySymbol = '<?php echo $currency_symbol; ?>';
-const allProducts = <?php echo json_encode($products); ?>;
+const currentLang = '<?php echo $current_lang; ?>';
+const allProducts = <?php 
+    // Prepare products with localized names for JS
+    $jsProducts = [];
+    foreach($products as $p) {
+        $p['display_name'] = $p[$prod_name_col] ?: $p['prod_name'];
+        $jsProducts[] = $p;
+    }
+    echo json_encode($jsProducts); 
+?>;
 
 $(document).ready(function() {
     renderCart(); // Restore cart from localStorage
@@ -432,7 +449,7 @@ $(document).ready(function() {
         // 1. Try barcode match first (Exact match)
         let product = allProducts.find(p => p.prod_code === val);
         if (product) {
-            addToCart(product.prod_id, product.prod_name, product.sprice, product.qty, product.image, product.prod_code);
+            addToCart(product.prod_id, product.display_name, product.sprice, product.qty, product.image, product.prod_code);
             $(this).val(''); // Clear for next scan
             $('.product-item').show(); // Reset filter
             $('#noResultsMsg').hide();

@@ -16,9 +16,9 @@ if (file_exists($lang_file)) {
 }
 
 $flags = [
-    'la' => ['src' => 'https://flagcdn.com/w20/la.png', 'alt' => 'Lao'],
-    'en' => ['src' => 'https://flagcdn.com/w20/gb.png', 'alt' => 'English'],
-    'cn' => ['src' => 'https://flagcdn.com/w20/cn.png', 'alt' => 'Chinese'],
+    'la' => ['src' => 'assets/img/flags/Laos.png', 'alt' => 'Lao'],
+    'en' => ['src' => 'assets/img/flags/uk.png', 'alt' => 'English'],
+    'cn' => ['src' => 'assets/img/flags/China.png', 'alt' => 'Chinese'],
 ];
 $active_flag = $flags[$current_lang] ?? $flags['la'];
 
@@ -39,10 +39,13 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
 // Fetch hotel logo & name from settings
 require_once 'config/db.php';
 try {
-    $stmtLogo = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('hotel_logo', 'hotel_name')");
+    $current_lang = $_SESSION['lang'] ?? 'la';
+    $name_key = "hotel_name_" . $current_lang;
+    $stmtLogo = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('hotel_logo', '$name_key', 'hotel_name')");
     $hotel_settings = $stmtLogo->fetchAll(PDO::FETCH_KEY_PAIR);
+    
     $hotel_logo = !empty($hotel_settings['hotel_logo']) ? 'assets/img/logo/' . $hotel_settings['hotel_logo'] : 'https://via.placeholder.com/150?text=Logo';
-    $hotel_name = $hotel_settings['hotel_name'] ?? 'ລະບົບໂຮງແຮມ';
+    $hotel_name = !empty($hotel_settings[$name_key]) ? $hotel_settings[$name_key] : ($hotel_settings['hotel_name'] ?? 'ລະບົບໂຮງແຮມ');
 } catch (Exception $e) {
     $hotel_logo = 'https://via.placeholder.com/150?text=Logo';
     $hotel_name = 'ລະບົບໂຮງແຮມ';
@@ -183,7 +186,7 @@ try {
         <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
       </li>
       <li class="nav-item d-none d-sm-inline-block">
-        <a href="Homepage.php" target="frame" class="nav-link"><b>ໜ້າຫຼັກ</b></a>
+        <a href="Homepage.php" target="frame" class="nav-link"><b><?php echo $lang['home']; ?></b></a>
       </li>
     </ul>
 
@@ -196,16 +199,16 @@ try {
           <span class="badge badge-danger navbar-badge" id="notiCount">0</span>
         </a>
         <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
-          <span class="dropdown-item dropdown-header bg-light font-weight-bold">ແຈ້ງເຕືອນ (Notifications)</span>
+          <span class="dropdown-item dropdown-header bg-light font-weight-bold"><?php echo $lang['notifications']; ?></span>
           <div class="dropdown-divider"></div>
           <div id="notiList" style="max-height: 300px; overflow-y: auto;">
              <a href="#" class="dropdown-item text-center py-4 text-muted">
                <i class="fas fa-bell-slash mb-2 d-block fa-2x opacity-2"></i>
-               <span>ບໍ່ມີການແຈ້ງເຕືອນໃໝ່</span>
+               <span><?php echo $lang['no_notifications']; ?></span>
              </a>
           </div>
           <div class="dropdown-divider"></div>
-          <a href="logs.php" target="frame" class="dropdown-item dropdown-footer">ເບິ່ງທັງໝົດ (View All Logs)</a>
+          <a href="logs.php" target="frame" class="dropdown-item dropdown-footer"><?php echo $lang['view_all_logs']; ?></a>
         </div>
       </li>
 
@@ -221,17 +224,14 @@ try {
           <img src="<?php echo $active_flag['src']; ?>" alt="<?php echo $active_flag['alt']; ?>" style="width: 24px; border-radius: 2px;" id="currentLangFlag">
         </a>
         <div class="dropdown-menu dropdown-menu-right p-0">
-          <a href="?lang=la" class="dropdown-item <?php echo $current_lang == 'la' ? 'active' : ''; ?>">
-            <img src="https://flagcdn.com/w20/la.png" alt="Lao" class="mr-2"> ລາວ (Lao)
+          <a href="javascript:void(0);" class="dropdown-item lang-dropdown-item <?php echo $current_lang == 'la' ? 'active' : ''; ?>" data-lang="la">
+            <img src="assets/img/flags/Laos.png" alt="Lao" class="mr-2" style="width: 20px;"> ລາວ (Lao)
           </a>
-          <a href="?lang=en" class="dropdown-item <?php echo $current_lang == 'en' ? 'active' : ''; ?>">
-            <img src="https://flagcdn.com/w20/gb.png" alt="English" class="mr-2"> English
+          <a href="javascript:void(0);" class="dropdown-item lang-dropdown-item <?php echo $current_lang == 'en' ? 'active' : ''; ?>" data-lang="en">
+            <img src="assets/img/flags/uk.png" alt="English" class="mr-2" style="width: 20px;"> English
           </a>
-          <a href="?lang=cn" class="dropdown-item <?php echo $current_lang == 'cn' ? 'active' : ''; ?>">
-            <img src="https://flagcdn.com/w20/cn.png" alt="Chinese" class="mr-2"> 中文 (Chinese)
-          </a>
-          <a href="?lang=vn" class="dropdown-item <?php echo $current_lang == 'vn' ? 'active' : ''; ?>">
-            <img src="https://flagcdn.com/w20/vn.png" alt="Vietnamese" class="mr-2"> Tiếng Việt
+          <a href="javascript:void(0);" class="dropdown-item lang-dropdown-item <?php echo $current_lang == 'cn' ? 'active' : ''; ?>" data-lang="cn">
+            <img src="assets/img/flags/China.png" alt="Chinese" class="mr-2" style="width: 20px;"> 中文 (Chinese)
           </a>
         </div>
       </li>
@@ -277,21 +277,21 @@ try {
       <nav class="mt-2 pb-5">
         <ul class="nav nav-pills nav-sidebar flex-column nav-flat nav-child-indent" data-widget="treeview" role="menu" data-accordion="true">
         
-          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.6); font-size: 0.75rem; letter-spacing: 1px;">ໜ້າຫຼັກ</li>
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.6); font-size: 0.75rem; letter-spacing: 1px;"><?php echo $lang['home']; ?></li>
           <li class="nav-item">
             <a href="Homepage.php" target="frame" class="nav-link active">
               <i class="nav-icon fas fa-chart-line"></i>
-              <p>ດາດສ໌ບອດ</p>
+              <p><?php echo $lang['dashboard']; ?></p>
             </a>
           </li>
 
           <?php if($is_admin || in_array('bookings', $perms) || in_array('walkin', $perms) || in_array('checkout', $perms) || in_array('room_service', $perms)): ?>
-          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ບໍລິການລູກຄ້າ</li>
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;"><?php echo $lang['customer_service']; ?></li>
           <?php if($is_admin || in_array('walkin', $perms)): ?>
           <li class="nav-item">
             <a href="walkin.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-door-open"></i>
-              <p>ເຂົ້າພັກ</p>
+              <p><?php echo $lang['check_in']; ?></p>
             </a>
           </li>
           <?php endif; ?>
@@ -299,7 +299,7 @@ try {
           <li class="nav-item">
             <a href="reserve.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-calendar-alt"></i>
-              <p>ຈອງຫ້ອງພັກ</p>
+              <p><?php echo $lang['bookings']; ?></p>
             </a>
           </li>
           <?php endif; ?>
@@ -307,7 +307,7 @@ try {
           <li class="nav-item">
             <a href="checkout.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-receipt"></i>
-              <p>Check-out</p>
+              <p><?php echo $lang['check_out']; ?></p>
             </a>
           </li>
           <?php endif; ?>
@@ -315,19 +315,19 @@ try {
           <li class="nav-item">
             <a href="room_service.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-bell"></i>
-              <p>ບໍລິການເພີ່ມເຕີມ</p>
+              <p><?php echo $lang['room_service']; ?></p>
             </a>
           </li>
           <?php endif; ?>
           <?php endif; ?>
 
           <?php if($is_admin || in_array('pos', $perms) || in_array('stock', $perms)): ?>
-          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ຄັງສິນຄ້າ ແລະ ການຂາຍ</li>
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;"><?php echo $lang['stock_and_sales']; ?></li>
           <?php if($is_admin || in_array('pos', $perms)): ?>
           <li class="nav-item">
             <a href="pos.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-cash-register"></i>
-              <p>ຂາຍສິນຄ້າ (POS)</p>
+              <p><?php echo $lang['pos']; ?></p>
             </a>
           </li>
           <?php endif; ?>
@@ -335,14 +335,14 @@ try {
           <li class="nav-item">
             <a href="stock.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-boxes"></i>
-              <p>ສະຕ໋ອກສິນຄ້າ</p>
+              <p><?php echo $lang['stock']; ?></p>
             </a>
           </li>
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-tags"></i>
               <p>
-                 ຂໍ້ມູນສິນຄ້າ
+                 <?php echo $lang['product_info']; ?>
 				         <i class="fas fa-angle-right right"></i>
               </p>
             </a>
@@ -350,13 +350,13 @@ try {
               <li class="nav-item">
                 <a href="form_product_categories.php" target="frame" class="nav-link">
                   <i class="fas fa-th-list nav-icon"></i>
-                  <p>ໝວດໝູ່ສິນຄ້າ</p>
+                  <p><?php echo $lang['product_categories']; ?></p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="form_product_units.php" target="frame" class="nav-link">
                   <i class="fas fa-balance-scale nav-icon"></i>
-                  <p>ຫົວໜ່ວຍສິນຄ້າ</p>
+                  <p><?php echo $lang['product_units']; ?></p>
                 </a>
               </li>
             </ul>
@@ -365,12 +365,12 @@ try {
           <?php endif; ?>
 
           <?php if($is_admin || in_array('report', $perms) || in_array('rooms', $perms) || in_array('settings', $perms) || in_array('users', $perms)): ?>
-          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;">ການຈັດການ ແລະ ລາຍງານ</li>
+          <li class="nav-header text-uppercase" style="color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 1.5px; padding-top: 20px;"><?php echo $lang['management_and_reports']; ?></li>
           <?php if($is_admin || in_array('report', $perms)): ?>
           <li class="nav-item">
             <a href="report.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-chart-bar"></i>
-              <p>ລາຍງານການເງິນ</p>
+              <p><?php echo $lang['financial_report']; ?></p>
             </a>
           </li>
           <?php endif; ?>
@@ -378,7 +378,7 @@ try {
           <li class="nav-item">
             <a href="logs.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-history"></i>
-              <p>ປະຫວັດລະບົບ</p>
+              <p><?php echo $lang['system_logs']; ?></p>
             </a>
           </li>
           <?php endif; ?>
@@ -387,7 +387,7 @@ try {
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-hotel"></i>
               <p>
-                 ຕັ້ງຄ່າຫ້ອງພັກ
+                 <?php echo $lang['room_settings']; ?>
 				         <i class="fas fa-angle-right right"></i>
               </p>
             </a>
@@ -395,13 +395,13 @@ try {
               <li class="nav-item">
                 <a href="rooms/select_rooms.php" target="frame" class="nav-link">
                   <i class="fas fa-door-open nav-icon"></i>
-                  <p>ລາຍລະອຽດຫ້ອງ</p>
+                  <p><?php echo $lang['room_details']; ?></p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="room_types/form_room_types.php" target="frame" class="nav-link">
                   <i class="fas fa-tags nav-icon"></i>
-                  <p>ປະເພດຫ້ອງ</p>
+                  <p><?php echo $lang['room_types']; ?></p>
                 </a>
               </li>
             </ul>
@@ -412,7 +412,7 @@ try {
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-cogs"></i>
               <p>
-                 ຕັ້ງຄ່າລະບົບ
+                 <?php echo $lang['settings']; ?>
                  <i class="fas fa-angle-right right"></i>
               </p>
             </a>
@@ -421,13 +421,13 @@ try {
               <li class="nav-item">
                 <a href="settings.php" target="frame" class="nav-link">
                   <i class="fas fa-hotel nav-icon"></i>
-                  <p>ຂໍ້ມູນໂຮງແຮມ</p>
+                  <p><?php echo $lang['hotel_info']; ?></p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="currency/form_currency.php" target="frame" class="nav-link">
                   <i class="fas fa-money-bill-wave nav-icon"></i>
-                  <p>ສະກຸນເງິນ</p>
+                  <p><?php echo $lang['currency']; ?></p>
                 </a>
               </li>
               <?php endif; ?>
@@ -435,7 +435,7 @@ try {
               <li class="nav-item">
                 <a href="users/manage_users.php" target="frame" class="nav-link">
                   <i class="fas fa-users-cog nav-icon"></i>
-                  <p>ຈັດການຜູ້ໃຊ້</p>
+                  <p><?php echo $lang['users']; ?></p>
                 </a>
               </li>
               <?php endif; ?>
@@ -452,7 +452,14 @@ try {
 
   <!-- Content Wrapper. Contains page content -->
   <div class="content-wrapper">
-	<iframe width="100%" height="100%" frameborder="0" name="frame" src="Homepage.php"></iframe>
+	<?php 
+    $iframe_src = $_GET['redirect'] ?? 'Homepage.php';
+    // Security: basic check to ensure we only load local files
+    if (strpos($iframe_src, 'http') !== false || strpos($iframe_src, '//') !== false) {
+        $iframe_src = 'Homepage.php';
+    }
+  ?>
+	<iframe width="100%" height="100%" frameborder="0" name="frame" src="<?php echo $iframe_src; ?>"></iframe>
   </div>
 
 </div>
@@ -577,28 +584,38 @@ try {
       }
     });
 
-    // Language dropdown
-    $('.lang-select').on('click', function(e) {
+    // Language dropdown switch preservation
+    $('.lang-dropdown-item').on('click', function(e) {
       e.preventDefault();
-      $('.lang-select').removeClass('active');
-      $(this).addClass('active');
-      var flagSrc = $(this).find('img').attr('src');
-      var flagAlt = $(this).find('img').attr('alt');
-      $('#currentLangFlag').attr('src', flagSrc).attr('alt', flagAlt);
+      var lang = $(this).data('lang');
+      var iframe = document.getElementsByName('frame')[0];
+      var currentUrl = 'Homepage.php';
+      
+      try {
+        // Get the filename from the iframe's current location
+        var path = iframe.contentWindow.location.pathname;
+        currentUrl = path.split('/').pop() + iframe.contentWindow.location.search;
+        if(!currentUrl || currentUrl === 'blank') currentUrl = 'Homepage.php';
+      } catch(err) {
+        // Fallback if cross-origin or other error
+        currentUrl = 'Homepage.php';
+      }
+      
+      window.location.href = '?lang=' + lang + '&redirect=' + encodeURIComponent(currentUrl);
     });
   });
 </script>
 <script>
 function confirmLogout() {
     Swal.fire({
-        title: 'ຢືນຢັນການອອກຈາກລະບົບ',
-        text: "ທ່ານຕ້ອງການອອກຈາກລະບົບແທ້ຫຼືບໍ່?",
+        title: '<?php echo $lang['confirm_logout']; ?>',
+        text: "<?php echo $lang['logout_question']; ?>",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#007bff',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'ອອກຈາກລະບົບ',
-        cancelButtonText: 'ຍົກເລີກ'
+        confirmButtonText: '<?php echo $lang['ok']; ?>, <?php echo $lang['logout']; ?>',
+        cancelButtonText: '<?php echo $lang['cancel']; ?>'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = 'logout.php';

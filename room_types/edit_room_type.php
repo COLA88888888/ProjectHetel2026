@@ -18,12 +18,20 @@ if (!$room_type) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
-    $room_type_name = $_POST['room_type_name'];
+    $room_type_name_la = $_POST['room_type_name_la'];
+    $room_type_name_en = $_POST['room_type_name_en'];
+    $room_type_name_cn = $_POST['room_type_name_cn'];
     $room_type_code = $_POST['room_type_code'];
-    $description = $_POST['description'];
+    $description_la = $_POST['description_la'];
+    $description_en = $_POST['description_en'];
+    $description_cn = $_POST['description_cn'];
 
-    $stmt = $pdo->prepare("UPDATE room_types SET room_type_name = ?, room_type_code = ?, description = ? WHERE id = ?");
-    if ($stmt->execute([$room_type_name, $room_type_code, $description, $id])) {
+    // Also update original columns for backward compatibility
+    $room_type_name = $room_type_name_la;
+    $description = $description_la;
+
+    $stmt = $pdo->prepare("UPDATE room_types SET room_type_name = ?, room_type_name_la = ?, room_type_name_en = ?, room_type_name_cn = ?, room_type_code = ?, description = ?, description_la = ?, description_en = ?, description_cn = ? WHERE id = ?");
+    if ($stmt->execute([$room_type_name, $room_type_name_la, $room_type_name_en, $room_type_name_cn, $room_type_code, $description, $description_la, $description_en, $description_cn, $id])) {
         $_SESSION['success'] = "ແກ້ໄຂຂໍ້ມູນສຳເລັດ";
         header("Location: form_room_types.php");
         exit();
@@ -64,16 +72,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
                 <form action="" method="post" id="editRoomTypeForm">
                     <div class="card-body">
                         <div class="form-group">
-                            <label>ລະຫັດປະເພດຫ້ອງ</label>
+                            <label>ລະຫັດປະເພດຫ້ອງ (Code)</label>
                             <input type="text" name="room_type_code" id="room_type_code" class="form-control" value="<?php echo htmlspecialchars($room_type['room_type_code'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
-                            <label>ຊື່ປະເພດຫ້ອງ</label>
-                            <input type="text" name="room_type_name" id="room_type_name" class="form-control" value="<?php echo htmlspecialchars($room_type['room_type_name'] ?? ''); ?>">
+                            <label>ຊື່ປະເພດຫ້ອງ (Lao)</label>
+                            <input type="text" name="room_type_name_la" id="room_type_name_la" class="form-control" value="<?php echo htmlspecialchars($room_type['room_type_name_la'] ?: $room_type['room_type_name']); ?>">
                         </div>
                         <div class="form-group">
-                            <label>ລາຍລະອຽດ</label>
-                            <textarea name="description" id="description" class="form-control" rows="3"><?php echo htmlspecialchars($room_type['description']); ?></textarea>
+                            <label>Room Type Name (English)</label>
+                            <input type="text" name="room_type_name_en" class="form-control" value="<?php echo htmlspecialchars($room_type['room_type_name_en'] ?? ''); ?>">
+                        </div>
+                        <div class="form-group">
+                            <label>客房类型名称 (Chinese)</label>
+                            <input type="text" name="room_type_name_cn" class="form-control" value="<?php echo htmlspecialchars($room_type['room_type_name_cn'] ?? ''); ?>">
+                        </div>
+                        <div class="form-group">
+                            <label>ລາຍລະອຽດ (Lao)</label>
+                            <textarea name="description_la" id="description_la" class="form-control" rows="2"><?php echo htmlspecialchars($room_type['description_la'] ?: $room_type['description']); ?></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Description (English)</label>
+                            <textarea name="description_en" class="form-control" rows="2"><?php echo htmlspecialchars($room_type['description_en'] ?? ''); ?></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>描述 (Chinese)</label>
+                            <textarea name="description_cn" class="form-control" rows="2"><?php echo htmlspecialchars($room_type['description_cn'] ?? ''); ?></textarea>
                         </div>
                     </div>
                     <div class="card-footer text-center">
@@ -96,24 +120,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
 <script>
 $(document).ready(function() {
     $('#editRoomTypeForm').on('submit', function(e) {
-        var roomTypeName = $('#room_type_name').val().trim();
-        var description = $('#description').val().trim();
+        var roomTypeNameLa = $('#room_type_name_la').val().trim();
         
-        if (roomTypeName === '' && description === '') {
+        if (roomTypeNameLa === '') {
             e.preventDefault();
             Swal.fire({
                 icon: 'warning',
                 title: 'ແຈ້ງເຕືອນ',
-                text: 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ!',
-                confirmButtonText: 'ຕົກລົງ'
-            });
-            return false;
-        } else if (roomTypeName === '') {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'warning',
-                title: 'ແຈ້ງເຕືອນ',
-                text: 'ກະລຸນາປ້ອນຊື່ປະເພດຫ້ອງ!',
+                text: 'ກະລຸນາປ້ອນຊື່ປະເພດຫ້ອງ (ພາສາລາວ)!',
                 confirmButtonText: 'ຕົກລົງ'
             });
             return false;

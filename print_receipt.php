@@ -27,8 +27,11 @@ $hotel_phone = $settings['hotel_phone'] ?? '';
 $hotel_address = $settings['hotel_address'] ?? '';
 $footer_text = $settings['receipt_footer'] ?? 'Thank you!';
 
-// Fetch order items
-$stmt = $pdo->prepare("SELECT o.*, p.prod_name, p.prod_code, p.sprice 
+// Fetch order items with localized product name
+$current_lang = $_SESSION['lang'] ?? 'la';
+$prod_name_col = "prod_name_" . $current_lang;
+
+$stmt = $pdo->prepare("SELECT o.*, p.prod_name, p.$prod_name_col as prod_name_localized, p.prod_code, p.sprice 
                        FROM orders o 
                        JOIN products p ON o.prod_id = p.prod_id 
                        WHERE o.bill_id = ?");
@@ -138,9 +141,8 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
                 $subtotal = $qty * $price;
                 $total += $subtotal;
             ?>
-            <tr>
                 <td>
-                    <?php echo htmlspecialchars($item['prod_name']); ?>
+                    <?php echo htmlspecialchars($item['prod_name_localized'] ?: $item['prod_name']); ?>
                     <br><small><?php echo number_format($price); ?> x <?php echo $qty; ?></small>
                 </td>
                 <td class="text-right"><?php echo $qty; ?></td>

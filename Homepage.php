@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 require_once 'config/session_check.php';
+
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
 ?>
 <!DOCTYPE html>
 <html lang="lo">
@@ -93,6 +102,44 @@ try {
                                  ORDER BY b.created_at DESC 
                                  LIMIT 8");
     $activity_logs = $stmt_history->fetchAll();
+
+    // 1. Today's Bookings (Made today)
+    $stmtBookToday = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE DATE(created_at) = ?");
+    $stmtBookToday->execute([$current_date]);
+    $today_bookings = $stmtBookToday->fetchColumn() ?: 0;
+
+    // 2. Today's Revenue Breakdown (Cash vs Transfer)
+    // Bookings
+    $stmtCashRoom = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?) AND (payment_method LIKE '%ເງິນສົດ%' OR payment_method LIKE '%Cash%')");
+    $stmtCashRoom->execute([$current_date, $current_date]);
+    $today_cash_room = $stmtCashRoom->fetchColumn() ?: 0;
+
+    $stmtTransferRoom = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?) AND (payment_method LIKE '%ເງິນໂອນ%' OR payment_method LIKE '%Transfer%')");
+    $stmtTransferRoom->execute([$current_date, $current_date]);
+    $today_transfer_room = $stmtTransferRoom->fetchColumn() ?: 0;
+
+    // POS Orders
+    $stmtCashPos = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE DATE(o_date) = ? AND (payment_method LIKE '%ເງິນສົດ%' OR payment_method LIKE '%Cash%')");
+    $stmtCashPos->execute([$current_date]);
+    $today_cash_pos = $stmtCashPos->fetchColumn() ?: 0;
+
+    $stmtTransferPos = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE DATE(o_date) = ? AND (payment_method LIKE '%ເງິນໂອນ%' OR payment_method LIKE '%Transfer%')");
+    $stmtTransferPos->execute([$current_date]);
+    $today_transfer_pos = $stmtTransferPos->fetchColumn() ?: 0;
+
+    $today_cash_total = $today_cash_room + $today_cash_pos;
+    $today_transfer_total = $today_transfer_room + $today_transfer_pos;
+
+    // 3. Monthly Revenue (Bookings + POS)
+    $stmtMonthRoom = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND MONTH(check_in_date) = MONTH(CURDATE()) AND YEAR(check_in_date) = YEAR(CURDATE())");
+    $stmtMonthRoom->execute();
+    $monthly_revenue_room = $stmtMonthRoom->fetchColumn() ?: 0;
+
+    $stmtMonthPos = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE MONTH(o_date) = MONTH(CURDATE()) AND YEAR(o_date) = YEAR(CURDATE())");
+    $stmtMonthPos->execute();
+    $monthly_revenue_pos = $stmtMonthPos->fetchColumn() ?: 0;
+
+    $monthly_revenue = $monthly_revenue_room + $monthly_revenue_pos;
 
     // Fetch Last 7 Days Revenue
     $days = [];
@@ -232,83 +279,83 @@ try {
         <a href="rooms/select_rooms.php" class="stat-card gc-green">
           <div class="stat-card-top">
             <div>
-              <div class="stat-card-label">ຫ້ອງຫວ່າງ</div>
-              <div class="stat-card-value"><?= number_format($available_rooms) ?> <span style="font-size:1rem;font-weight:600;">ຫ້ອງ</span></div>
+              <div class="stat-card-label"><?php echo $lang['available_rooms_label']; ?></div>
+              <div class="stat-card-value"><?= number_format($available_rooms) ?> <span style="font-size:1rem;font-weight:600;"><?php echo $lang['room_unit']; ?></span></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-door-open"></i></div>
           </div>
           <div class="stat-card-footer">
-            <i class="fas fa-arrow-right"></i> ຈັດການຂໍ້ມູນຫ້ອງ
+            <i class="fas fa-arrow-right"></i> <?php echo $lang['manage_rooms']; ?>
           </div>
         </a>
 
-        <!-- Card 2: Unavailable Rooms -->
-        <a href="report.php?type=room_history" class="stat-card gc-amber">
+        <!-- Card 2: Today's Bookings -->
+        <a href="reserve.php" class="stat-card gc-amber">
           <div class="stat-card-top">
             <div>
-              <div class="stat-card-label">ຫ້ອງບໍ່ຫວ່າງ</div>
-              <div class="stat-card-value"><?= number_format($unavailable_rooms) ?> <span style="font-size:1rem;font-weight:600;">ຫ້ອງ</span></div>
+              <div class="stat-card-label"><?php echo $lang['today_bookings_label']; ?></div>
+              <div class="stat-card-value"><?= number_format($today_bookings) ?> <span style="font-size:1rem;font-weight:600;"><?php echo $lang['bill_unit']; ?></span></div>
             </div>
-            <div class="stat-card-icon"><i class="fas fa-door-closed"></i></div>
+            <div class="stat-card-icon"><i class="fas fa-calendar-check"></i></div>
           </div>
           <div class="stat-card-footer">
-            <i class="fas fa-arrow-right"></i> ປະຫວັດການຈອງ
+            <i class="fas fa-arrow-right"></i> <?php echo $lang['view_booking_details']; ?>
           </div>
         </a>
 
-        <!-- Card 3: Total Rooms -->
-        <a href="rooms/select_rooms.php" class="stat-card gc-blue">
+        <!-- Card 3: Today's Cash -->
+        <div class="stat-card gc-blue">
           <div class="stat-card-top">
             <div>
-              <div class="stat-card-label">ຫ້ອງທັງໝົດ</div>
-              <div class="stat-card-value"><?= number_format($total_rooms) ?> <span style="font-size:1rem;font-weight:600;">ຫ້ອງ</span></div>
+              <div class="stat-card-label"><?php echo $lang['today_cash_label']; ?></div>
+              <div class="stat-card-value"><?= number_format($today_cash_total) ?> <span style="font-size:0.9rem;font-weight:600;">₭</span></div>
             </div>
-            <div class="stat-card-icon"><i class="fas fa-hotel"></i></div>
+            <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
           </div>
           <div class="stat-card-footer">
-            <i class="fas fa-arrow-right"></i> ຈັດການຂໍ້ມູນຫ້ອງ
+            <i class="fas fa-coins"></i> <?php echo $lang['total_cash_label']; ?>
           </div>
-        </a>
+        </div>
 
-        <!-- Card 4: Total Guests -->
-        <a href="report.php?type=room_history" class="stat-card gc-indigo">
+        <!-- Card 4: Today's Transfer -->
+        <div class="stat-card gc-indigo">
           <div class="stat-card-top">
             <div>
-              <div class="stat-card-label">ແຂກທັງໝົດ</div>
-              <div class="stat-card-value"><?= number_format($guest_count) ?> <span style="font-size:1rem;font-weight:600;">ຄົນ</span></div>
+              <div class="stat-card-label"><?php echo $lang['today_transfer_label']; ?></div>
+              <div class="stat-card-value"><?= number_format($today_transfer_total) ?> <span style="font-size:0.9rem;font-weight:600;">₭</span></div>
             </div>
-            <div class="stat-card-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-card-icon"><i class="fas fa-university"></i></div>
           </div>
           <div class="stat-card-footer">
-            <i class="fas fa-arrow-right"></i> ແຂກເຂົ້າພັກ
+            <i class="fas fa-exchange-alt"></i> <?php echo $lang['total_transfer_label']; ?>
           </div>
-        </a>
+        </div>
 
-        <!-- Card 5: Today Revenue -->
+        <!-- Card 5: Today Total Revenue -->
         <a href="report.php?type=room_revenue" class="stat-card gc-teal">
           <div class="stat-card-top">
             <div>
-              <div class="stat-card-label">ລາຍຮັບມື້ນີ້</div>
-              <div class="stat-card-value"><?= number_format($today_revenue) ?> <span style="font-size:0.9rem;font-weight:600;">ກີບ</span></div>
+              <div class="stat-card-label"><?php echo $lang['today_revenue_label']; ?></div>
+              <div class="stat-card-value"><?= number_format($today_revenue) ?> <span style="font-size:0.9rem;font-weight:600;">₭</span></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-wallet"></i></div>
           </div>
           <div class="stat-card-footer">
-            <i class="fas fa-arrow-right"></i> ເບິ່ງລາຍງານ
+            <i class="fas fa-arrow-right"></i> <?php echo $lang['view_detailed_report']; ?>
           </div>
         </a>
 
-        <!-- Card 6: Total Revenue -->
+        <!-- Card 6: Monthly Revenue -->
         <a href="report.php?type=finance" class="stat-card gc-dark">
           <div class="stat-card-top">
             <div>
-              <div class="stat-card-label">ລາຍຮັບລາຍເດືອນ</div>
-              <div class="stat-card-value"><?= number_format($total_revenue) ?> <span style="font-size:0.9rem;font-weight:600;">ກີບ</span></div>
+              <div class="stat-card-label"><?php echo $lang['monthly_revenue_label']; ?></div>
+              <div class="stat-card-value"><?= number_format($monthly_revenue ?? 0) ?> <span style="font-size:0.9rem;font-weight:600;">₭</span></div>
             </div>
-            <div class="stat-card-icon"><i class="fas fa-dollar-sign"></i></div>
+            <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
           </div>
           <div class="stat-card-footer">
-            <i class="fas fa-arrow-right"></i> ເບິ່ງລາຍງານ
+            <i class="fas fa-arrow-right"></i> <?php echo $lang['monthly_summary']; ?>
           </div>
         </a>
 
@@ -321,12 +368,12 @@ try {
         <div class="col-lg-8 col-12 mb-3">
             <div class="card shadow-sm border-0" style="border-radius: 12px;">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center" style="border-top-left-radius: 12px; border-top-right-radius: 12px;">
-                    <h5 class="m-0 font-weight-bold text-dark" style="font-size: 0.95rem;"><i class="fas fa-chart-line mr-2 text-primary"></i> ສະຫຼຸບລາຍຮັບ</h5>
+                    <h5 class="m-0 font-weight-bold text-dark" style="font-size: 0.95rem;"><i class="fas fa-chart-line mr-2 text-primary"></i> <?php echo $lang['revenue_chart']; ?></h5>
                     <select id="chartPeriod" class="form-control form-control-sm" style="width: auto; border-radius: 8px; font-weight: 600; border: 2px solid #3498DB; color: #3498DB;">
-                        <option value="daily">ລາຍວັນ</option>
-                        <option value="weekly">ລາຍອາທິດ</option>
-                        <option value="monthly">ລາຍເດືອນ</option>
-                        <option value="yearly">ລາຍປີ</option>
+                        <option value="daily"><?php echo $lang['daily']; ?></option>
+                        <option value="weekly"><?php echo $lang['weekly']; ?></option>
+                        <option value="monthly"><?php echo $lang['monthly']; ?></option>
+                        <option value="yearly"><?php echo $lang['yearly']; ?></option>
                     </select>
                 </div>
                 <div class="card-body p-2 p-md-3">
@@ -338,7 +385,7 @@ try {
         <div class="col-lg-4 col-12 mb-3">
             <div class="card shadow-sm border-0" style="border-radius: 12px;">
                 <div class="card-header bg-white" style="border-top-left-radius: 12px; border-top-right-radius: 12px;">
-                    <h5 class="m-0 font-weight-bold text-dark" style="font-size: 0.95rem;"><i class="fas fa-chart-pie mr-2 text-danger"></i> ອັດຕາສ່ວນລາຍຮັບ</h5>
+                    <h5 class="m-0 font-weight-bold text-dark" style="font-size: 0.95rem;"><i class="fas fa-chart-pie mr-2 text-danger"></i> <?php echo $lang['revenue_share']; ?></h5>
                 </div>
                 <div class="card-body p-2 p-md-3 d-flex align-items-center justify-content-center">
                     <canvas id="donutChart" style="max-height: 280px; max-width: 100%;"></canvas>
