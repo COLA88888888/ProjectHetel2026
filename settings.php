@@ -146,6 +146,8 @@ foreach($currencies as $c) {
             .col-form-label { text-align: left !important; padding-bottom: 0; }
             .card-body { padding: 15px; }
             .btn { font-size: 0.85rem; }
+            .alert h4 { font-size: 1rem !important; word-break: break-all; }
+            .alert { padding: 10px; }
         }
     </style>
 </head>
@@ -286,7 +288,7 @@ foreach($currencies as $c) {
                     <p>ທ່ານສາມາດໃຫ້ພະນັກງານຄົນອື່ນເຂົ້າໃຊ້ລະບົບຜ່ານ Network ດຽວກັນໄດ້ໂດຍການພິມ IP ນີ້ໃນ Browser:</p>
                     <div class="alert alert-info">
                         <h4 class="mb-0 text-center font-weight-bold">
-                            http://<?php echo gethostbyname(gethostname()); ?>/ProjectHotels
+                            http://<?php echo gethostbyname(gethostname()); ?>/ProjectHetel2026
                         </h4>
                     </div>
                     <small class="text-muted">* ໝາຍເຫດ: ເຄື່ອງອື່ນໆຕ້ອງເຊື່ອມຕໍ່ WiFi ຫຼື ວົງ LAN ດຽວກັນກັບເຄື່ອງ Server ນີ້.</small>

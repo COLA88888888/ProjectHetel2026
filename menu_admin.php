@@ -19,7 +19,6 @@ $flags = [
     'la' => ['src' => 'https://flagcdn.com/w20/la.png', 'alt' => 'Lao'],
     'en' => ['src' => 'https://flagcdn.com/w20/gb.png', 'alt' => 'English'],
     'cn' => ['src' => 'https://flagcdn.com/w20/cn.png', 'alt' => 'Chinese'],
-    'vn' => ['src' => 'https://flagcdn.com/w20/vn.png', 'alt' => 'Vietnamese'],
 ];
 $active_flag = $flags[$current_lang] ?? $flags['la'];
 
@@ -190,18 +189,31 @@ try {
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
+      <!-- Notifications Dropdown -->
+      <li class="nav-item dropdown">
+        <a class="nav-link" data-toggle="dropdown" href="#">
+          <i class="far fa-bell"></i>
+          <span class="badge badge-danger navbar-badge" id="notiCount">0</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+          <span class="dropdown-item dropdown-header bg-light font-weight-bold">ແຈ້ງເຕືອນ (Notifications)</span>
+          <div class="dropdown-divider"></div>
+          <div id="notiList" style="max-height: 300px; overflow-y: auto;">
+             <a href="#" class="dropdown-item text-center py-4 text-muted">
+               <i class="fas fa-bell-slash mb-2 d-block fa-2x opacity-2"></i>
+               <span>ບໍ່ມີການແຈ້ງເຕືອນໃໝ່</span>
+             </a>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a href="logs.php" target="frame" class="dropdown-item dropdown-footer">ເບິ່ງທັງໝົດ (View All Logs)</a>
+        </div>
+      </li>
+
       <li class="nav-item">
         <a class="nav-link" data-widget="fullscreen" href="#" role="button">
           <i class="fas fa-expand-arrows-alt"></i>
         </a>
-      </li>  
-
-      <!-- Usage Package -->
-      <!-- <li class="nav-item">
-        <a class="nav-link" href="#" role="button" style="color: #28a745; font-weight: bold;">
-         ແພັກເກັດການນຳໃຊ້
-        </a>
-      </li> -->
+      </li>
 
       <!-- Language Dropdown -->
       <li class="nav-item dropdown">
@@ -454,8 +466,61 @@ try {
 <script src="plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
 <!-- AdminLTE App -->
 <script src="dist/js/adminlte.js"></script>
+<!-- Notification Sound -->
+<audio id="notiSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
 <script>
   $(function() {
+    // ===== Notifications Logic =====
+    let lastNotiCount = 0;
+
+    function fetchNotifications() {
+      $.ajax({
+        url: 'fetch_notifications.php',
+        method: 'GET',
+        dataType: 'json',
+        success: function(data) {
+          if (data.error) return;
+
+          $('#notiCount').text(data.count);
+          
+          if (data.count > 0) {
+            $('#notiCount').show();
+            let html = '';
+            data.items.forEach(item => {
+              html += `
+                <a href="${item.link}" target="frame" class="dropdown-item">
+                  <i class="${item.icon} mr-2 ${item.color}"></i>
+                  <span class="text-sm font-weight-bold">${item.title}</span>
+                  <div class="text-muted text-xs">${item.text}</div>
+                </a>
+                <div class="dropdown-divider"></div>
+              `;
+            });
+            $('#notiList').html(html);
+
+            // Play sound if count increased
+            if (data.count > lastNotiCount) {
+              document.getElementById('notiSound').play().catch(e => console.log("Sound play blocked"));
+            }
+          } else {
+            $('#notiCount').hide();
+            $('#notiList').html(`
+              <a href="#" class="dropdown-item text-center py-4 text-muted">
+                <i class="fas fa-bell-slash mb-2 d-block fa-2x opacity-2"></i>
+                <span>ບໍ່ມີການແຈ້ງເຕືອນໃໝ່</span>
+              </a>
+            `);
+          }
+          lastNotiCount = data.count;
+        }
+      });
+    }
+
+    // Initial fetch and set interval
+    fetchNotifications();
+    setInterval(fetchNotifications, 30000); // Every 30 seconds
+
     // ===== Active Menu Highlight =====
     var $navLinks = $('.nav-sidebar .nav-link[target="frame"]');
     

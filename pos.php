@@ -153,6 +153,7 @@ foreach ($products as $p) {
             display: flex;
             align-items: center;
             justify-content: center;
+        }
         .product-name { font-size: 0.82rem; font-weight: 600; color: #444; line-height: 1.4; min-height: 2.8em; }
         .product-price { font-size: 0.92rem; font-weight: 700; color: #2ecc71; }
         .product-stock { font-size: 0.7rem; color: #aaa; margin-top: 4px; }
@@ -173,6 +174,24 @@ foreach ($products as $p) {
             border-radius: 2px;
             background: rgba(0,0,0,0.5);
             color: #fff;
+            z-index: 5;
+        }
+        .qty-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #e74c3c;
+            color: white;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.25rem;
+            z-index: 20;
+            border-radius: 0 12px 0 15px;
+            box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
         }
         
         /* Cart */
@@ -189,6 +208,33 @@ foreach ($products as $p) {
             .product-img, .product-placeholder { height: 100px !important; }
             .cat-btn { padding: 6px 12px; font-size: 0.75rem; }
             .cart-container { height: 42vh; }
+        }
+
+        /* Barcode Input Styling */
+        #barcodeInput {
+            height: 45px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 0 8px 8px 0 !important;
+            transition: all 0.3s ease;
+            background-color: #fff;
+        }
+        #barcodeInput:focus {
+            background-color: #fff9db;
+            border-color: #f1c40f;
+            box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+        }
+        .barcode-group .input-group-text {
+            border-radius: 8px 0 0 8px !important;
+            padding: 0 15px;
+            font-size: 1.2rem;
+            background: linear-gradient(135deg, #3498DB, #2980B9);
+            border: none;
+        }
+        .barcode-group {
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #3498DB;
         }
     </style>
 </head>
@@ -216,7 +262,7 @@ foreach ($products as $p) {
         </script>
     <?php unset($_SESSION['print_bill']); endif; ?>
 
-    <div class="row mb-2">
+    <div class="row mb-3 align-items-center">
         <div class="col-12">
             <h2 class="mb-0"><i class="fas fa-cash-register text-primary"></i> ຈຸດຂາຍສິນຄ້າ (POS)</h2>
         </div>
@@ -225,6 +271,18 @@ foreach ($products as $p) {
     <div class="row">
         <!-- Products Grid (Left) -->
         <div class="col-lg-8 col-md-7 mb-3">
+            <!-- Search & Barcode Area -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="input-group barcode-group shadow-sm h-100">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text text-white"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input type="text" id="mainSearch" class="form-control" placeholder="ຄົ້ນຫາສິນຄ້າ ຫຼື ສະແກນບາໂຄ້ດ (Search or Scan Barcode)..." autofocus autocomplete="off" style="height: 50px; font-size: 1.1rem;">
+                    </div>
+                </div>
+            </div>
+
             <!-- Category Filter Buttons -->
             <div class="mb-3">
                 <div class="cat-scroll">
@@ -233,17 +291,14 @@ foreach ($products as $p) {
                         <span class="badge badge-danger ml-1"><?php echo count($products); ?></span>
                     </button>
                     <?php 
-                    $catIcons = [
-                        'ເຄື່ອງດື່ມ' => 'fa-glass-cheers',
-                        'ອາຫານ' => 'fa-utensils',
-                        'ຂະໜົມ' => 'fa-cookie-bite',
-                        'ເບຍ' => 'fa-beer',
-                        'ນ້ຳ' => 'fa-tint',
-                        'ຢາສູບ' => 'fa-smoking',
-                    ];
+                    // $catIcons = [
+                    //     'ເຄື່ອງດື່ມ' => 'fa-glass-cheers',
+                    //     'ອາຫານ' => 'fa-utensils',
+                    //     'ຂະໜົມ' => 'fa-cookie-bite',
+                    // ];
                     foreach($categories as $cat): 
                         $catName = $cat['name'];
-                        $icon = $catIcons[$catName] ?? 'fa-tag';
+                        // $icon = $catIcons[$catName] ?? 'fa-tag';
                         $count = $catCounts[$catName] ?? 0;
                         if ($count == 0) continue;
                     ?>
@@ -260,9 +315,14 @@ foreach ($products as $p) {
             <div class="card border-0 shadow-sm" style="border-radius: 4px;">
                 <div class="card-body p-2" style="max-height: 70vh; overflow-y: auto;" id="productGrid">
                     <div class="row" id="productList">
+                        <div id="noResultsMsg" class="col-12 text-center py-5 text-muted" style="display: none;">
+                            <i class="fas fa-search fa-3x mb-3 d-block" style="color: #ddd;"></i>
+                            <h5>ບໍ່ມີສິນຄ້າທີ່ທ່ານຄົ້ນຫາ</h5>
+                        </div>
                         <?php foreach($products as $p): ?>
                             <div class="col-xl-3 col-lg-4 col-md-6 col-6 mb-3 product-item" data-category="<?php echo htmlspecialchars($p['category']); ?>">
-                                <div class="card product-card shadow-sm h-100" onclick="addToCart(<?php echo $p['prod_id']; ?>, '<?php echo htmlspecialchars(addslashes($p['prod_name'])); ?>', <?php echo $p['sprice']; ?>, <?php echo $p['qty']; ?>, '<?php echo $p['image']; ?>')">
+                                <div class="card product-card shadow-sm h-100" id="prod-card-<?php echo $p['prod_id']; ?>" onclick="addToCart(<?php echo $p['prod_id']; ?>, '<?php echo htmlspecialchars(addslashes($p['prod_name'])); ?>', <?php echo $p['sprice']; ?>, <?php echo $p['qty']; ?>, '<?php echo $p['image']; ?>', '<?php echo htmlspecialchars($p['prod_code']); ?>')">
+                                    <span class="qty-badge" id="qty-badge-<?php echo $p['prod_id']; ?>" style="display: none;">0</span>
                                     <!-- Category Label -->
                                     <span class="cat-label"><?php echo htmlspecialchars($p['category'] ?: 'ອື່ນໆ'); ?></span>
                                     <!-- Stock Badge -->
@@ -282,6 +342,7 @@ foreach ($products as $p) {
                                     <?php endif; ?>
                                     <div class="card-body text-center">
                                         <div class="product-name text-truncate"><?php echo htmlspecialchars($p['prod_name']); ?></div>
+                                        <div class="text-muted small mb-1"><?php echo htmlspecialchars($p['prod_code'] ?? '-'); ?></div>
                                         <div class="product-price mt-1"><?php echo number_format($p['sprice']); ?> <?php echo $currency_symbol; ?></div>
                                         <div class="product-stock">ເຫຼືອ: <?php echo number_format($p['qty']); ?></div>
                                     </div>
@@ -344,9 +405,67 @@ foreach ($products as $p) {
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
 
 <script>
-let cart = {};
+let cart = JSON.parse(localStorage.getItem('pos_cart')) || {};
 const taxPercent = <?php echo $tax_percent; ?>;
 const currencySymbol = '<?php echo $currency_symbol; ?>';
+const allProducts = <?php echo json_encode($products); ?>;
+
+$(document).ready(function() {
+    renderCart(); // Restore cart from localStorage
+    // Combined Search & Barcode Logic
+    $('#mainSearch').focus();
+    $(document).on('click', function() {
+        if ($('.modal.show').length === 0 && !$(event.target).is('input, textarea, select')) {
+            $('#mainSearch').focus();
+        }
+    });
+
+    $('#mainSearch').on('input', function() {
+        let val = $(this).val().trim();
+        
+        if (val === '') {
+            $('.product-item').show();
+            $('#noResultsMsg').hide();
+            return;
+        }
+
+        // 1. Try barcode match first (Exact match)
+        let product = allProducts.find(p => p.prod_code === val);
+        if (product) {
+            addToCart(product.prod_id, product.prod_name, product.sprice, product.qty, product.image, product.prod_code);
+            $(this).val(''); // Clear for next scan
+            $('.product-item').show(); // Reset filter
+            $('#noResultsMsg').hide();
+            return;
+        }
+
+        // 2. Otherwise treat as name search filter
+        var visibleCount = 0;
+        var searchVal = val.toLowerCase();
+        $('.product-item').each(function() {
+            var name = $(this).find('.product-name').text().toLowerCase();
+            if (name.indexOf(searchVal) > -1) {
+                $(this).show();
+                visibleCount++;
+            } else {
+                $(this).hide();
+            }
+        });
+
+        if (visibleCount === 0) {
+            $('#noResultsMsg').show();
+        } else {
+            $('#noResultsMsg').hide();
+        }
+    });
+
+    // Also handle Enter key for barcode scanners that append Enter
+    $('#mainSearch').on('keypress', function(e) {
+        if (e.which === 13) {
+            $(this).trigger('input');
+        }
+    });
+});
 
 // Category filter
 $('.cat-btn').on('click', function() {
@@ -362,7 +481,7 @@ $('.cat-btn').on('click', function() {
     }
 });
 
-function addToCart(id, name, price, maxQty, image) {
+function addToCart(id, name, price, maxQty, image, code) {
     if (cart[id]) {
         if (cart[id].qty < maxQty) {
             cart[id].qty++;
@@ -372,7 +491,7 @@ function addToCart(id, name, price, maxQty, image) {
         }
     } else {
         if (maxQty > 0) {
-            cart[id] = { name: name, price: price, qty: 1, maxQty: maxQty, image: image };
+            cart[id] = { name: name, price: price, qty: 1, maxQty: maxQty, image: image, code: code };
         }
     }
     // Mini animation toast
@@ -409,16 +528,21 @@ function clearCart() {
         confirmButtonText: 'ລ້າງເລີຍ',
         cancelButtonText: 'ຍົກເລີກ'
     }).then((result) => {
-        if (result.isConfirmed) { cart = {}; renderCart(); }
+        if (result.isConfirmed) { cart = {}; localStorage.removeItem('pos_cart'); renderCart(); }
     });
 }
 
 function renderCart() {
+    // Save to localStorage for persistence
+    localStorage.setItem('pos_cart', JSON.stringify(cart));
     let html = '';
     let total = 0;
     let hasItems = false;
     let hiddenHtml = '';
     let itemCount = 0;
+
+    // Reset all badges first
+    $('.qty-badge').hide().text('0');
 
     for (let id in cart) {
         hasItems = true;
@@ -426,6 +550,9 @@ function renderCart() {
         let item = cart[id];
         let subtotal = item.price * item.qty;
         total += subtotal;
+
+        // Update badge on product card
+        $('#qty-badge-' + id).text(item.qty).show();
 
         let imageHtml = item.image 
             ? `<img src="assets/img/products/${item.image}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 10px;" class="border shadow-sm">`
@@ -437,7 +564,10 @@ function renderCart() {
                 ${imageHtml}
                 <div style="flex:1;">
                     <div class="d-flex justify-content-between align-items-start">
-                        <strong style="font-size: 0.82rem; color: #333;" class="text-truncate d-inline-block" style="max-width: 120px;">${item.name}</strong>
+                        <div>
+                            <strong style="font-size: 0.82rem; color: #333;" class="text-truncate d-inline-block" style="max-width: 120px;">${item.name}</strong>
+                            <div class="text-muted small" style="font-size: 0.65rem;">Code: ${item.code || '-'}</div>
+                        </div>
                         <div class="text-success font-weight-bold" style="font-size: 0.85rem;">${subtotal.toLocaleString('en-US')} ${currencySymbol}</div>
                     </div>
                     <div class="text-muted d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
@@ -583,13 +713,13 @@ $('#posForm').on('submit', function(e) {
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            $('#hiddenInputs').html(`
+            $('#hiddenInputs').append(`
                 <input type="hidden" name="payment_method" value="${result.value.method}">
                 <input type="hidden" name="received" value="${result.value.received}">
                 <input type="hidden" name="change_amount" value="${result.value.change}">
+                <input type="hidden" name="checkout_pos" value="1">
             `);
-            // Add existing items
-            renderCart(); // Re-render to ensure all items are in hidden inputs
+            localStorage.removeItem('pos_cart'); // Clear after success
             $('#posForm')[0].submit();
         }
     });

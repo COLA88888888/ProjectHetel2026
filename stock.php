@@ -5,6 +5,7 @@ require_once 'config/session_check.php';
 
 // Handle Add Product
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
+    $prod_code = trim($_POST['prod_code']);
     $prod_name = trim($_POST['prod_name']);
     $category = $_POST['category'];
     $qty = (int)$_POST['qty'];
@@ -45,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
         $_SESSION['error'] = "ການອັບໂຫຼດຮູບຜິດພາດ: " . ($err_msg[$_FILES['image']['error']] ?? "Unknown Error");
     }
 
-    $stmt = $pdo->prepare("INSERT INTO products (prod_name, category, image, qty, unit, bprice, sprice) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    if ($stmt->execute([$prod_name, $category, $image, $qty, $unit, $bprice, $sprice])) {
+    $stmt = $pdo->prepare("INSERT INTO products (prod_code, prod_name, category, image, qty, unit, bprice, sprice) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    if ($stmt->execute([$prod_code, $prod_name, $category, $image, $qty, $unit, $bprice, $sprice])) {
         // Record Expense
         $expense_amount = $qty * $bprice;
         if ($expense_amount > 0) {
@@ -67,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
 // Handle Edit Product
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_product'])) {
     $prod_id = (int)$_POST['prod_id'];
+    $prod_code = trim($_POST['prod_code']);
     $prod_name = trim($_POST['prod_name']);
     $category = $_POST['category'];
     $unit = $_POST['unit'];
@@ -75,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_product'])) {
     
     // Check if new image is uploaded
     $image_query = "";
-    $params = [$prod_name, $category, $unit, $bprice, $sprice];
+    $params = [$prod_code, $prod_name, $category, $unit, $bprice, $sprice];
     
     if (isset($_FILES['edit_image']) && $_FILES['edit_image']['error'] == 0) {
         $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'jfif', 'avif'];
@@ -121,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_product'])) {
     }
     
     $params[] = $prod_id;
-    $stmt = $pdo->prepare("UPDATE products SET prod_name = ?, category = ?, unit = ?, bprice = ?, sprice = ? $image_query WHERE prod_id = ?");
+    $stmt = $pdo->prepare("UPDATE products SET prod_code = ?, prod_name = ?, category = ?, unit = ?, bprice = ?, sprice = ? $image_query WHERE prod_id = ?");
     if ($stmt->execute($params)) {
         logActivity($pdo, "ແກ້ໄຂສິນຄ້າ", "ຊື່: $prod_name");
         $_SESSION['success'] = "ແກ້ໄຂສິນຄ້າສຳເລັດແລ້ວ!";
@@ -215,13 +217,16 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
+        .btn-edit { background: transparent !important; border: none !important; color: #ffc107 !important; font-size: 1.15rem; padding: 0 8px; }
+        .btn-restock { background: transparent !important; border: none !important; color: #17a2b8 !important; font-size: 1.15rem; padding: 0 8px; }
+        .btn-delete { background: transparent !important; border: none !important; color: #dc3545 !important; font-size: 1.15rem; padding: 0 8px; }
+        .btn-edit:hover, .btn-restock:hover, .btn-delete:hover { opacity: 0.7; }
         @media (max-width: 768px) {
             body { padding: 10px; }
             h2 { font-size: 1.2rem; }
             .card-title { font-size: 1rem; }
             .alert { font-size: 0.85rem; padding: 0.5rem 0.75rem !important; }
             .table th, .table td { padding: 0.6rem 0.4rem !important; font-size: 0.8rem !important; }
-            .btn-group-sm > .btn { padding: 0.25rem 0.4rem; font-size: 0.7rem; }
             .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { font-size: 0.75rem; text-align: center !important; }
             .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter { text-align: left !important; margin-bottom: 10px; }
             .card-body { padding: 0.75rem; }
@@ -287,6 +292,10 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                             <label>ຮູບພາບສິນຄ້າ</label>
                             <input type="file" name="image" id="image" class="form-control-file border p-2" accept="image/*" onchange="previewImage(this)">
                             <img id="preview" src="" alt="Preview" style="max-height: 100px; display: none; margin-top: 10px; border-radius: 4px;" class="shadow-sm">
+                        </div>
+                        <div class="form-group">
+                            <label>ລະຫັດສິນຄ້າ</label>
+                            <input type="text" name="prod_code" class="form-control" placeholder="ປ້ອນລະຫັດສິນຄ້າ...">
                         </div>
                         <div class="form-group">
                             <label>ຊື່ສິນຄ້າ</label>
@@ -355,6 +364,7 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                                 <tr>
                                     <th>#</th>
                                     <th>ຮູບພາບ</th>
+                                    <th>ລະຫັດ</th>
                                     <th class="text-left">ຊື່ສິນຄ້າ</th>
                                     <th>ປະເພດ</th>
                                     <th>ລາຄາຂາຍ</th>
@@ -379,6 +389,11 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                                                 </div>
                                             <?php endif; ?>
                                         </td>
+                                        <td>
+                                            <span class="badge badge-info shadow-sm py-1 px-2" style="font-size: 0.85rem;">
+                                                <i class="fas fa-barcode mr-1"></i> <?php echo htmlspecialchars($row['prod_code'] ?: '-'); ?>
+                                            </span>
+                                        </td>
                                         <td class="text-left">
                                             <span class="font-weight-bold text-dark"><?php echo htmlspecialchars($row['prod_name']); ?></span>
                                         </td>
@@ -393,6 +408,7 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                                             <div class="btn-group btn-group-sm">
                                                 <button class="btn btn-warning text-white btn-edit" 
                                                     data-id="<?php echo $row['prod_id']; ?>" 
+                                                    data-code="<?php echo htmlspecialchars($row['prod_code']); ?>" 
                                                     data-name="<?php echo htmlspecialchars($row['prod_name']); ?>" 
                                                     data-cat="<?php echo htmlspecialchars($row['category']); ?>" 
                                                     data-unit="<?php echo htmlspecialchars($row['unit'] ?? 'ປ໋ອງ'); ?>" 
@@ -465,6 +481,10 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                   <label>ປ່ຽນຮູບພາບໃໝ່ (ຖ້າຕ້ອງການ)</label>
                   <input type="file" name="edit_image" id="edit_image" class="form-control-file border p-2" accept="image/*" onchange="previewEditImage(this)">
                   <img id="edit_preview" src="" style="max-height: 120px; display: none; margin-top: 10px; border-radius: 5px;" class="shadow-sm">
+              </div>
+               <div class="form-group">
+                  <label>ລະຫັດສິນຄ້າ</label>
+                  <input type="text" name="prod_code" id="edit_prod_code" class="form-control">
               </div>
               <div class="form-group">
                   <label>ຊື່ສິນຄ້າ</label>
@@ -547,6 +567,7 @@ $(document).ready(function() {
 
     $('.btn-edit').on('click', function() {
         var id = $(this).data('id');
+        var code = $(this).data('code');
         var name = $(this).data('name');
         var cat = $(this).data('cat');
         var unit = $(this).data('unit');
@@ -554,6 +575,7 @@ $(document).ready(function() {
         var sprice = parseInt($(this).data('sprice')).toLocaleString('en-US');
         
         $('#edit_prod_id').val(id);
+        $('#edit_prod_code').val(code);
         $('#edit_prod_name').val(name);
         $('#edit_unit').val(unit);
         

@@ -28,7 +28,7 @@ $hotel_address = $settings['hotel_address'] ?? '';
 $footer_text = $settings['receipt_footer'] ?? 'Thank you!';
 
 // Fetch order items
-$stmt = $pdo->prepare("SELECT o.*, p.prod_name, p.sprice 
+$stmt = $pdo->prepare("SELECT o.*, p.prod_name, p.prod_code, p.sprice 
                        FROM orders o 
                        JOIN products p ON o.prod_id = p.prod_id 
                        WHERE o.bill_id = ?");
@@ -140,8 +140,8 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
             ?>
             <tr>
                 <td>
-                    <?php echo htmlspecialchars($item['prod_name']); ?><br>
-                    <small><?php echo number_format($price); ?> x <?php echo $qty; ?></small>
+                    <?php echo htmlspecialchars($item['prod_name']); ?>
+                    <br><small><?php echo number_format($price); ?> x <?php echo $qty; ?></small>
                 </td>
                 <td class="text-right"><?php echo $qty; ?></td>
                 <td class="text-right"><?php echo number_format($subtotal); ?></td>

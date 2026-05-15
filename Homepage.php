@@ -1,52 +1,23 @@
 <?php
 session_start();
-if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
-    $_SESSION['checked'] = 1;
-    $_SESSION['fname'] = 'Admin';
-    $_SESSION['lname'] = 'System';
-    $_SESSION['user_id'] = 1;
-    $_SESSION['status'] = 'Admin';
-    $_SESSION['permissions'] = '["room_types","rooms","bookings","housekeeping","reports","settings","users"]';
-}
+require_once 'config/db.php';
+require_once 'config/session_check.php';
 ?>
-<script src="sweetalert/dist/sweetalert2.all.min.js"></script>
-<script src="jquery.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-    * {
-      font-family: 'Noto Sans Lao Looped', 'Phetsarath OT', 'Saysettha OT', sans-serif;
-    }
-
-    #save {
-      margin-top: 30;
-    }
-  </style>
-
+<!DOCTYPE html>
+<html lang="lo">
   <head>
-
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ລະບົບບໍລິຫານ ໂຮງແຮມ</title>
-    <link href="./assets/vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="./assets/vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
-    <link href="./assets/vendors/themify-icons/css/themify-icons.css" rel="stylesheet" />
-    <!-- PLUGINS STYLES-->
-    <link href="./assets/vendors/jvectormap/jquery-jvectormap-2.0.3.css" rel="stylesheet" />
-    <!-- THEME STYLES-->
-    <link href="assets/css/main.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="icon/css/all.min.css">
-    <link rel="stylesheet" href="fontawesome-free-6.2.1-web/css/all.min.css">
-    <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
-    <script src="jquery.js"></script>
-
-    <!-- Google Font: Source Sans Pro -->
+    
+    <!-- Google Font: Source Sans Pro & Noto Sans Lao Looped -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
-    <!-- Ionicons -->
-    <link rel="stylesheet" href="ionicons.min.css">
-    <script src="ionicons.designerpack/index.js"></script>
+    <!-- Ionicons (CDN as used in main menu) -->
+    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
     <!-- Tempusdominus Bootstrap 4 -->
     <link rel="stylesheet" href="plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css">
     <!-- iCheck -->
@@ -61,12 +32,12 @@ if (!isset($_SESSION['checked']) || $_SESSION['checked'] <> 1) {
     <link rel="stylesheet" href="plugins/daterangepicker/daterangepicker.css">
     <!-- summernote -->
     <link rel="stylesheet" href="plugins/summernote/summernote-bs4.min.css">
-    <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="icon/css/all.min.css">
-    <link rel="stylesheet" href="fontawesome-free-6.2.1-web/css/all.min.css">
-    <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
-    <script src="jquery.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped+Looped:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+      body { font-family: 'Noto Sans Lao Looped', sans-serif; }
+      * { font-family: 'Noto Sans Lao Looped', sans-serif; }
+    </style>
+  </head>
     <style>
       body { font-family: 'Noto Sans Lao Looped', sans-serif; }
     </style>
@@ -411,22 +382,7 @@ try {
     <script src="plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
     <!-- AdminLTE App -->
     <script src="dist/js/adminlte.js"></script>
-    <!-- AdminLTE for demo purposes -->
-    <script src="dist/js/demo.js"></script>
-    <!-- AdminLTE dashboard demo (This is only for demo purposes) -->
-    <script src="dist/js/pages/dashboard.js"></script>
-    <script src="./assets/vendors/jquery/dist/jquery.min.js" type="text/javascript"></script>
-    <script src="./assets/vendors/popper.js/dist/umd/popper.min.js" type="text/javascript"></script>
-    <script src="./assets/vendors/bootstrap/dist/js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="./assets/vendors/metisMenu/dist/metisMenu.min.js" type="text/javascript"></script>
-    <script src="./assets/vendors/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
-    <!-- PAGE LEVEL PLUGINS-->
-    <script src="./assets/vendors/chart.js/dist/Chart.min.js" type="text/javascript"></script>
-    <script src="./assets/vendors/jvectormap/jquery-jvectormap-2.0.3.min.js" type="text/javascript"></script>
-    <script src="./assets/vendors/jvectormap/jquery-jvectormap-world-mill-en.js" type="text/javascript"></script>
-    <script src="./assets/vendors/jvectormap/jquery-jvectormap-us-aea-en.js" type="text/javascript"></script>
-    <!-- CORE SCRIPTS-->
-    <script src="./assets/js/app.min.js" type="text/javascript"></script>
+    
     <!-- PAGE LEVEL SCRIPTS-->
     <script>
       $(function () {

@@ -27,7 +27,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($hotel_name); ?> - ເຂົ້າສູ່ລະບົບ</title>
+    <title><?php echo htmlspecialchars($hotel_name); ?></title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
 
@@ -151,7 +151,7 @@ try {
         }
         
         @media (max-width: 576px) {
-            .login-card { padding: 25px; max-width: 90%; }
+            .login-card { padding: 30px 20px; width: 80%; max-width: 280px; margin: 0 auto; }
             .login-header h2 { font-size: 1.3rem; }
             .login-header p { font-size: 0.8rem; }
             .form-label { font-size: 0.85rem; }

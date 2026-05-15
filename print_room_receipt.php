@@ -37,7 +37,13 @@ if (!$booking) {
 }
 
 // Fetch Room Services (Food/Drink)
-$svcStmt = $pdo->prepare("SELECT * FROM room_services WHERE booking_id = ?");
+$svcStmt = $pdo->prepare("
+    SELECT rs.item_name, rs.price, SUM(rs.qty) as qty, SUM(rs.total_price) as total_price, MAX(p.prod_code) as prod_code
+    FROM room_services rs 
+    LEFT JOIN products p ON rs.prod_id = p.prod_id 
+    WHERE rs.booking_id = ?
+    GROUP BY rs.prod_id, rs.item_name, rs.price
+");
 $svcStmt->execute([$booking_id]);
 $services = $svcStmt->fetchAll();
 
@@ -157,7 +163,9 @@ $final_payable = $grand_total - $booking['deposit_amount'];
                 </tr>
                 <?php foreach($services as $s): ?>
                 <tr>
-                    <td style="padding-left: 10px;"><?php echo htmlspecialchars($s['item_name']); ?> (x<?php echo $s['qty']; ?>)</td>
+                    <td style="padding-left: 10px;">
+                        <?php echo htmlspecialchars($s['item_name']); ?> (x<?php echo $s['qty']; ?>)
+                    </td>
                     <td class="text-right"><?php echo number_format($s['total_price']); ?></td>
                 </tr>
                 <?php endforeach; ?>

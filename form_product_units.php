@@ -67,7 +67,15 @@ $units = $stmt->fetchAll();
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
         .card { border-radius: 15px; overflow: hidden; }
         .card-header { border-bottom: 0; }
-        .btn { border-radius: 8px; }
+        .btn-edit { background: transparent !important; border: none !important; color: #ffc107 !important; font-size: 1.1rem; padding: 0 5px; }
+        .btn-delete { background: transparent !important; border: none !important; color: #dc3545 !important; font-size: 1.1rem; padding: 0 5px; }
+        .btn-edit:hover, .btn-delete:hover { opacity: 0.7; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h2 { font-size: 1.25rem !important; }
+            .card-title { font-size: 1rem !important; }
+            .table { font-size: 0.85rem; }
+        }
     </style>
 </head>
 <body>
@@ -128,11 +136,12 @@ $units = $stmt->fetchAll();
                                     <td>
                                         <button class="btn btn-sm btn-warning text-white btn-edit" 
                                             data-id="<?php echo $u['id']; ?>" 
-                                            data-name="<?php echo htmlspecialchars($u['unit_name']); ?>">
-                                            <i class="fas fa-edit"></i> ແກ້ໄຂ
+                                            data-name="<?php echo htmlspecialchars($u['unit_name']); ?>"
+                                            title="ແກ້ໄຂ">
+                                            <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $u['id']; ?>">
-                                            <i class="fas fa-trash-alt"></i> ລຶບ
+                                        <button class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $u['id']; ?>" title="ລຶບ">
+                                            <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>
                                 </tr>

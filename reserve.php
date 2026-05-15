@@ -204,17 +204,36 @@ $reservations = $stmtReserved->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ຈອງຫ້ອງລ່ວງໜ້າ</title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="plugins/fontawesome-free-5.15.3-web/css/all.min.css">
+    <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
-        .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
-        body { background-color: #f4f6f9; padding: 10px; }
+        body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 10px; }
         .room-card { transition: transform 0.2s; border-radius: 10px; }
         .room-card:hover { transform: scale(1.02); cursor: pointer; border-color: #f39c12; }
         .room-price { font-size: 1.1rem; font-weight: 600; color: #f39c12; }
+        .btn-action-group { 
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+        }
+        .btn-action-group .btn { 
+            background: transparent !important;
+            border: none !important;
+            padding: 0;
+            width: auto;
+            height: auto;
+            box-shadow: none !important;
+            font-size: 1.2rem;
+            transition: opacity 0.2s;
+        }
+        .btn-action-group .btn:hover { opacity: 0.7; }
+        .btn-action-group .btn-success { color: #28a745 !important; }
+        .btn-action-group .btn-primary { color: #007bff !important; }
+        .btn-action-group .btn-info { color: #17a2b8 !important; }
+        .btn-action-group .btn-danger { color: #dc3545 !important; }
         @media (max-width: 768px) {
             h2 { font-size: 1.2rem; }
             .room-card .display-4 { font-size: 2rem; }
@@ -366,10 +385,10 @@ $reservations = $stmtReserved->fetchAll();
     <!-- Current Reservations List -->
     <?php if (count($reservations) > 0): ?>
     <div class="card card-outline card-info shadow-sm">
-        <div class="card-header d-flex align-items-center">
-            <h3 class="card-title"><i class="fas fa-list"></i> ລາຍການຈອງລ່ວງໜ້າ (<?php echo count($reservations); ?>)</h3>
-            <div class="card-tools ml-auto">
-                <div class="input-group input-group-sm" style="width: 220px;">
+        <div class="card-header d-flex flex-wrap align-items-center">
+            <h3 class="card-title mr-auto mb-1 mb-md-0"><i class="fas fa-list"></i> ລາຍການຈອງລ່ວງໜ້າ (<?php echo count($reservations); ?>)</h3>
+            <div class="card-tools" style="flex: 1; min-width: 200px; max-width: 300px;">
+                <div class="input-group input-group-sm">
                     <input type="text" id="res_search_input" class="form-control" placeholder="ຄົ້ນຫາຊື່ ຫຼື ເບີໂທ...">
                     <div class="input-group-append">
                         <span class="input-group-text bg-white"><i class="fas fa-search text-warning"></i></span>
@@ -415,39 +434,41 @@ $reservations = $stmtReserved->fetchAll();
                         <td class="text-right"><?php echo number_format($res['total_price']); ?> ₭</td>
                         <td class="text-right text-info"><?php echo number_format($res['deposit_amount']); ?> ₭</td>
                         <td class="align-middle text-center">
-                            <a href="checkin_reserved.php?booking_id=<?php echo $res['id']; ?>" class="btn btn-xs btn-success mb-1" title="ເຂົ້າພັກ">
-                                <i class="fas fa-sign-in-alt"></i> ເຂົ້າພັກ
-                            </a>
-                            <button class="btn btn-xs btn-primary mb-1 btn-view-reserve" 
-                                data-id="<?php echo $res['id']; ?>"
-                                data-room="<?php echo htmlspecialchars($res['room_number']); ?>"
-                                data-type="<?php echo htmlspecialchars($res['room_type']); ?>"
-                                data-name="<?php echo htmlspecialchars($res['customer_name']); ?>"
-                                data-phone="<?php echo htmlspecialchars($res['customer_phone']); ?>"
-                                data-passport="<?php echo htmlspecialchars($res['passport_number'] ?? '-'); ?>"
-                                data-address="<?php echo htmlspecialchars($res['address'] ?? '-'); ?>"
-                                data-guests="<?php echo $res['guest_count']; ?>"
-                                data-checkin="<?php echo date('d/m/Y', strtotime($res['check_in_date'])); ?>"
-                                data-checkout="<?php echo date('d/m/Y', strtotime($res['check_out_date'])); ?>"
-                                data-total="<?php echo number_format($res['total_price']); ?>"
-                                data-deposit="<?php echo number_format($res['deposit_amount']); ?>"
-                                title="ເບິ່ງລາຍລະອຽດ">
-                                <i class="fas fa-eye"></i> ລາຍລະອຽດ
-                            </button>
-                            <button class="btn btn-xs btn-info mb-1 btn-edit-reserve" 
-                                data-id="<?php echo $res['id']; ?>"
-                                data-name="<?php echo htmlspecialchars($res['customer_name']); ?>"
-                                data-phone="<?php echo htmlspecialchars($res['customer_phone']); ?>"
-                                data-guests="<?php echo $res['guest_count']; ?>"
-                                data-checkin="<?php echo $res['check_in_date']; ?>"
-                                data-checkout="<?php echo $res['check_out_date']; ?>"
-                                data-deposit="<?php echo $res['deposit_amount']; ?>"
-                                title="ແກ້ໄຂ">
-                                <i class="fas fa-edit"></i> ແກ້ໄຂ
-                            </button>
-                            <a href="#" class="btn btn-xs btn-danger mb-1 btn-cancel-reserve" data-id="<?php echo $res['id']; ?>" data-room-id="<?php echo $res['room_id']; ?>" title="ຍົກເລີກ">
-                                <i class="fas fa-times-circle"></i> ຍົກເລີກ
-                            </a>
+                            <div class="btn-action-group">
+                                <a href="checkin_reserved.php?booking_id=<?php echo $res['id']; ?>" class="btn btn-sm btn-success" title="ເຂົ້າພັກ">
+                                    <i class="fas fa-sign-in-alt"></i>
+                                </a>
+                                <button class="btn btn-sm btn-primary btn-view-reserve" 
+                                    data-id="<?php echo $res['id']; ?>"
+                                    data-room="<?php echo htmlspecialchars($res['room_number']); ?>"
+                                    data-type="<?php echo htmlspecialchars($res['room_type']); ?>"
+                                    data-name="<?php echo htmlspecialchars($res['customer_name']); ?>"
+                                    data-phone="<?php echo htmlspecialchars($res['customer_phone']); ?>"
+                                    data-passport="<?php echo htmlspecialchars($res['passport_number'] ?? '-'); ?>"
+                                    data-address="<?php echo htmlspecialchars($res['address'] ?? '-'); ?>"
+                                    data-guests="<?php echo $res['guest_count']; ?>"
+                                    data-checkin="<?php echo date('d/m/Y', strtotime($res['check_in_date'])); ?>"
+                                    data-checkout="<?php echo date('d/m/Y', strtotime($res['check_out_date'])); ?>"
+                                    data-total="<?php echo number_format($res['total_price']); ?>"
+                                    data-deposit="<?php echo number_format($res['deposit_amount']); ?>"
+                                    title="ເບິ່ງລາຍລະອຽດ">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-info btn-edit-reserve" 
+                                    data-id="<?php echo $res['id']; ?>"
+                                    data-name="<?php echo htmlspecialchars($res['customer_name']); ?>"
+                                    data-phone="<?php echo htmlspecialchars($res['customer_phone']); ?>"
+                                    data-guests="<?php echo $res['guest_count']; ?>"
+                                    data-checkin="<?php echo $res['check_in_date']; ?>"
+                                    data-checkout="<?php echo $res['check_out_date']; ?>"
+                                    data-deposit="<?php echo $res['deposit_amount']; ?>"
+                                    title="ແກ້ໄຂ">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <a href="#" class="btn btn-sm btn-danger btn-cancel-reserve" data-id="<?php echo $res['id']; ?>" data-room-id="<?php echo $res['room_id']; ?>" title="ຍົກເລີກ">
+                                    <i class="fas fa-times-circle"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>

@@ -82,6 +82,9 @@ $currencies = $stmt->fetchAll();
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
+        .btn-warning { background: transparent !important; border: none !important; color: #ffc107 !important; font-size: 1.15rem; padding: 0 8px; box-shadow: none !important; }
+        .btn-danger { background: transparent !important; border: none !important; color: #dc3545 !important; font-size: 1.15rem; padding: 0 8px; box-shadow: none !important; }
+        .btn-warning:hover, .btn-danger:hover { opacity: 0.7; }
         @media (max-width: 576px) {
             body { padding: 10px; }
             h2 { font-size: 1.25rem; }

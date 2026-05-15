@@ -50,7 +50,7 @@ if (isset($_GET['booking_id'])) {
     
     // If selected booking found, get detailed room services
     if ($selected_booking) {
-        $svcStmt = $pdo->prepare("SELECT * FROM room_services WHERE booking_id = ?");
+        $svcStmt = $pdo->prepare("SELECT item_name, price, SUM(qty) as qty, SUM(total_price) as total_price FROM room_services WHERE booking_id = ? GROUP BY prod_id, item_name, price ORDER BY id ASC");
         $svcStmt->execute([$bid]);
         $room_services = $svcStmt->fetchAll();
         

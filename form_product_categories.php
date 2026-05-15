@@ -68,6 +68,16 @@ $categories = $stmt->fetchAll();
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
+        .btn-edit { background: transparent !important; border: none !important; color: #ffc107 !important; font-size: 1.1rem; padding: 0 5px; }
+        .btn-delete { background: transparent !important; border: none !important; color: #dc3545 !important; font-size: 1.1rem; padding: 0 5px; }
+        .btn-edit:hover, .btn-delete:hover { opacity: 0.7; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h2 { font-size: 1.25rem !important; }
+            .card-title { font-size: 1rem !important; }
+            .table { font-size: 0.85rem; }
+            .badge { font-size: 0.75rem; }
+        }
     </style>
 </head>
 <body>
@@ -132,10 +142,11 @@ $categories = $stmt->fetchAll();
                                         <button class="btn btn-sm btn-warning text-white btn-edit" 
                                             data-id="<?php echo $c['id']; ?>" 
                                             data-name="<?php echo htmlspecialchars($c['name']); ?>"
-                                            data-code="<?php echo htmlspecialchars($c['category_code'] ?? ''); ?>">
-                                            <i class="fas fa-edit"></i> ແກ້ໄຂ
+                                            data-code="<?php echo htmlspecialchars($c['category_code'] ?? ''); ?>"
+                                            title="ແກ້ໄຂ">
+                                            <i class="fas fa-edit"></i>
                                         </button>
-                                        <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $c['id']; ?>"><i class="fas fa-trash-alt"></i> ລຶບ</a>
+                                        <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $c['id']; ?>" title="ລຶບ"><i class="fas fa-trash-alt"></i></a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

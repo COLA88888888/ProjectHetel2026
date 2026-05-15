@@ -35,8 +35,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_service'])) {
 
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare("INSERT INTO room_services (booking_id, prod_id, item_name, price, qty, total_price) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$booking_id, $prod_id, $item_name, $price, $qty, $total_price]);
+        // Check if this product already exists in the cart for this booking
+        $checkExisting = $pdo->prepare("SELECT id, qty, total_price FROM room_services WHERE booking_id = ? AND prod_id = ? AND prod_id IS NOT NULL");
+        $checkExisting->execute([$booking_id, $prod_id]);
+        $existingItem = $checkExisting->fetch();
+
+        if ($existingItem) {
+            // Update existing row
+            $newQty = $existingItem['qty'] + $qty;
+            $newTotalPrice = $existingItem['total_price'] + $total_price;
+            $stmt = $pdo->prepare("UPDATE room_services SET qty = ?, total_price = ? WHERE id = ?");
+            $stmt->execute([$newQty, $newTotalPrice, $existingItem['id']]);
+        } else {
+            // Insert new row
+            $stmt = $pdo->prepare("INSERT INTO room_services (booking_id, prod_id, item_name, price, qty, total_price) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$booking_id, $prod_id, $item_name, $price, $qty, $total_price]);
+        }
 
         // Update food_charge in bookings
         $updateBooking = $pdo->prepare("UPDATE bookings SET food_charge = food_charge + ? WHERE id = ?");
@@ -146,18 +160,27 @@ $services = [];
 $total_accumulated = 0;
 if ($selected_booking_id > 0) {
     $stmt = $pdo->prepare("
-        SELECT rs.*, p.image as prod_image, p.category as prod_category 
+        SELECT rs.item_name, rs.price, SUM(rs.qty) as qty, SUM(rs.total_price) as total_price, 
+               MAX(rs.id) as id, rs.prod_id, MAX(p.image) as prod_image, MAX(p.category) as prod_category, MAX(p.prod_code) as prod_code
         FROM room_services rs 
         LEFT JOIN products p ON rs.prod_id = p.prod_id 
         WHERE rs.booking_id = ? 
-        ORDER BY rs.id DESC
+        GROUP BY rs.prod_id, rs.item_name, rs.price
+        ORDER BY id ASC
     ");
     $stmt->execute([$selected_booking_id]);
     $services = $stmt->fetchAll();
     
+    $prod_counts = [];
     foreach ($services as $s) {
         $total_accumulated += $s['total_price'];
+        $pid = $s['prod_id'];
+        if ($pid) {
+            $prod_counts[$pid] = ($prod_counts[$pid] ?? 0) + $s['qty'];
+        }
     }
+} else {
+    $prod_counts = [];
 }
 ?>
 <!DOCTYPE html>
@@ -280,6 +303,23 @@ if ($selected_booking_id > 0) {
             display: flex;
             flex-direction: column;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .qty-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #e74c3c;
+            color: white;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.2rem;
+            z-index: 20;
+            border-radius: 0 15px 0 15px;
+            box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
         }
         .product-card:active {
             transform: scale(0.98);
@@ -551,7 +591,41 @@ if ($selected_booking_id > 0) {
             border-radius: 8px !important;
             display: flex !important;
             align-items: center !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            align-items: center !important;
             padding-left: 12px !important;
+        }
+
+        /* Barcode Input Styling */
+        #barcodeInput {
+            height: 48px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 0 10px 10px 0 !important;
+            transition: all 0.3s ease;
+            border: 2px solid #007bff;
+            border-left: none;
+        }
+        #barcodeInput:focus {
+            background-color: #fff9db;
+            border-color: #f1c40f;
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.4);
+            outline: none;
+        }
+        .barcode-group .input-group-text {
+            border-radius: 10px 0 0 10px !important;
+            padding: 0 18px;
+            font-size: 1.4rem;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border: none;
+            color: white;
+        }
+        .barcode-group {
+            box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0;
         }
     </style>
 </head>
@@ -569,11 +643,15 @@ if ($selected_booking_id > 0) {
     <!-- Products Panel -->
     <div class="product-column">
         <div class="search-area">
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span>
+            <div class="row">
+                <div class="col-12">
+                    <div class="input-group barcode-group h-100">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input type="text" id="mainSearch" class="form-control" placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ ຫຼື ສະແກນບາໂຄ້ດ (Search or Scan Barcode)..." autofocus autocomplete="off" style="height: 50px; font-size: 1.1rem;">
+                    </div>
                 </div>
-                <input type="text" id="prodSearch" class="form-control border-left-0" placeholder="ຄົ້ນຫາສິນຄ້າ ຫຼື ອາຫານ...">
             </div>
         </div>
 
@@ -585,6 +663,10 @@ if ($selected_booking_id > 0) {
         </div>
 
         <div class="product-scroll" id="prodGrid">
+            <div id="noProductsMsg" class="col-12 text-center py-5 text-muted w-100" style="display: none; grid-column: 1 / -1;">
+                <i class="fas fa-search fa-3x mb-3 d-block" style="color: #ddd;"></i>
+                <h5>ບໍ່ມີສິນຄ້າທີ່ທ່ານຄົ້ນຫາ</h5>
+            </div>
             <?php foreach($products_list as $p): ?>
                 <div class="product-card" 
                      data-id="<?php echo $p['prod_id']; ?>" 
@@ -592,6 +674,7 @@ if ($selected_booking_id > 0) {
                      data-price="<?php echo $p['sprice']; ?>"
                      data-cate="<?php echo htmlspecialchars($p['category']); ?>">
                     
+                    <span class="qty-badge" id="qty-badge-<?php echo $p['prod_id']; ?>" style="display: none;">0</span>
                     <div class="product-img-wrapper">
                         <?php if(!empty($p['image']) && file_exists('assets/img/products/'.$p['image'])): ?>
                             <img src="assets/img/products/<?php echo $p['image']; ?>" alt="<?php echo htmlspecialchars($p['prod_name']); ?>">
@@ -610,6 +693,7 @@ if ($selected_booking_id > 0) {
                     </div>
 
                     <div class="product-card-body">
+                        <div class="text-muted small mb-1"><?php echo htmlspecialchars($p['prod_code'] ?? '-'); ?></div>
                         <div class="product-name"><?php echo htmlspecialchars($p['prod_name']); ?></div>
                         <div class="product-price"><?php echo number_format($p['sprice']); ?> ກີບ</div>
                         <div class="product-stock">ຄົງເຫຼືອ: <?php echo $p['qty']; ?></div>
@@ -646,7 +730,7 @@ if ($selected_booking_id > 0) {
         <div class="order-list">
             <?php if (count($services) > 0): ?>
                 <?php foreach ($services as $row): ?>
-                    <div class="order-item">
+                    <div class="order-item" data-prod-id="<?php echo $row['prod_id']; ?>" data-qty="<?php echo $row['qty']; ?>">
                         <div class="order-item-thumb">
                             <?php if(!empty($row['prod_image']) && file_exists('assets/img/products/'.$row['prod_image'])): ?>
                                 <img src="assets/img/products/<?php echo $row['prod_image']; ?>" alt="">
@@ -663,6 +747,9 @@ if ($selected_booking_id > 0) {
                         </div>
                         <div class="order-item-info">
                             <div class="order-item-name"><?php echo htmlspecialchars($row['item_name']); ?></div>
+                            <?php if(!empty($row['prod_code'])): ?>
+                                <div class="text-muted small" style="font-size: 0.7rem;">Code: <?php echo htmlspecialchars($row['prod_code']); ?></div>
+                            <?php endif; ?>
                             <div class="order-item-price text-success font-weight-bold"><?php echo number_format($row['price']); ?> ກີບ x <?php echo $row['qty']; ?></div>
                         </div>
                         <div class="text-right mr-3">
@@ -784,17 +871,84 @@ if ($selected_booking_id > 0) {
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
 
 <script>
-$(function() {
-    // 1. Initialize Select2
-    if ($.fn.select2) {
-        $('.select2').select2({
-            theme: 'bootstrap4',
-            placeholder: "ຄົ້ນຫາເບີຫ້ອງ...",
-            minimumResultsForSearch: 0
-        });
-    }
+const allProducts = <?php echo json_encode($products_list); ?>;
+const initialCounts = <?php echo json_encode($prod_counts); ?>;
 
-    // 2. Room Selection Change (Using delegation for AJAX compatibility)
+$(function() {
+    // Keep barcode input focused
+    $('#barcodeInput').focus();
+    // Combined Search & Barcode Logic
+    $('#mainSearch').focus();
+    $(document).on('click', function() {
+        if ($('.modal.show').length === 0 && !$(event.target).is('input, textarea, select')) {
+            $('#mainSearch').focus();
+        }
+    });
+
+    $('#mainSearch').on('input', function() {
+        let val = $(this).val().trim();
+        
+        if (val === '') {
+            $('.product-card').show();
+            $('#noProductsMsg').hide();
+            return;
+        }
+
+        // 1. Try barcode match first (Exact match)
+        let product = allProducts.find(p => p.prod_code === val);
+        if (product) {
+            quickAdd(product.prod_id, product.prod_name, product.sprice);
+            $(this).val(''); // Clear for next scan
+            $('.product-card').show(); // Reset filter
+            $('#noProductsMsg').hide();
+            return;
+        }
+
+        // 2. Otherwise treat as name search filter
+        var visibleCount = 0;
+        var searchVal = val.toLowerCase();
+        $('.product-card').each(function() {
+            var name = $(this).data('name').toLowerCase();
+            if (name.indexOf(searchVal) > -1) {
+                $(this).show();
+                visibleCount++;
+            } else {
+                $(this).hide();
+            }
+        });
+
+        if (visibleCount === 0) {
+            $('#noProductsMsg').show();
+        } else {
+            $('#noProductsMsg').hide();
+        }
+    });
+
+    // Also handle Enter key for barcode scanners that append Enter
+    $('#mainSearch').on('keypress', function(e) {
+        if (e.which === 13) {
+            // Trigger input logic just in case, then clear
+            $(this).trigger('input');
+        }
+    });
+
+    $('.cate-pill').on('click', function() {
+        $('.cate-pill').removeClass('active');
+        $(this).addClass('active');
+        $('#mainSearch').val(''); // Clear search when changing category
+        var cate = $(this).data('cate');
+        if (cate === 'all') {
+            $('.product-card').show();
+        } else {
+            $('.product-card').hide();
+            $('.product-card[data-cate="' + cate + '"]').show();
+        }
+        $('#noProductsMsg').hide();
+    });
+
+    // Restore missing logic
+    initSelect2();
+
     $(document).on('change', '#roomSelect', function() {
         var bid = $(this).val();
         if(bid) {
@@ -802,12 +956,11 @@ $(function() {
         }
     });
 
-    // 3. Room Grid Modal (Using delegation for AJAX compatibility)
     $(document).on('click', '#btnShowRoomGrid', function() {
         $('#roomGridModal').modal('show');
     });
 
-    $('.room-item-card').on('click', function() {
+    $(document).on('click', '.room-item-card', function() {
         var bid = $(this).data('booking-id');
         window.location.href = 'room_service.php?booking_id=' + bid;
     });
@@ -825,36 +978,11 @@ $(function() {
         });
     });
 
-    // 4. Product Search & Filter
-    $('#prodSearch').on('keyup', function() {
-        var val = $(this).val().toLowerCase();
-        $('.product-card').each(function() {
-            var name = $(this).data('name').toLowerCase();
-            if (name.indexOf(val) > -1) {
-                $(this).show();
-            } else {
-                $(this).hide();
-            }
-        });
-    });
-
-    $('.cate-pill').on('click', function() {
-        $('.cate-pill').removeClass('active');
-        $(this).addClass('active');
-        var cate = $(this).data('cate');
-        if (cate === 'all') {
-            $('.product-card').show();
-        } else {
-            $('.product-card').hide();
-            $('.product-card[data-cate="' + cate + '"]').show();
-        }
-    });
-
-    // 5. Quick Add on product card click (Now using AJAX to prevent flicker)
     $('.product-card').on('click', function() {
-        var id = $(this).data('id');
-        var name = $(this).data('name');
-        var price = $(this).data('price');
+        quickAdd($(this).data('id'), $(this).data('name'), $(this).data('price'));
+    });
+
+    function quickAdd(id, name, price) {
         var bookingId = $('#roomSelect').val();
 
         if(!bookingId) {
@@ -877,11 +1005,10 @@ $(function() {
             success: function(response) {
                 // Refresh only the order list part
                 $('#orderContainer').load('room_service.php?booking_id=' + bookingId + ' #orderContainer > *', function() {
-                    // Re-initialize Select2 if it was inside the refreshed area
                     initSelect2();
+                    updateProductBadges();
                 });
                 
-                // Show a small toast notification
                 const Toast = Swal.mixin({
                     toast: true,
                     position: 'top-end',
@@ -895,17 +1022,45 @@ $(function() {
                 });
             }
         });
-    });
+    }
 
     function initSelect2() {
         if ($.fn.select2) {
             $('.select2').select2({
                 theme: 'bootstrap4',
-                placeholder: "ຄົ້ນຫາເບີຫ້ອງ...",
+                placeholder: "ຄົນຫາເບີຫ້ອງ...",
                 minimumResultsForSearch: 0
             });
         }
     }
+
+    function updateProductBadges(countsObj) {
+        // Reset all badges
+        $('.qty-badge').hide().text('0');
+        
+        var counts = countsObj || {};
+        
+        if (!countsObj) {
+            // Count items from the DOM if no counts object provided
+            $('.order-item').each(function() {
+                var pid = $(this).data('prod-id');
+                var q = parseInt($(this).data('qty')) || 0;
+                if (pid) {
+                    counts[pid] = (counts[pid] || 0) + q;
+                }
+            });
+        }
+        
+        // Apply counts to badges
+        for (var pid in counts) {
+            if (counts[pid] > 0) {
+                $('#qty-badge-' + pid).text(counts[pid]).show();
+            }
+        }
+    }
+    
+    // Initial call with server-side counts for instant rendering
+    updateProductBadges(initialCounts);
 });
 
 function confirmDelete(id, booking_id) {

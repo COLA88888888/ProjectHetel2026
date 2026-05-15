@@ -69,7 +69,7 @@ $room_types = $stmtTypes->fetchAll();
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="../plugins/fontawesome-free-5.15.3-web/css/all.min.css">
+    <link rel="stylesheet" href="../plugins/fontawesome-free/css/all.min.css">
     <!-- AdminLTE -->
     <link rel="stylesheet" href="../dist/css/adminlte.min.css">
     <!-- DataTables -->
@@ -104,11 +104,9 @@ $room_types = $stmtTypes->fetchAll();
         .hk-saving { opacity: 0.5; pointer-events: none; }
         
         /* Actions */
-        .btn-action { border-radius: 8px; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px; display: block; width: 100%; padding: 6px; }
-        .btn-edit { background-color: #f1c40f; color: #fff; border: none; }
-        .btn-delete-action { background-color: #e74c3c; color: #fff; border: none; }
-        .btn-edit:hover { background-color: #f39c12; color: #fff; }
-        .btn-delete-action:hover { background-color: #c0392b; color: #fff; }
+        .btn-warning { background: transparent !important; border: none !important; color: #ffc107 !important; font-size: 1.15rem; padding: 0 8px; box-shadow: none !important; }
+        .btn-danger { background: transparent !important; border: none !important; color: #dc3545 !important; font-size: 1.15rem; padding: 0 8px; box-shadow: none !important; }
+        .btn-warning:hover, .btn-danger:hover { opacity: 0.7; }
         
         /* Room number styling */
         .room-number-cell { font-size: 1.1rem; font-weight: 800; color: #2c3e50; }
@@ -259,8 +257,10 @@ $room_types = $stmtTypes->fetchAll();
                                             </select>
                                         </td>
                                         <td style="width: 100px;">
-                                            <a href="edit_room.php?id=<?php echo $row['id']; ?>" class="btn btn-action btn-edit">ແກ້ໄຂ</a>
-                                            <a href="#" class="btn btn-action btn-delete-action btn-delete" data-id="<?php echo $row['id']; ?>">ລົບ</a>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="edit_room.php?id=<?php echo $row['id']; ?>" class="btn btn-warning text-white" title="ແກ້ໄຂ"><i class="fas fa-edit"></i></a>
+                                                <a href="#" class="btn btn-danger btn-delete" data-id="<?php echo $row['id']; ?>" title="ລົບ"><i class="fas fa-trash-alt"></i></a>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -62,7 +62,7 @@ $room_types = $stmt->fetchAll();
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="../plugins/fontawesome-free-5.15.3-web/css/all.min.css">
+    <link rel="stylesheet" href="../plugins/fontawesome-free/css/all.min.css">
     <!-- AdminLTE -->
     <link rel="stylesheet" href="../dist/css/adminlte.min.css">
     <!-- Noto Sans Lao Looped -->
@@ -71,6 +71,9 @@ $room_types = $stmt->fetchAll();
     <link rel="stylesheet" href="../sweetalert/dist/sweetalert2.min.css">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
+        .btn-warning { background: transparent !important; border: none !important; color: #ffc107 !important; font-size: 1.15rem; padding: 0 8px; box-shadow: none !important; }
+        .btn-danger { background: transparent !important; border: none !important; color: #dc3545 !important; font-size: 1.15rem; padding: 0 8px; box-shadow: none !important; }
+        .btn-warning:hover, .btn-danger:hover { opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -159,8 +162,8 @@ $room_types = $stmt->fetchAll();
                                         <td><strong><?php echo htmlspecialchars($row['room_type_name'] ?? ''); ?></strong></td>
                                         <td><?php echo htmlspecialchars($row['description'] ?? ''); ?></td>
                                         <td class="text-center">
-                                            <a href="edit_room_type.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> ແກ້ໄຂ</a>
-                                            <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $row['id']; ?>"><i class="fas fa-trash"></i> ລົບ</a>
+                                            <a href="edit_room_type.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning" title="ແກ້ໄຂ"><i class="fas fa-edit"></i></a>
+                                            <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $row['id']; ?>" title="ລົບ"><i class="fas fa-trash"></i></a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -119,6 +119,9 @@ $users = $stmt->fetchAll();
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 10px; }
         .avatar { width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 2px solid #ddd; }
         .avatar-lg { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid #007bff; margin-bottom: 15px; }
+        .btn-edit { background: transparent !important; border: none !important; color: #ffc107 !important; font-size: 1.15rem; padding: 0 8px; box-shadow: none !important; }
+        .btn-delete { background: transparent !important; border: none !important; color: #dc3545 !important; font-size: 1.15rem; padding: 0 8px; box-shadow: none !important; }
+        .btn-edit:hover, .btn-delete:hover { opacity: 0.7; }
         /* Desktop table */
         .desktop-table { display: block; }
         .mobile-cards { display: none; }
@@ -133,8 +136,8 @@ $users = $stmt->fetchAll();
         .user-card .user-username { color: #5DADE2; font-size: 0.85rem; font-weight: 600; }
         .user-card .detail-row { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; font-size: 0.88rem; color: #555; border-top: 1px solid #f0f0f0; }
         .user-card .detail-row i { width: 18px; text-align: center; margin-top: 3px; color: #5DADE2; }
-        .user-card .card-actions { display: flex; gap: 8px; margin-top: 12px; }
-        .user-card .card-actions .btn { flex: 1; border-radius: 8px; font-size: 0.85rem; padding: 8px; }
+        .user-card .card-actions { display: flex; gap: 15px; margin-top: 12px; justify-content: center; }
+        .user-card .card-actions .btn { flex: none; border-radius: 0; font-size: 1.3rem; padding: 5px 15px; }
         .page-header h2 { font-size: 1.4rem; }
         /* Tablet & Mobile */
         @media (max-width: 991px) {
@@ -235,11 +238,12 @@ $users = $stmt->fetchAll();
                                     data-status="<?php echo htmlspecialchars($u['status']); ?>"
                                     data-address="<?php echo htmlspecialchars($u['address'] ?? ''); ?>"
                                     data-img="<?php echo $img_path; ?>"
-                                    data-permissions='<?php echo $u['permissions'] ?? '[]'; ?>'>
-                                    <i class="fas fa-edit"></i> ແກ້ໄຂ
+                                    data-permissions='<?php echo $u['permissions'] ?? '[]'; ?>'
+                                    title="ແກ້ໄຂ">
+                                    <i class="fas fa-edit"></i>
                                 </button>
                                 <?php if($u['user_id'] != 1): ?>
-                                    <a href="#" class="btn btn-sm btn-danger btn-delete shadow-sm" data-id="<?php echo $u['user_id']; ?>"><i class="fas fa-trash-alt"></i> ລຶບ</a>
+                                    <a href="#" class="btn btn-sm btn-danger btn-delete shadow-sm" data-id="<?php echo $u['user_id']; ?>" title="ລຶບ"><i class="fas fa-trash-alt"></i></a>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -288,11 +292,12 @@ $users = $stmt->fetchAll();
                             data-status="<?php echo htmlspecialchars($u['status']); ?>"
                             data-address="<?php echo htmlspecialchars($u['address'] ?? ''); ?>"
                             data-img="<?php echo $img_path; ?>"
-                            data-permissions='<?php echo $u['permissions'] ?? '[]'; ?>'>
-                            <i class="fas fa-edit"></i> ແກ້ໄຂ
+                            data-permissions='<?php echo $u['permissions'] ?? '[]'; ?>'
+                            title="ແກ້ໄຂ">
+                            <i class="fas fa-edit"></i>
                         </button>
                         <?php if($u['user_id'] != 1): ?>
-                            <a href="#" class="btn btn-danger btn-delete" data-id="<?php echo $u['user_id']; ?>"><i class="fas fa-trash-alt"></i> ລຶບ</a>
+                            <a href="#" class="btn btn-danger btn-delete" data-id="<?php echo $u['user_id']; ?>" title="ລຶບ"><i class="fas fa-trash-alt"></i></a>
                         <?php endif; ?>
                     </div>
                 </div>
