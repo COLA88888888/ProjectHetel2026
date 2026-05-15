@@ -3,6 +3,26 @@ session_start();
 require_once 'config/session_check.php';
 require_once 'config/db.php';
 
+$language = $_SESSION['lang'] ?? 'la'; // ຖ້າບໍ່ມີໃຫ້ເປັນພາສາລາວເປັນ default
+if (file_exists("languages/$language.php")) {
+    include_once "languages/$language.php";
+} else {
+    // ຖ້າຫາໄຟລ໌ບໍ່ເຫັນ ໃຫ້ກຳນົດຄ່າເລີ່ມຕົ້ນໄວ້ກ່ອນເພື່ອບໍ່ໃຫ້ Error
+    $lang = [
+        'bookings' => 'ລາຍການຈອງ',
+        'search' => 'ຄົ້ນຫາ',
+        'room' => 'ຫ້ອງ',
+        'customer' => 'ລູກຄ້າ',
+        'guests' => 'ແຂກ',
+        'phone' => 'ເບີໂທ',
+        'checkin_date' => 'ວັນທີເຂົ້າ',
+        'checkout_date' => 'ວັນທີອອກ',
+        'nights' => 'ຄືນ',
+        'total' => 'ລວມ',
+        'deposit' => 'ມັດຈຳ',
+        'action' => 'ຈັດການ'
+    ];
+}
 // Fetch room types
 $stmtTypes = $pdo->query("SELECT * FROM room_types ORDER BY id DESC");
 $room_types = $stmtTypes->fetchAll();

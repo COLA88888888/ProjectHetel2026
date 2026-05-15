@@ -302,16 +302,8 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                             <input type="text" name="prod_code" class="form-control" placeholder="ປ້ອນລະຫັດສິນຄ້າ...">
                         </div>
                         <div class="form-group">
-                            <label>ຊື່ສິນຄ້າ (Lao)</label>
-                            <input type="text" name="prod_name_la" class="form-control" placeholder="ຊື່ພາສາລາວ..." required>
-                        </div>
-                        <div class="form-group">
-                            <label>Product Name (English)</label>
-                            <input type="text" name="prod_name_en" class="form-control" placeholder="English name...">
-                        </div>
-                        <div class="form-group">
-                            <label>商品名称 (Chinese)</label>
-                            <input type="text" name="prod_name_cn" class="form-control" placeholder="Chinese name...">
+                            <label>ຊື່ສິນຄ້າ</label>
+                            <input type="text" name="prod_name_la" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ສິນຄ້າ..." required>
                         </div>
                         <div class="form-group">
                             <label>ປະເພດສິນຄ້າ</label>
