@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 if (!isset($_GET['bill_id'])) {
     die("Invoice not found.");
 }
@@ -50,7 +59,7 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ໃບບິນຮັບເງິນ - <?php echo $bill_id; ?></title>
+    <title><?php echo $lang['receipt_label'] ?? 'ໃບບິນຮັບເງິນ'; ?> - <?php echo $bill_id; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <style>
@@ -101,8 +110,8 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
 <body>
 
 <div class="no-print" style="text-align: center; margin-top: 10px;">
-    <button onclick="window.print()" class="btn-print" style="border: none; cursor: pointer; display: inline-block;"><i class="fas fa-print"></i> ພິມໃບບິນ (Print)</button>
-    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px; font-family: 'Noto Sans Lao Looped', sans-serif;"><i class="fas fa-times"></i> ປິດໜ້າຕ່າງ</button>
+    <button onclick="window.print()" class="btn-print" style="border: none; cursor: pointer; display: inline-block;"><i class="fas fa-print"></i> <?php echo $lang['print_receipt']; ?> (Print)</button>
+    <button onclick="window.close()" style="border: 1px solid #ddd; background: #f8f9fa; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px; font-family: 'Noto Sans Lao Looped', sans-serif;"><i class="fas fa-times"></i> <?php echo $lang['close']; ?></button>
 </div>
 
 <div class="receipt">
@@ -114,24 +123,24 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
         <div style="font-size: 11px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($hotel_address); ?></div>
         <div style="font-size: 11px;"><i class="fas fa-phone-alt"></i> Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
         <div class="divider"></div>
-        <div style="font-weight: bold; font-size: 14px;"><i class="fas fa-file-invoice-dollar"></i> ໃບບິນຮັບເງິນ (RECEIPT)</div>
+        <div style="font-weight: bold; font-size: 14px;"><i class="fas fa-file-invoice-dollar"></i> <?php echo $lang['receipt_label'] ?? 'ໃບບິນຮັບເງິນ'; ?> (RECEIPT)</div>
     </div>
 
     <div class="info-row">
-        <span><i class="fas fa-hashtag"></i> ເລກທີບິນ:</span>
+        <span><i class="fas fa-hashtag"></i> <?php echo $lang['bill_no_label'] ?? 'ເລກທີບິນ'; ?>:</span>
         <span><?php echo $bill_id; ?></span>
     </div>
     <div class="info-row">
-        <span><i class="fas fa-calendar-day"></i> ວັນທີ:</span>
+        <span><i class="fas fa-calendar-day"></i> <?php echo $lang['date_label'] ?? 'ວັນທີ'; ?>:</span>
         <span><?php echo $date; ?></span>
     </div>
 
     <table class="item-table">
         <thead>
             <tr>
-                <th>ລາຍການ</th>
-                <th class="text-right">ຈຳນວນ</th>
-                <th class="text-right">ລວມ</th>
+                <th><?php echo $lang['item_label'] ?? 'ລາຍການ'; ?></th>
+                <th class="text-right"><?php echo $lang['qty_label'] ?? 'ຈຳນວນ'; ?></th>
+                <th class="text-right"><?php echo $lang['total_label']; ?></th>
             </tr>
         </thead>
         <tbody>
@@ -156,7 +165,7 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
 
     <div class="total-section">
         <div class="info-row">
-            <span>ລວມຍ່ອຍ (Subtotal):</span>
+            <span><?php echo $lang['subtotal']; ?>:</span>
             <span><?php echo number_format($total); ?></span>
         </div>
         <?php if($tax_percent > 0): 
@@ -164,16 +173,16 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
             $grand_total = $total + $tax_amount;
         ?>
             <div class="info-row" style="font-weight: normal; font-size: 13px;">
-                <span>ພາສີ (Tax <?php echo $tax_percent; ?>%):</span>
+                <span><?php echo $lang['tax']; ?> (<?php echo $tax_percent; ?>%):</span>
                 <span><?php echo number_format($tax_amount); ?></span>
             </div>
             <div class="info-row grand-total">
-                <span>ລວມທັງໝົດ:</span>
+                <span><?php echo $lang['grand_total']; ?>:</span>
                 <span><?php echo number_format($grand_total); ?> <?php echo $currency_symbol; ?></span>
             </div>
         <?php else: ?>
             <div class="info-row grand-total">
-                <span>ລວມທັງໝົດ:</span>
+                <span><?php echo $lang['grand_total']; ?>:</span>
                 <span><?php echo number_format($total); ?> <?php echo $currency_symbol; ?></span>
             </div>
         <?php endif; ?>
@@ -182,22 +191,25 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
     <div class="divider"></div>
     
     <div class="info-row">
-        <span>ວິທີຊຳລະ:</span>
-        <span><?php echo htmlspecialchars($items[0]['payment_method'] ?? 'ເງິນສົດ'); ?></span>
+        <span><?php echo $lang['payment_method_label']; ?>:</span>
+        <span><?php 
+            $pm = $items[0]['payment_method'] ?? 'Cash';
+            echo ($pm == 'Cash' || $pm == 'ເງິນສົດ') ? $lang['cash'] : $lang['transfer']; 
+        ?></span>
     </div>
     <div class="info-row">
-        <span>ຮັບເງິນມາ:</span>
+        <span><?php echo $lang['amount_received_label']; ?>:</span>
         <span><?php echo number_format($items[0]['received'] ?? 0); ?> <?php echo $currency_symbol; ?></span>
     </div>
     <div class="info-row">
-        <span>ເງິນທອນ:</span>
+        <span><?php echo $lang['change_amount_label']; ?>:</span>
         <span style="font-size: 14px;"><?php echo number_format($items[0]['change_amount'] ?? 0); ?> <?php echo $currency_symbol; ?></span>
     </div>
 
     <div class="footer">
         <?php if(!empty($settings['hotel_qr'])): ?>
             <div style="margin-top: 10px; text-align: center;">
-                <p style="margin-bottom: 5px; font-weight: bold; font-size: 10px; color: #555;">SCAN TO PAY (ສະແກນເພື່ອຊຳລະ)</p>
+                <p style="margin-bottom: 5px; font-weight: bold; font-size: 10px; color: #555;"><?php echo $lang['scan_to_pay_msg'] ?? 'SCAN TO PAY (ສະແກນເພື່ອຊຳລະ)'; ?></p>
                 <img src="assets/img/QR/<?php echo $settings['hotel_qr']; ?>" style="width: 130px; height: 130px; border: 1px solid #eee; padding: 5px; background: #fff;">
             </div>
         <?php endif; ?>

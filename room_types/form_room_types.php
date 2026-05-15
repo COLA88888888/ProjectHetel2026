@@ -27,12 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
 
     $stmt = $pdo->prepare("INSERT INTO room_types (room_type_name, room_type_name_la, room_type_name_en, room_type_name_cn, room_type_code, description, description_la, description_en, description_cn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     if ($stmt->execute([$room_type_name, $room_type_name_la, $room_type_name_en, $room_type_name_cn, $room_type_code, $description, $description_la, $description_en, $description_cn])) {
-        logActivity($pdo, "ເພີ່ມປະເພດຫ້ອງໃໝ່", "ຊື່: $room_type_name_la");
-        $_SESSION['success'] = "ບັນທຶກຂໍ້ມູນສຳເລັດ";
+        $_SESSION['success'] = $lang['save_success'];
         header("Location: form_room_types.php");
         exit();
     } else {
-        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ";
+        $_SESSION['error'] = $lang['error_occurred'];
     }
 }
 
@@ -56,8 +55,7 @@ if (isset($_GET['delete'])) {
         } else {
             $stmt = $pdo->prepare("DELETE FROM room_types WHERE id = ?");
             if ($stmt->execute([$id])) {
-                logActivity($pdo, "ລົບປະເພດຫ້ອງ", "ປະເພດ: $typeName");
-                $_SESSION['success'] = "ລົບຂໍ້ມູນສຳເລັດ";
+                $_SESSION['success'] = $lang['delete_success'];
             } else {
                 $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການລົບ";
             }
@@ -70,16 +68,15 @@ if (isset($_GET['delete'])) {
 $stmt = $pdo->query("SELECT * FROM room_types ORDER BY id DESC");
 $room_types = $stmt->fetchAll();
 
-$current_lang = $_SESSION['lang'] ?? 'la';
 $name_col = "room_type_name_" . $current_lang;
 $desc_col = "description_" . $current_lang;
 ?>
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="<?php echo $current_lang; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ຈັດການປະເພດຫ້ອງ</title>
+    <title><?php echo $lang['room_types']; ?></title>
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
@@ -105,7 +102,7 @@ $desc_col = "description_" . $current_lang;
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'success',
-                    title: 'ສຳເລັດ',
+                    title: '<?php echo $lang['success_label'] ?? 'ສຳເລັດ'; ?>',
                     text: '<?php echo $_SESSION['success']; ?>',
                     showConfirmButton: false,
                     timer: 2000
@@ -119,9 +116,9 @@ $desc_col = "description_" . $current_lang;
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'error',
-                    title: 'ຜິດພາດ',
+                    title: '<?php echo $lang['error_label'] ?? 'ຜິດພາດ'; ?>',
                     text: '<?php echo $_SESSION['error']; ?>',
-                    confirmButtonText: 'ຕົກລົງ'
+                    confirmButtonText: '<?php echo $lang['ok'] ?? 'ຕົກລົງ'; ?>'
                 });
             });
         </script>
@@ -130,54 +127,54 @@ $desc_col = "description_" . $current_lang;
     <div class="row">
         <!-- Form Section -->
         <div class="col-md-4">
-            <div class="card card-primary card-outline">
+            <div class="card card-primary card-outline shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-plus-circle"></i> ເພີ່ມປະເພດຫ້ອງ</h3>
+                    <h3 class="card-title"><i class="fas fa-plus-circle"></i> <?php echo $lang['add_room_type']; ?></h3>
                 </div>
                 <form action="" method="post" id="roomTypeForm">
                     <div class="card-body">
                         <div class="form-group">
                             <label><?php echo $lang['room_type_code_label']; ?></label>
-                            <input type="text" name="room_type_code" id="room_type_code" class="form-control" placeholder="Code...">
+                            <input type="text" name="room_type_code" id="room_type_code" class="form-control" placeholder="<?php echo $lang['room_type_code_label']; ?>...">
                         </div>
                         <div class="form-group">
                             <label><?php echo $lang['room_type_label']; ?> (Lao) <span class="text-danger">*</span></label>
-                            <input type="text" name="room_type_name_la" id="room_type_name_la" class="form-control" placeholder="ຊື່ພາສາລາວ..." required>
+                            <input type="text" name="room_type_name_la" id="room_type_name_la" class="form-control" placeholder="Lao..." required>
                         </div>
                         <div class="form-group">
                             <label><?php echo $lang['details']; ?> (Lao)</label>
-                            <textarea name="description_la" id="description_la" class="form-control" rows="2" placeholder="ລາຍລະອຽດພາສາລາວ..."></textarea>
+                            <textarea name="description_la" id="description_la" class="form-control" rows="2" placeholder="Lao..."></textarea>
                         </div>
 
                         <!-- Advanced Multi-language Options -->
-                        <!-- <div class="mt-3">
+                        <div class="mt-3">
                             <a href="javascript:void(0)" class="text-primary small font-weight-bold" data-toggle="collapse" data-target="#advancedOptions">
-                                <i class="fas fa-cog mr-1"></i> <?php echo $lang['advanced_options']; ?>
+                                <i class="fas fa-cog mr-1"></i> <?php echo $lang['advanced_options'] ?? 'Advanced Options'; ?>
                             </a>
                         </div>
 
                         <div id="advancedOptions" class="collapse mt-3 border-top pt-3">
                             <div class="form-group">
-                                <label>Room Type Name (English)</label>
-                                <input type="text" name="room_type_name_en" class="form-control" placeholder="English name...">
+                                <label><?php echo $lang['room_type_label']; ?> (English)</label>
+                                <input type="text" name="room_type_name_en" class="form-control" placeholder="English...">
                             </div>
                             <div class="form-group">
-                                <label>客房类型名称 (Chinese)</label>
-                                <input type="text" name="room_type_name_cn" class="form-control" placeholder="Chinese name...">
+                                <label><?php echo $lang['room_type_label']; ?> (Chinese)</label>
+                                <input type="text" name="room_type_name_cn" class="form-control" placeholder="Chinese...">
                             </div>
                             <div class="form-group">
-                                <label>Description (English)</label>
-                                <textarea name="description_en" class="form-control" rows="2" placeholder="English description..."></textarea>
+                                <label><?php echo $lang['details']; ?> (English)</label>
+                                <textarea name="description_en" class="form-control" rows="2" placeholder="English..."></textarea>
                             </div>
                             <div class="form-group">
-                                <label>描述 (Chinese)</label>
-                                <textarea name="description_cn" class="form-control" rows="2" placeholder="Chinese description..."></textarea>
+                                <label><?php echo $lang['details']; ?> (Chinese)</label>
+                                <textarea name="description_cn" class="form-control" rows="2" placeholder="Chinese..."></textarea>
                             </div>
-                        </div> -->
+                        </div>
                     </div>
-                    <div class="card-footer">
-                        <button type="submit" name="save" class="btn btn-primary"><i class="fas fa-save"></i> ບັນທຶກ</button>
-                        <button type="reset" class="btn btn-default"><i class="fas fa-times"></i> ຍົກເລີກ</button>
+                    <div class="card-footer bg-white border-top-0">
+                        <button type="submit" name="save" class="btn btn-primary px-4"><i class="fas fa-save mr-1"></i> <?php echo $lang['save']; ?></button>
+                        <button type="reset" class="btn btn-default px-4 ml-2"><?php echo $lang['cancel']; ?></button>
                     </div>
                 </form>
             </div>
@@ -185,42 +182,46 @@ $desc_col = "description_" . $current_lang;
 
         <!-- Table Section -->
         <div class="col-md-8">
-            <div class="card card-outline card-info">
+            <div class="card card-outline card-info shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-list"></i> ລາຍການປະເພດຫ້ອງ</h3>
+                    <h3 class="card-title"><i class="fas fa-list"></i> <?php echo $lang['room_type_list']; ?></h3>
                 </div>
-                <div class="card-body table-responsive">
-                    <table id="roomTypeTable" class="table table-bordered table-striped table-hover text-center">
-                        <thead class="bg-light">
-                            <tr>
-                                <th>#</th>
-                                <th>ລະຫັດ</th>
-                                <th>ຊື່ປະເພດຫ້ອງ</th>
-                                <th>ລາຍລະອຽດ</th>
-                                <th width="150" class="text-center">ຈັດການ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($room_types) > 0): ?>
-                                <?php $i = 1; foreach ($room_types as $row): ?>
-                                    <tr>
-                                        <td><?php echo $i++; ?></td>
-                                        <td><span class="badge badge-secondary"><?php echo htmlspecialchars($row['room_type_code'] ?? '-'); ?></span></td>
-                                        <td><strong><?php echo htmlspecialchars($row[$name_col] ?: $row['room_type_name']); ?></strong></td>
-                                        <td><?php echo htmlspecialchars($row[$desc_col] ?: $row['description']); ?></td>
-                                        <td class="text-center">
-                                            <a href="edit_room_type.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning" title="ແກ້ໄຂ"><i class="fas fa-edit"></i></a>
-                                            <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $row['id']; ?>" title="ລົບ"><i class="fas fa-trash"></i></a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="roomTypeTable" class="table table-bordered table-striped table-hover text-center w-100">
+                            <thead class="bg-light">
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">ບໍ່ມີຂໍ້ມູນ</td>
+                                    <th width="50">#</th>
+                                    <th><?php echo $lang['room_type_code_label']; ?></th>
+                                    <th class="text-left"><?php echo $lang['room_type_label']; ?></th>
+                                    <th class="text-left"><?php echo $lang['details']; ?></th>
+                                    <th width="120"><?php echo $lang['action']; ?></th>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php if (count($room_types) > 0): ?>
+                                    <?php $i = 1; foreach ($room_types as $row): ?>
+                                        <tr>
+                                            <td><?php echo $i++; ?></td>
+                                            <td><span class="badge badge-secondary py-1 px-2"><?php echo htmlspecialchars($row['room_type_code'] ?? '-'); ?></span></td>
+                                            <td class="text-left"><strong class="text-primary"><?php echo htmlspecialchars($row[$name_col] ?: $row['room_type_name']); ?></strong></td>
+                                            <td class="text-left text-muted small"><?php echo htmlspecialchars($row[$desc_col] ?: $row['description']); ?></td>
+                                            <td class="text-center">
+                                                <div class="btn-group">
+                                                    <a href="edit_room_type.php?id=<?php echo $row['id']; ?>" class="btn btn-sm btn-warning" title="<?php echo $lang['edit']; ?>"><i class="fas fa-edit"></i></a>
+                                                    <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $row['id']; ?>" title="<?php echo $lang['delete']; ?>"><i class="fas fa-trash-alt"></i></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4"><?php echo $lang['table_zero_records']; ?></td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -240,30 +241,19 @@ $desc_col = "description_" . $current_lang;
 <script src="../sweetalert/dist/sweetalert2.all.min.js"></script>
 
 <script>
-// $(document).ready(function() {
-//     // Initialize DataTable
-//     $('#roomTypeTable').DataTable({
-//       "paging": true,
-//       "lengthChange": false,
-//       "searching": true,
-//       "ordering": true,
-//       "info": true,
-//       "autoWidth": false,
-//       "responsive": true,
-//       "pageLength": 10,
-//       "language": {
-//           "search": "ຄົ້ນຫາ:",
-//           "info": "ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ",
-//           "infoEmpty": "ສະແດງ 0 ຫາ 0 ຈາກທັງໝົດ 0 ລາຍການ",
-//           "zeroRecords": "ບໍ່ພົບຂໍ້ມູນທີ່ຄົ້ນຫາ",
-//           "paginate": {
-//               "first": "ໜ້າທຳອິດ",
-//               "last": "ໜ້າສຸດທ້າຍ",
-//               "next": "ຕໍ່ໄປ",
-//               "previous": "ກ່ອນໜ້າ"
-//           }
-//       }
-//     });
+$(document).ready(function() {
+    // Initialize DataTable with dynamic language
+    $('#roomTypeTable').DataTable({
+        "language": {
+            "sLengthMenu":   "<?php echo $lang['dt_length']; ?>",
+            "sZeroRecords":  "<?php echo $lang['dt_zeroRecords']; ?>",
+            "sInfo":         "<?php echo $lang['dt_info']; ?>",
+            "sSearch":       "<?php echo $lang['dt_search']; ?>",
+            "oPaginate": { "sPrevious": "<?php echo $lang['dt_paginate_previous']; ?>", "sNext": "<?php echo $lang['dt_paginate_next']; ?>" }
+        },
+        "responsive": true,
+        "autoWidth": false
+    });
 
     $('#roomTypeForm').on('submit', function(e) {
         var roomTypeNameLa = $('#room_type_name_la').val().trim();
@@ -272,9 +262,9 @@ $desc_col = "description_" . $current_lang;
             e.preventDefault();
             Swal.fire({
                 icon: 'warning',
-                title: 'ແຈ້ງເຕືອນ',
-                text: 'ກະລຸນາປ້ອນຊື່ປະເພດຫ້ອງ (ພາສາລາວ)!',
-                confirmButtonText: 'ຕົກລົງ'
+                title: '<?php echo $lang['warning_label'] ?? 'ແຈ້ງເຕືອນ'; ?>',
+                text: '<?php echo $lang['room_type_required_msg'] ?? 'ກະລຸນາປ້ອນຊື່ປະເພດຫ້ອງ (ພາສາລາວ)!'; ?>',
+                confirmButtonText: '<?php echo $lang['ok'] ?? 'ຕົກລົງ'; ?>'
             });
             return false;
         }
@@ -285,14 +275,14 @@ $desc_col = "description_" . $current_lang;
         e.preventDefault();
         var id = $(this).data('id');
         Swal.fire({
-            title: 'ຍືນຍັນການລົບ?',
-            text: "ທ່ານຕ້ອງການລົບຂໍ້ມູນນີ້ແທ້ບໍ່? ຂໍ້ມູນທີ່ລົບແລ້ວບໍ່ສາມາດກູ້ຄືນໄດ້!",
+            title: '<?php echo $lang['confirm_delete']; ?>',
+            text: "<?php echo $lang['delete_warning']; ?>",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'ລົບເລີຍ!',
-            cancelButtonText: 'ຍົກເລີກ'
+            confirmButtonText: '<?php echo $lang['confirm'] ?? 'ຢືນຢັນ'; ?>',
+            cancelButtonText: '<?php echo $lang['cancel']; ?>'
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = "?delete=" + id;

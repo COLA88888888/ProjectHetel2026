@@ -245,7 +245,7 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'success',
-                    title: '<?php echo $lang['ok'] ?? 'Success'; ?>',
+                    title: '<?php echo $lang['success_label'] ?? 'ສຳເລັດ'; ?>',
                     text: '<?php echo $_SESSION['success']; ?>',
                     showConfirmButton: false,
                     timer: 2000
@@ -259,7 +259,7 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'error',
-                    title: '<?php echo $lang['error'] ?? 'Error'; ?>',
+                    title: '<?php echo $lang['error_label'] ?? 'ຜິດພາດ'; ?>',
                     text: '<?php echo $_SESSION['error']; ?>',
                 });
             });
@@ -288,27 +288,35 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
         <div class="col-md-4 col-12 mb-4">
             <div class="card card-primary card-outline shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-plus-circle"></i> ເພີ່ມສິນຄ້າໃໝ່</h3>
+                    <h3 class="card-title"><i class="fas fa-plus-circle"></i> <?php echo $lang['add_new_product']; ?></h3>
                 </div>
                 <form action="" method="post" enctype="multipart/form-data">
                     <div class="card-body">
                         <div class="form-group text-center">
-                            <label>ຮູບພາບສິນຄ້າ</label>
+                            <label><?php echo $lang['product_image']; ?></label>
                             <input type="file" name="image" id="image" class="form-control-file border p-2" accept="image/*" onchange="previewImage(this)">
                             <img id="preview" src="" alt="Preview" style="max-height: 100px; display: none; margin-top: 10px; border-radius: 4px;" class="shadow-sm">
                         </div>
                         <div class="form-group">
-                            <label>ລະຫັດສິນຄ້າ</label>
-                            <input type="text" name="prod_code" class="form-control" placeholder="ປ້ອນລະຫັດສິນຄ້າ...">
+                            <label><?php echo $lang['product_code']; ?></label>
+                            <input type="text" name="prod_code" class="form-control" placeholder="<?php echo $lang['product_code']; ?>...">
                         </div>
                         <div class="form-group">
-                            <label>ຊື່ສິນຄ້າ</label>
-                            <input type="text" name="prod_name_la" class="form-control" placeholder="ກະລຸນາປ້ອນຊື່ສິນຄ້າ..." required>
+                            <label><?php echo $lang['product_name_la']; ?></label>
+                            <input type="text" name="prod_name_la" class="form-control" placeholder="Lao..." required>
                         </div>
                         <div class="form-group">
-                            <label>ປະເພດສິນຄ້າ</label>
+                            <label><?php echo $lang['product_name_en']; ?></label>
+                            <input type="text" name="prod_name_en" class="form-control" placeholder="English...">
+                        </div>
+                        <div class="form-group">
+                            <label><?php echo $lang['product_name_cn']; ?></label>
+                            <input type="text" name="prod_name_cn" class="form-control" placeholder="Chinese...">
+                        </div>
+                        <div class="form-group">
+                            <label><?php echo $lang['category']; ?></label>
                             <select name="category" class="form-control" required>
-                                <option value="">-- ເລືອກປະເພດ --</option>
+                                <option value=""><?php echo $lang['select_category']; ?></option>
                                 <?php foreach($categories as $cat): ?>
                                     <option value="<?php echo htmlspecialchars($cat['name']); ?>"><?php echo htmlspecialchars($cat[$cat_name_col] ?: $cat['name']); ?></option>
                                 <?php endforeach; ?>
@@ -317,15 +325,15 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                         <div class="row">
                             <div class="col-6">
                                 <div class="form-group">
-                                    <label>ຈຳນວນຮັບເຂົ້າ</label>
+                                    <label><?php echo $lang['stock_in_qty']; ?></label>
                                     <input type="number" name="qty" class="form-control" value="0" min="0" required>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="form-group">
-                                    <label>ໜ່ວຍນັບ</label>
+                                    <label><?php echo $lang['unit']; ?></label>
                                     <select name="unit" class="form-control" required>
-                                        <option value="">-- ເລືອກ --</option>
+                                        <option value="">-- <?php echo $lang['unit']; ?> --</option>
                                         <?php foreach($units_list as $u): ?>
                                             <option value="<?php echo htmlspecialchars($u['unit_name']); ?>"><?php echo htmlspecialchars($u[$unit_name_col] ?: $u['unit_name']); ?></option>
                                         <?php endforeach; ?>
@@ -336,20 +344,20 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                         <div class="row">
                             <div class="col-6">
                                 <div class="form-group">
-                                    <label>ຕົ້ນທຶນ</label>
+                                    <label><?php echo $lang['buy_price']; ?></label>
                                     <input type="text" name="bprice" class="form-control number-format" placeholder="0">
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="form-group">
-                                    <label>ລາຄາຂາຍ</label>
+                                    <label><?php echo $lang['sell_price']; ?></label>
                                     <input type="text" name="sprice" class="form-control number-format" placeholder="0" required>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button type="submit" name="add_product" class="btn btn-primary btn-block"><i class="fas fa-save"></i> ບັນທຶກ</button>
+                        <button type="submit" name="add_product" class="btn btn-primary btn-block"><i class="fas fa-save"></i> <?php echo $lang['save']; ?></button>
                     </div>
                 </form>
             </div>
@@ -359,7 +367,7 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
         <div class="col-md-8 col-12">
             <div class="card card-success card-outline shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-clipboard-list"></i> ລາຍງານສະຕັອກທັງໝົດ</h3>
+                    <h3 class="card-title"><i class="fas fa-clipboard-list"></i> <?php echo $lang['stock_report_all']; ?></h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -420,13 +428,19 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
                                                     data-unit="<?php echo htmlspecialchars($row['unit'] ?? 'ປ໋ອງ'); ?>" 
                                                     data-image="<?php echo htmlspecialchars($row['image']); ?>"
                                                     data-bprice="<?php echo $row['bprice']; ?>" 
-                                                    data-sprice="<?php echo $row['sprice']; ?>">
+                                                    data-sprice="<?php echo $row['sprice']; ?>"
+                                                    title="<?php echo $lang['edit']; ?>">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-info btn-restock" data-id="<?php echo $row['prod_id']; ?>" data-name="<?php echo htmlspecialchars($row[$prod_name_col] ?: $row['prod_name']); ?>">
+                                                <button class="btn btn-info btn-restock" 
+                                                    data-id="<?php echo $row['prod_id']; ?>" 
+                                                    data-name="<?php echo htmlspecialchars($row[$prod_name_col] ?: $row['prod_name']); ?>"
+                                                    title="<?php echo $lang['restock_btn']; ?>">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
-                                                <a href="#" class="btn btn-danger btn-delete" data-id="<?php echo $row['prod_id']; ?>">
+                                                <a href="#" class="btn btn-danger btn-delete" 
+                                                    data-id="<?php echo $row['prod_id']; ?>"
+                                                    title="<?php echo $lang['delete']; ?>">
                                                     <i class="fas fa-trash-alt"></i>
                                                 </a>
                                             </div>
@@ -447,7 +461,7 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
   <div class="modal-dialog modal-sm" role="document">
     <div class="modal-content">
       <div class="modal-header bg-info text-white">
-        <h5 class="modal-title">ເຕີມສິນຄ້າເຂົ້າສະຕັອກ</h5>
+        <h5 class="modal-title"><?php echo $lang['restock_title']; ?></h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -455,15 +469,15 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
       <form action="" method="post">
           <div class="modal-body">
               <input type="hidden" name="prod_id" id="restock_prod_id">
-              <p>ສິນຄ້າ: <strong id="restock_prod_name" class="text-primary"></strong></p>
+              <p><?php echo $lang['product_info']; ?>: <strong id="restock_prod_name" class="text-primary"></strong></p>
               <div class="form-group">
-                  <label>ຈຳນວນທີ່ຕ້ອງການເຕີມ</label>
+                  <label><?php echo $lang['restock_qty']; ?></label>
                   <input type="number" name="add_qty" class="form-control" value="1" min="1" required>
               </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">ຍົກເລີກ</button>
-            <button type="submit" name="restock" class="btn btn-info">ບັນທຶກການເຕີມ</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal"><?php echo $lang['cancel']; ?></button>
+            <button type="submit" name="restock" class="btn btn-info"><?php echo $lang['confirm_restock']; ?></button>
           </div>
       </form>
     </div>
@@ -475,7 +489,7 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header bg-warning text-white">
-        <h5 class="modal-title"><i class="fas fa-edit"></i> ແກ້ໄຂສິນຄ້າ</h5>
+        <h5 class="modal-title"><i class="fas fa-edit"></i> <?php echo $lang['edit']; ?></h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -484,39 +498,39 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
           <div class="modal-body">
               <input type="hidden" name="prod_id" id="edit_prod_id">
               <div class="form-group text-center">
-                  <label>ປ່ຽນຮູບພາບໃໝ່ (ຖ້າຕ້ອງການ)</label>
+                  <label><?php echo $lang['product_image']; ?></label>
                   <input type="file" name="edit_image" id="edit_image" class="form-control-file border p-2" accept="image/*" onchange="previewEditImage(this)">
                   <img id="edit_preview" src="" style="max-height: 120px; display: none; margin-top: 10px; border-radius: 5px;" class="shadow-sm">
               </div>
                <div class="form-group">
-                  <label>ລະຫັດສິນຄ້າ</label>
+                  <label><?php echo $lang['product_code']; ?></label>
                   <input type="text" name="prod_code" id="edit_prod_code" class="form-control">
               </div>
               <div class="form-group">
-                  <label>ຊື່ສິນຄ້າ (Lao)</label>
+                  <label><?php echo $lang['product_name_la']; ?></label>
                   <input type="text" name="prod_name_la" id="edit_prod_name_la" class="form-control" required>
               </div>
               <div class="form-group">
-                  <label>Product Name (English)</label>
+                  <label><?php echo $lang['product_name_en']; ?></label>
                   <input type="text" name="prod_name_en" id="edit_prod_name_en" class="form-control">
               </div>
               <div class="form-group">
-                  <label>商品名称 (Chinese)</label>
+                  <label><?php echo $lang['product_name_cn']; ?></label>
                   <input type="text" name="prod_name_cn" id="edit_prod_name_cn" class="form-control">
               </div>
               <div class="form-group">
-                  <label>ປະເພດສິນຄ້າ</label>
+                  <label><?php echo $lang['category']; ?></label>
                   <select name="category" id="edit_category" class="form-control" required>
-                      <option value="">-- ເລືອກປະເພດ --</option>
+                      <option value=""><?php echo $lang['select_category']; ?></option>
                        <?php foreach($categories as $cat): ?>
                            <option value="<?php echo htmlspecialchars($cat['name']); ?>"><?php echo htmlspecialchars($cat[$cat_name_col] ?: $cat['name']); ?></option>
                        <?php endforeach; ?>
                   </select>
               </div>
               <div class="form-group">
-                  <label>ໜ່ວຍນັບ</label>
+                  <label><?php echo $lang['unit']; ?></label>
                   <select name="unit" id="edit_unit" class="form-control" required>
-                      <option value="">-- ເລືອກ --</option>
+                      <option value="">-- <?php echo $lang['unit']; ?> --</option>
                       <?php foreach($units_list as $u): ?>
                           <option value="<?php echo htmlspecialchars($u['unit_name']); ?>"><?php echo htmlspecialchars($u[$unit_name_col] ?: $u['unit_name']); ?></option>
                       <?php endforeach; ?>
@@ -525,21 +539,21 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
               <div class="row">
                   <div class="col-6">
                       <div class="form-group">
-                          <label>ຕົ້ນທຶນ</label>
+                          <label><?php echo $lang['buy_price']; ?></label>
                           <input type="text" name="bprice" id="edit_bprice" class="form-control number-format">
                       </div>
                   </div>
                   <div class="col-6">
                       <div class="form-group">
-                          <label>ລາຄາຂາຍ</label>
+                          <label><?php echo $lang['sell_price']; ?></label>
                           <input type="text" name="sprice" id="edit_sprice" class="form-control number-format" required>
                       </div>
                   </div>
               </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">ຍົກເລີກ</button>
-            <button type="submit" name="edit_product" class="btn btn-warning text-white">ບັນທຶກການແກ້ໄຂ</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal"><?php echo $lang['cancel']; ?></button>
+            <button type="submit" name="edit_product" class="btn btn-warning text-white"><?php echo $lang['save']; ?></button>
           </div>
       </form>
     </div>
@@ -622,7 +636,7 @@ $(document).ready(function() {
         e.preventDefault();
         var id = $(this).data('id');
         Swal.fire({
-            title: '<?php echo $lang['confirm'] ?? 'Confirm?'; ?>',
+            title: '<?php echo $lang['confirm_delete'] ?? 'Confirm?'; ?>',
             text: "<?php echo $lang['delete_user_warning'] ?? 'Are you sure you want to delete this item?'; ?>",
             icon: 'warning',
             showCancelButton: true,

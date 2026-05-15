@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 // Fetch logs with user names
 $stmt = $pdo->query("
     SELECT l.*, u.fname, u.lname, u.status as user_role 
@@ -17,7 +26,7 @@ $logs = $stmt->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ປະຫວັດການເຄື່ອນໄຫວລະບົບ</title>
+    <title><?php echo $lang['system_history']; ?></title>
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
@@ -42,7 +51,7 @@ $logs = $stmt->fetchAll();
     <div class="card card-outline card-primary shadow-sm">
         <div class="card-header bg-white">
             <h3 class="card-title font-weight-bold">
-                <i class="fas fa-history mr-2 text-primary"></i> ປະຫວັດການເຄື່ອນໄຫວທັງໝົດ
+                <i class="fas fa-history mr-2 text-primary"></i> <?php echo $lang['action_history']; ?>
             </h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-tool" onclick="window.location.reload()"><i class="fas fa-sync-alt"></i></button>
@@ -54,11 +63,11 @@ $logs = $stmt->fetchAll();
                     <thead class="thead-light">
                         <tr>
                             <th width="5%">#</th>
-                            <th width="15%">ວັນທີ/ເວລາ</th>
-                            <th width="15%">ຜູ້ໃຊ້</th>
-                            <th width="20%">ການເຄື່ອນໄຫວ</th>
-                            <th>ລາຍລະອຽດ</th>
-                            <th width="12%">IP Address</th>
+                            <th width="15%"><?php echo $lang['date_time']; ?></th>
+                            <th width="15%"><?php echo $lang['user']; ?></th>
+                            <th width="20%"><?php echo $lang['action']; ?></th>
+                            <th><?php echo $lang['details']; ?></th>
+                            <th width="12%"><?php echo $lang['ip_address']; ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -103,15 +112,14 @@ $logs = $stmt->fetchAll();
             "responsive": true,
             "pageLength": 10,
             "language": {
-                "search": "ຄົ້ນຫາ:",
-                "lengthMenu": "ສະແດງ _MENU_ ລາຍການ",
-                "info": "ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ",
-                "infoEmpty": "ສະແດງ 0 ຫາ 0 ຈາກທັງໝົດ 0 ລາຍການ",
-                "zeroRecords": "ບໍ່ມີຂໍ້ມູນ",
-                "infoFiltered": "(ກັ່ນຕອງຈາກທັງໝົດ _MAX_ ລາຍການ)",
+                "search": "<?php echo $lang['dt_search'] ?? $lang['search']; ?>:",
+                "lengthMenu": "<?php echo $lang['dt_length']; ?>",
+                "info": "<?php echo $lang['dt_info']; ?>",
+                "infoEmpty": "<?php echo $lang['dt_info_empty'] ?? $lang['table_info_empty']; ?>",
+                "zeroRecords": "<?php echo $lang['dt_zeroRecords']; ?>",
                 "paginate": {
-                    "next": "ຕໍ່ໄປ",
-                    "previous": "ກ່ອນໜ້າ"
+                    "next": "<?php echo $lang['dt_paginate_next'] ?? $lang['next']; ?>",
+                    "previous": "<?php echo $lang['dt_paginate_previous'] ?? $lang['previous']; ?>"
                 }
             }
         });

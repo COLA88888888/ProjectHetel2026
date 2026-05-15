@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 // Check if settings exist, if not create default keys
 $default_keys = [
     'hotel_name' => 'ໂຮງແຮມ ຕົວຢ່າງ',
@@ -98,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
 
     logActivity($pdo, "ອັບເດດການຕັ້ງຄ່າລະບົບ", "ໂຮງແຮມ: $hotel_name");
 
-    $_SESSION['success'] = "ບັນທຶກການຕັ້ງຄ່າສຳເລັດແລ້ວ!";
+    $_SESSION['success'] = $lang['save_success'];
     header("Location: settings.php");
     exit();
 }
@@ -106,19 +115,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
 // Fetch all currencies
 $stmtCur = $pdo->query("SELECT * FROM currency ORDER BY id ASC");
 $currencies = $stmtCur->fetchAll();
-
-// Get current default currency
-$default_currency = null;
-foreach($currencies as $c) {
-    if($c['is_default'] == 1) $default_currency = $c;
-}
 ?>
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="<?php echo $current_lang; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ຕັ້ງຄ່າລະບົບໂຮງແຮມ</title>
+    <title><?php echo $lang['hotel_settings']; ?></title>
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
@@ -168,7 +171,7 @@ foreach($currencies as $c) {
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'success',
-                    title: 'ສຳເລັດ',
+                    title: '<?php echo $lang['success_label'] ?? 'ສຳເລັດ'; ?>',
                     text: '<?php echo $_SESSION['success']; ?>',
                     showConfirmButton: false,
                     timer: 2000
@@ -179,7 +182,7 @@ foreach($currencies as $c) {
 
     <div class="row mb-3">
         <div class="col-12">
-            <h2><i class="fas fa-cog"></i> ຕັ້ງຄ່າຂໍ້ມູນໂຮງແຮມ</h2>
+            <h2><i class="fas fa-cog"></i> <?php echo $lang['hotel_settings']; ?></h2>
         </div>
     </div>
 
@@ -187,7 +190,7 @@ foreach($currencies as $c) {
         <div class="col-md-8 mx-auto">
             <div class="card card-primary card-outline shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-hotel"></i> ລາຍລະອຽດໂຮງແຮມ</h3>
+                    <h3 class="card-title"><i class="fas fa-hotel"></i> <?php echo $lang['hotel_info']; ?></h3>
                 </div>
                 <form action="" method="post" enctype="multipart/form-data">
                     <div class="card-body">
@@ -201,11 +204,11 @@ foreach($currencies as $c) {
                                 <?php endif; ?>
                                 <div>
                                     <label for="hotel_logo" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-upload"></i> ປ່ຽນໂລໂກ້
+                                        <i class="fas fa-upload"></i> <?php echo $lang['change_logo']; ?>
                                     </label>
                                     <input type="file" name="hotel_logo" id="hotel_logo" class="d-none" accept="image/*" onchange="previewImage(this, 'previewLogo')">
                                 </div>
-                                <small class="text-muted">ໂລໂກ້ໂຮງແຮມ</small>
+                                <small class="text-muted"><?php echo $lang['hotel_logo'] ?? 'Logo'; ?></small>
                             </div>
                             <div class="col-sm-6 text-center">
                                 <?php if(!empty($settings_data['hotel_qr'])): ?>
@@ -215,74 +218,74 @@ foreach($currencies as $c) {
                                 <?php endif; ?>
                                 <div>
                                     <label for="hotel_qr" class="btn btn-sm btn-outline-success">
-                                        <i class="fas fa-qrcode"></i> ປ່ຽນ QR ສຳລັບໂອນ
+                                        <i class="fas fa-qrcode"></i> <?php echo $lang['change_qr']; ?>
                                     </label>
                                     <input type="file" name="hotel_qr" id="hotel_qr" class="d-none" accept="image/*" onchange="previewImage(this, 'previewQR')">
                                 </div>
-                                <small class="text-muted">QR Code ສຳລັບຊຳລະເງິນ</small>
+                                <small class="text-muted"><?php echo $lang['payment_qr']; ?></small>
                             </div>
                         </div>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label text-right">ຊື່ໂຮງແຮມ (Lao) <span class="text-danger">*</span></label>
+                            <label class="col-sm-3 col-form-label text-right"><?php echo $lang['hotel_name_label']; ?> (Lao) <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" name="hotel_name" class="form-control mb-2" value="<?php echo htmlspecialchars($settings_data['hotel_name'] ?? ''); ?>" required placeholder="ຊື່ພາສາລາວ (ຫຼັກ)">
+                                <input type="text" name="hotel_name" class="form-control mb-2" value="<?php echo htmlspecialchars($settings_data['hotel_name'] ?? ''); ?>" required placeholder="Lao...">
                                 <input type="hidden" name="hotel_name_la" value="<?php echo htmlspecialchars($settings_data['hotel_name'] ?? ''); ?>">
                                 <div class="row">
                                     <div class="col-6">
-                                        <input type="text" name="hotel_name_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_name_en'] ?? ''); ?>" placeholder="Hotel Name (EN)">
+                                        <input type="text" name="hotel_name_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_name_en'] ?? ''); ?>" placeholder="English...">
                                     </div>
                                     <div class="col-6">
-                                        <input type="text" name="hotel_name_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_name_cn'] ?? ''); ?>" placeholder="酒店名称 (CN)">
+                                        <input type="text" name="hotel_name_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_name_cn'] ?? ''); ?>" placeholder="Chinese...">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label text-right">ເບີໂທລະສັບຕິດຕໍ່ <span class="text-danger">*</span></label>
+                            <label class="col-sm-3 col-form-label text-right"><?php echo $lang['hotel_phone_label']; ?> <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
                                 <input type="text" name="hotel_phone" class="form-control" value="<?php echo htmlspecialchars($settings_data['hotel_phone'] ?? ''); ?>" required>
                             </div>
                         </div>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label text-right">ທີ່ຢູ່ / ສະຖານທີ່ຕັ້ງ</label>
+                            <label class="col-sm-3 col-form-label text-right"><?php echo $lang['hotel_address_label']; ?></label>
                             <div class="col-sm-9">
-                                <textarea name="hotel_address" class="form-control mb-2" rows="2" placeholder="ທີ່ຢູ່ພາສາລາວ"><?php echo htmlspecialchars($settings_data['hotel_address'] ?? ''); ?></textarea>
+                                <textarea name="hotel_address" class="form-control mb-2" rows="2" placeholder="Lao..."><?php echo htmlspecialchars($settings_data['hotel_address'] ?? ''); ?></textarea>
                                 <input type="hidden" name="hotel_address_la" value="<?php echo htmlspecialchars($settings_data['hotel_address'] ?? ''); ?>">
                                 <div class="row">
                                     <div class="col-6">
-                                        <input type="text" name="hotel_address_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_address_en'] ?? ''); ?>" placeholder="Address (EN)">
+                                        <input type="text" name="hotel_address_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_address_en'] ?? ''); ?>" placeholder="English...">
                                     </div>
                                     <div class="col-6">
-                                        <input type="text" name="hotel_address_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_address_cn'] ?? ''); ?>" placeholder="地址 (CN)">
+                                        <input type="text" name="hotel_address_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['hotel_address_cn'] ?? ''); ?>" placeholder="Chinese...">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label text-right">ທ້າຍໃບຮັບເງິນ</label>
+                            <label class="col-sm-3 col-form-label text-right"><?php echo $lang['receipt_footer_label']; ?></label>
                             <div class="col-sm-9">
-                                <input type="text" name="receipt_footer" class="form-control mb-2" value="<?php echo htmlspecialchars($settings_data['receipt_footer'] ?? ''); ?>" placeholder="ຂໍ້ຄວາມພາສາລາວ">
+                                <input type="text" name="receipt_footer" class="form-control mb-2" value="<?php echo htmlspecialchars($settings_data['receipt_footer'] ?? ''); ?>" placeholder="Lao...">
                                 <input type="hidden" name="receipt_footer_la" value="<?php echo htmlspecialchars($settings_data['receipt_footer'] ?? ''); ?>">
                                 <div class="row">
                                     <div class="col-6">
-                                        <input type="text" name="receipt_footer_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['receipt_footer_en'] ?? ''); ?>" placeholder="Footer (EN)">
+                                        <input type="text" name="receipt_footer_en" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['receipt_footer_en'] ?? ''); ?>" placeholder="English...">
                                     </div>
                                     <div class="col-6">
-                                        <input type="text" name="receipt_footer_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['receipt_footer_cn'] ?? ''); ?>" placeholder="页脚 (CN)">
+                                        <input type="text" name="receipt_footer_cn" class="form-control form-control-sm" value="<?php echo htmlspecialchars($settings_data['receipt_footer_cn'] ?? ''); ?>" placeholder="Chinese...">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <hr>
-                        <h5 class="mb-3 text-info"><i class="fas fa-coins"></i> ຕັ້ງຄ່າການເງິນ ແລະ ພາສີ</h5>
+                        <h5 class="mb-3 text-info"><i class="fas fa-coins"></i> <?php echo $lang['finance_tax_settings']; ?></h5>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label text-right">ສະກຸນເງິນຫຼັກ <span class="text-danger">*</span></label>
+                            <label class="col-sm-3 col-form-label text-right"><?php echo $lang['default_currency_label']; ?> <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
                                 <select name="currency_id" class="form-control" required>
                                     <?php foreach($currencies as $c): ?>
@@ -291,12 +294,12 @@ foreach($currencies as $c) {
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                                <small class="text-muted">ສະກຸນເງິນທີ່ທ່ານເລືອກຈະຖືກໃຊ້ສະແດງຜົນທັງລະບົບ.</small>
+                                <small class="text-muted"><?php echo $lang['currency_help_text']; ?></small>
                             </div>
                         </div>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label text-right">ອັດຕາພາສີ (%)</label>
+                            <label class="col-sm-3 col-form-label text-right"><?php echo $lang['tax_rate_label']; ?> (%)</label>
                             <div class="col-sm-9">
                                 <div class="input-group">
                                     <input type="number" name="tax_percent" class="form-control" value="<?php echo htmlspecialchars($settings_data['tax_percent'] ?? '0'); ?>" step="0.01" min="0">
@@ -304,13 +307,13 @@ foreach($currencies as $c) {
                                         <span class="input-group-text">%</span>
                                     </div>
                                 </div>
-                                <small class="text-muted">ພາສີຈະຖືກນຳໄປຄິດໄລ່ໃນໃບບິນ POS.</small>
+                                <small class="text-muted"><?php echo $lang['tax_help_text']; ?></small>
                             </div>
                         </div>
 
                     </div>
                     <div class="card-footer bg-light text-right">
-                        <button type="submit" name="save_settings" class="btn btn-primary px-5"><i class="fas fa-save"></i> ບັນທຶກ</button>
+                        <button type="submit" name="save_settings" class="btn btn-primary px-5"><i class="fas fa-save"></i> <?php echo $lang['save']; ?></button>
                     </div>
                 </form>
             </div>
@@ -318,16 +321,39 @@ foreach($currencies as $c) {
             <!-- Network Access Info -->
             <div class="card card-info card-outline shadow-sm mt-4">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-network-wired"></i> ການເຂົ້າເຖິງລະບົບ (Network Access)</h3>
+                    <h3 class="card-title"><i class="fas fa-network-wired"></i> <?php echo $lang['network_access']; ?></h3>
                 </div>
                 <div class="card-body">
-                    <p>ທ່ານສາມາດໃຫ້ພະນັກງານຄົນອື່ນເຂົ້າໃຊ້ລະບົບຜ່ານ Network ດຽວກັນໄດ້ໂດຍການພິມ IP ນີ້ໃນ Browser:</p>
+                    <p><?php echo $lang['network_help_text']; ?></p>
                     <div class="alert alert-info">
                         <h4 class="mb-0 text-center font-weight-bold">
                             http://<?php echo gethostbyname(gethostname()); ?>/ProjectHetel2026
                         </h4>
                     </div>
-                    <small class="text-muted">* ໝາຍເຫດ: ເຄື່ອງອື່ນໆຕ້ອງເຊື່ອມຕໍ່ WiFi ຫຼື ວົງ LAN ດຽວກັນກັບເຄື່ອງ Server ນີ້.</small>
+                    <small class="text-muted"><?php echo $lang['network_note']; ?></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="plugins/jquery/jquery.min.js"></script>
+<script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="sweetalert/dist/sweetalert2.all.min.js"></script>
+
+<script>
+function previewImage(input, previewId) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $('#' + previewId).attr('src', e.target.result);
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+</body>
+</html>
                 </div>
             </div>
         </div>

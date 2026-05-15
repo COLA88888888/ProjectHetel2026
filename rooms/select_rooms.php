@@ -2,6 +2,15 @@
 session_start();
 require_once '../config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "../lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "../lang/la.php";
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
     $room_number = $_POST['room_number'];
@@ -17,11 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
     $stmt = $pdo->prepare("INSERT INTO rooms (room_number, room_type, bed_type, price, status, housekeeping_status) VALUES (?, ?, ?, ?, ?, ?)");
     if ($stmt->execute([$room_number, $room_type, $bed_type, $price, $status, $housekeeping_status])) {
         logActivity($pdo, "ເພີ່ມຫ້ອງໃໝ່", "ເລກຫ້ອງ: $room_number, ປະເພດ: $room_type");
-        $_SESSION['success'] = "ບັນທຶກຂໍ້ມູນຫ້ອງສຳເລັດ";
+        $_SESSION['success'] = $lang['save_success'];
         header("Location: select_rooms.php");
         exit();
     } else {
-        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ";
+        $_SESSION['error'] = $lang['error_occurred'];
     }
 }
 
@@ -31,9 +40,9 @@ if (isset($_GET['delete'])) {
     $stmt = $pdo->prepare("DELETE FROM rooms WHERE id = ?");
     if ($stmt->execute([$id])) {
         logActivity($pdo, "ລົບຂໍ້ມູນຫ້ອງ", "ID: $id");
-        $_SESSION['success'] = "ລົບຂໍ້ມູນສຳເລັດ";
+        $_SESSION['success'] = $lang['delete_success'];
     } else {
-        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການລົບ";
+        $_SESSION['error'] = $lang['error_occurred'] ?? "ເກີດຂໍ້ຜິດພາດໃນການລົບ";
     }
     header("Location: select_rooms.php");
     exit();
@@ -76,7 +85,7 @@ $stmtTypes = $pdo->query("SELECT * FROM room_types ORDER BY id DESC");
 $room_types = $stmtTypes->fetchAll();
 ?>
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="<?php echo $current_lang; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -137,7 +146,7 @@ $room_types = $stmtTypes->fetchAll();
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'success',
-                    title: 'ສຳເລັດ',
+                    title: '<?php echo $lang['success_label'] ?? 'ສຳເລັດ'; ?>',
                     text: '<?php echo $_SESSION['success']; ?>',
                     showConfirmButton: false,
                     timer: 2000
@@ -151,9 +160,9 @@ $room_types = $stmtTypes->fetchAll();
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'error',
-                    title: 'ຜິດພາດ',
+                    title: '<?php echo $lang['error_label'] ?? 'ຜິດພາດ'; ?>',
                     text: '<?php echo $_SESSION['error']; ?>',
-                    confirmButtonText: 'ຕົກລົງ'
+                    confirmButtonText: '<?php echo $lang['ok'] ?? 'ຕົກລົງ'; ?>'
                 });
             });
         </script>
@@ -213,7 +222,7 @@ $room_types = $stmtTypes->fetchAll();
         <div class="col-md-9">
             <div class="card card-outline card-info">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-list"></i> ລາຍລະອຽດທຸກຫ້ອງ</h3>
+                    <h3 class="card-title"><i class="fas fa-list"></i> <?php echo $lang['all_rooms_detail']; ?></h3>
                 </div>
                 <div class="card-body table-responsive">
                     <table id="roomTable" class="table table-bordered table-striped table-hover text-center">
@@ -221,11 +230,11 @@ $room_types = $stmtTypes->fetchAll();
                             <tr>
                                 <th><?php echo $lang['no']; ?></th>
                                 <th><?php echo $lang['room']; ?></th>
-                                <th><?php echo $lang['room_types'] ?? 'ປະເພດຫ້ອງ'; ?></th>
-                                <th><?php echo $lang['bed_type'] ?? 'ປະເພດຕຽງ'; ?></th>
+                                <th><?php echo $lang['room_types_header']; ?></th>
+                                <th><?php echo $lang['bed_type_header']; ?></th>
                                 <th><?php echo $lang['price']; ?></th>
                                 <th><?php echo $lang['status']; ?></th>
-                                <th><?php echo $lang['housekeeping'] ?? 'ຄວາມພ້ອມ'; ?></th>
+                                <th><?php echo $lang['housekeeping']; ?></th>
                                 <th><?php echo $lang['action']; ?></th>
                             </tr>
                         </thead>
@@ -266,22 +275,22 @@ $room_types = $stmtTypes->fetchAll();
                                                 elseif ($hk == 'Maintenance') $hk_class = 'hk-maintenance';
                                             ?>
                                             <select class="hk-select <?php echo $hk_class; ?>" data-room-id="<?php echo $row['id']; ?>">
-                                                <option value="ພ້ອມໃຊ້" <?php echo ($hk == 'ພ້ອມໃຊ້' || $hk == 'Ready') ? 'selected' : ''; ?>>ພ້ອມໃຊ້</option>
-                                                <option value="Cleaning" <?php echo ($hk == 'Cleaning') ? 'selected' : ''; ?>>ກຳລັງອະນາໄມ</option>
-                                                <option value="Maintenance" <?php echo ($hk == 'Maintenance') ? 'selected' : ''; ?>>ຫ້ອງເສຍ</option>
+                                                <option value="ພ້ອມໃຊ້" <?php echo ($hk == 'ພ້ອມໃຊ້' || $hk == 'Ready') ? 'selected' : ''; ?>><?php echo $lang['ready']; ?></option>
+                                                <option value="Cleaning" <?php echo ($hk == 'Cleaning') ? 'selected' : ''; ?>><?php echo $lang['cleaning']; ?></option>
+                                                <option value="Maintenance" <?php echo ($hk == 'Maintenance') ? 'selected' : ''; ?>><?php echo $lang['maintenance']; ?></option>
                                             </select>
                                         </td>
                                         <td style="width: 100px;">
                                             <div class="btn-group btn-group-sm">
-                                                <a href="edit_room.php?id=<?php echo $row['id']; ?>" class="btn btn-warning text-white" title="ແກ້ໄຂ"><i class="fas fa-edit"></i></a>
-                                                <a href="#" class="btn btn-danger btn-delete" data-id="<?php echo $row['id']; ?>" title="ລົບ"><i class="fas fa-trash-alt"></i></a>
+                                                <a href="edit_room.php?id=<?php echo $row['id']; ?>" class="btn btn-warning text-white" title="<?php echo $lang['edit']; ?>"><i class="fas fa-edit"></i></a>
+                                                <a href="#" class="btn btn-danger btn-delete" data-id="<?php echo $row['id']; ?>" title="<?php echo $lang['delete']; ?>"><i class="fas fa-trash-alt"></i></a>
                                             </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="8" class="text-muted">ບໍ່ມີຂໍ້ມູນຫ້ອງ</td>
+                                    <td colspan="8" class="text-muted"><?php echo $lang['table_zero_records']; ?></td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -352,9 +361,9 @@ $(document).ready(function() {
             e.preventDefault();
             Swal.fire({
                 icon: 'warning',
-                title: 'ແຈ້ງເຕືອນ',
-                text: 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນທຸກຊ່ອງ!',
-                confirmButtonText: 'ຕົກລົງ'
+                title: '<?php echo $lang['warning_label'] ?? 'ແຈ້ງເຕືອນ'; ?>',
+                text: '<?php echo $lang['form_required_msg'] ?? 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນທຸກຊ່ອງ!'; ?>',
+                confirmButtonText: '<?php echo $lang['ok'] ?? 'ຕົກລົງ'; ?>'
             });
             return false;
         }
@@ -365,14 +374,14 @@ $(document).ready(function() {
         e.preventDefault();
         var id = $(this).data('id');
         Swal.fire({
-            title: 'ຍືນຍັນການລົບ?',
-            text: "ທ່ານຕ້ອງການລົບຫ້ອງນີ້ແທ້ບໍ່?",
+            title: '<?php echo $lang['confirm_delete']; ?>',
+            text: "<?php echo $lang['delete_warning_room'] ?? 'ທ່ານຕ້ອງການລົບຫ້ອງນີ້ແທ້ບໍ່?'; ?>",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'ລົບເລີຍ!',
-            cancelButtonText: 'ຍົກເລີກ'
+            confirmButtonText: '<?php echo $lang['confirm'] ?? 'ຢືນຢັນ'; ?>',
+            cancelButtonText: '<?php echo $lang['cancel']; ?>'
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = "?delete=" + id;
@@ -403,7 +412,7 @@ $(document).ready(function() {
             // Show toast
             Swal.fire({
                 icon: 'success',
-                title: 'ອັບເດດສຳເລັດ!',
+                title: '<?php echo $lang['save_success']; ?>',
                 toast: true,
                 position: 'top-end',
                 showConfirmButton: false,
@@ -411,7 +420,11 @@ $(document).ready(function() {
             });
         }).fail(function() {
             $sel.removeClass('hk-saving');
-            Swal.fire({ icon: 'error', title: 'ຜິດພາດ', text: 'ບໍ່ສາມາດອັບເດດໄດ້' });
+            Swal.fire({ 
+                icon: 'error', 
+                title: '<?php echo $lang['error_label'] ?? 'ຜິດພາດ'; ?>', 
+                text: '<?php echo $lang['error_occurred'] ?? 'ບໍ່ສາມາດອັບເດດໄດ້'; ?>' 
+            });
         });
     });
 });

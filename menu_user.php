@@ -436,10 +436,7 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
   <!-- Content Wrapper. Contains page content -->
   <div class="content-wrapper">
     <?php 
-      $iframe_src = $_GET['redirect'] ?? 'Homepage.php';
-      if (strpos($iframe_src, 'http') !== false || strpos($iframe_src, '//') !== false) {
-          $iframe_src = 'Homepage.php';
-      }
+      $iframe_src = 'Homepage.php';
     ?>
     <iframe width="100%" height="100%" frameborder="0" name="frame" src="<?php echo $iframe_src; ?>"></iframe>
 
@@ -633,22 +630,11 @@ window.addEventListener('pageshow', function (event) {
     }
 });
 
-// Language dropdown switch preservation
+// Language dropdown switch
 $('.lang-dropdown-item').on('click', function(e) {
   e.preventDefault();
   var lang = $(this).data('lang');
-  var iframe = document.getElementsByName('frame')[0];
-  var currentUrl = 'Homepage.php';
-  
-  try {
-    var path = iframe.contentWindow.location.pathname;
-    currentUrl = path.split('/').pop() + iframe.contentWindow.location.search;
-    if(!currentUrl || currentUrl === 'blank') currentUrl = 'Homepage.php';
-  } catch(err) {
-    currentUrl = 'Homepage.php';
-  }
-  
-  window.location.href = '?lang=' + lang + '&redirect=' + encodeURIComponent(currentUrl);
+  window.location.href = '?lang=' + lang;
 });
 </script>
 </body>

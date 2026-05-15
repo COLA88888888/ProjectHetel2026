@@ -720,7 +720,7 @@ if ($selected_booking_id > 0) {
         <div class="product-scroll" id="prodGrid">
             <div id="noProductsMsg" class="col-12 text-center py-5 text-muted w-100" style="display: none; grid-column: 1 / -1;">
                 <i class="fas fa-search fa-3x mb-3 d-block" style="color: #ddd;"></i>
-                <h5>ບໍ່ມີສິນຄ້າທີ່ທ່ານຄົ້ນຫາ</h5>
+                <h5><?php echo $lang['no_products_found']; ?></h5>
             </div>
             <?php foreach($products_list as $p): ?>
                 <div class="product-card" 
@@ -750,8 +750,8 @@ if ($selected_booking_id > 0) {
                     <div class="product-card-body">
                         <div class="text-muted small mb-1"><?php echo htmlspecialchars($p['prod_code'] ?? '-'); ?></div>
                         <div class="product-name"><?php echo htmlspecialchars($p[$prod_name_col] ?: $p['prod_name']); ?></div>
-                        <div class="product-price"><?php echo number_format($p['sprice']); ?> ກີບ</div>
-                        <div class="product-stock">ຄົງເຫຼືອ: <?php echo $p['qty']; ?></div>
+                        <div class="product-price"><?php echo number_format($p['sprice']); ?> ₭</div>
+                        <div class="product-stock"><?php echo $lang['remaining']; ?>: <?php echo $p['qty']; ?></div>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -761,7 +761,7 @@ if ($selected_booking_id > 0) {
     <!-- Order Panel -->
     <div class="order-column" id="orderContainer">
         <div class="room-selector-area">
-            <label class="text-muted small text-uppercase font-weight-bold mb-2 d-block"><i class="fas fa-search mr-1"></i> ເລືອກຫ້ອງທີ່ສັ່ງ (Select Room)</label>
+            <label class="text-muted small text-uppercase font-weight-bold mb-2 d-block"><i class="fas fa-search mr-1"></i> <?php echo $lang['select_room_to_order']; ?></label>
             <div class="d-flex align-items-center" style="gap: 8px;">
                 <div style="flex: 1;">
                     <select id="roomSelect" class="form-control form-control-lg border-primary select2">
@@ -772,16 +772,16 @@ if ($selected_booking_id > 0) {
                                     data-phone="<?php echo htmlspecialchars($b['customer_phone'] ?: '-'); ?>"
                                     data-type="<?php echo htmlspecialchars($b['room_type'] ?: '-'); ?>"
                                     <?php echo ($selected_booking_id == $b['booking_id']) ? 'selected' : ''; ?>>
-                                ຫ້ອງ <?php echo htmlspecialchars($b['room_number']); ?> - <?php echo htmlspecialchars($b['customer_name']); ?>
+                                <?php echo $lang['room']; ?> <?php echo htmlspecialchars($b['room_number']); ?> - <?php echo htmlspecialchars($b['customer_name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <button type="button" class="btn btn-primary" id="btnShowRoomGrid" title="ເບິ່ງແບບຜັງຫ້ອງ">
+                <button type="button" class="btn btn-primary" id="btnShowRoomGrid" title="<?php echo $lang['view_room_grid']; ?>">
                     <i class="fas fa-th fa-lg"></i>
                 </button>
             </div>
-            <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle text-info"></i> ຄລິກທີ່ປຸ່ມສີຟ້າເພື່ອເບິ່ງຫ້ອງທັງໝົດ</p>
+            <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle text-info"></i> <?php echo $lang['click_blue_to_view_all']; ?></p>
         </div>
 
         <div class="order-list">
@@ -903,7 +903,7 @@ if ($selected_booking_id > 0) {
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                         </div>
-                        <input type="text" id="gridRoomSearch" class="form-control" placeholder="ຄົ້ນຫາເບີຫ້ອງ ຫຼື ຊື່ລູກຄ້າ...">
+                        <input type="text" id="gridRoomSearch" class="form-control" placeholder="<?php echo $lang['search_room_guest']; ?>">
                     </div>
                 </div>
                 <div class="room-grid-container" id="roomGridItems">
@@ -1070,7 +1070,7 @@ $(function() {
         var bookingId = $('#roomSelect').val();
 
         if(!bookingId) {
-            Swal.fire('ຜິດພາດ', 'ກະລຸນາເລືອກຫ້ອງກ່ອນ!', 'error');
+            Swal.fire('<?php echo $lang['error_label']; ?>', '<?php echo $lang['select_room_before_msg']; ?>', 'error');
             return;
         }
 
@@ -1102,7 +1102,7 @@ $(function() {
                 });
                 Toast.fire({
                     icon: 'success',
-                    title: 'ເພີ່ມ ' + name + ' ແລ້ວ'
+                    title: '<?php echo str_replace('%s', "' + name + '", $lang['added_msg']); ?>'
                 });
             }
         });
@@ -1112,7 +1112,7 @@ $(function() {
         if ($.fn.select2) {
             $('.select2').select2({
                 theme: 'bootstrap4',
-                placeholder: "ເລືອກຫ້ອງ...",
+                placeholder: "<?php echo $lang['select_room'] ?? 'Select Room...'; ?>",
                 minimumResultsForSearch: Infinity
             });
         }
@@ -1149,14 +1149,14 @@ $(function() {
 
 function confirmDelete(id, booking_id) {
     Swal.fire({
-        title: 'ຢືນຢັນການລົບ?',
-        text: "ທ່ານຕ້ອງການລົບລາຍການນີ້ແທ້ຫຼືບໍ່?",
+        title: '<?php echo $lang['confirm_delete_question'] ?? 'Confirm Delete?'; ?>',
+        text: "<?php echo $lang['delete_confirm_msg']; ?>",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        confirmButtonText: 'ຢືນຢັນ',
-        cancelButtonText: 'ຍົກເລີກ'
+        confirmButtonText: '<?php echo $lang['confirm']; ?>',
+        cancelButtonText: '<?php echo $lang['cancel']; ?>'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = 'room_service.php?delete=' + id + '&booking_id=' + booking_id;
@@ -1166,14 +1166,14 @@ function confirmDelete(id, booking_id) {
 
 function clearAllItems(booking_id) {
     Swal.fire({
-        title: 'ຢືນຢັນການຍົກເລີກທັງໝົດ?',
-        text: "ລາຍການທັງໝົດໃນຫ້ອງນີ້ຈະຖືກລຶບອອກ ແລະ ຄືນສະຕັອກສິນຄ້າທັນທີ!",
+        title: '<?php echo $lang['confirm_clear_all_question']; ?>',
+        text: "<?php echo $lang['clear_all_warning_msg']; ?>",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        confirmButtonText: 'ຢືນຢັນການຍົກເລີກ',
-        cancelButtonText: 'ກັບຄືນ'
+        confirmButtonText: '<?php echo $lang['confirm_cancel']; ?>',
+        cancelButtonText: '<?php echo $lang['back']; ?>'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = 'room_service.php?clear_all=' + booking_id;

@@ -3,6 +3,15 @@ session_start();
 require_once 'config/session_check.php';
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 // Handle Checkout
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['checkout_pos']) || isset($_POST['cart_prod_id']))) {
     if (!empty($_POST['cart_prod_id'])) {
@@ -62,7 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['checkout_pos']) || is
 }
 
 // Fetch available products with localized names
-$current_lang = $_SESSION['lang'] ?? 'la';
 $prod_name_col = "prod_name_" . $current_lang;
 $cat_name_col = "name_" . $current_lang;
 
@@ -87,7 +95,12 @@ $stmtCur = $pdo->query("SELECT * FROM currency WHERE is_default = 1 LIMIT 1");
 $default_currency = $stmtCur->fetch();
 $currency_symbol = $default_currency['symbol'] ?? '₭';
 
-// Group products by category for counting
+// Group products by category for counting and define icons
+$catIcons = [
+    'ເຄື່ອງດື່ມ' => 'fa-glass-cheers',
+    'ອາຫານ' => 'fa-utensils',
+    'ຂະໜົມ' => 'fa-cookie-bite',
+];
 $catCounts = [];
 foreach ($products as $p) {
     $cat = $p['category'] ?: 'ອື່ນໆ';
@@ -99,7 +112,7 @@ foreach ($products as $p) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS ຂາຍສິນຄ້າ</title>
+    <title><?php echo $lang['pos']; ?> - POS</title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
@@ -254,13 +267,13 @@ foreach ($products as $p) {
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'success',
-                    title: 'ຊຳລະເງິນສຳເລັດ!',
-                    text: 'ທ່ານຕ້ອງການພິມໃບບິນຫຼືບໍ່?',
+                    title: '<?php echo $lang['payment_success']; ?>',
+                    text: '<?php echo $lang['print_receipt_question']; ?>',
                     showCancelButton: true,
                     confirmButtonColor: '#28a745',
                     cancelButtonColor: '#6c757d',
-                    confirmButtonText: '<i class="fas fa-print"></i> ພິມໃບບິນ',
-                    cancelButtonText: 'ປິດ'
+                    confirmButtonText: '<i class="fas fa-print"></i> <?php echo $lang['print_receipt']; ?>',
+                    cancelButtonText: '<?php echo $lang['close']; ?>'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         window.open('print_receipt.php?bill_id=<?php echo $_SESSION['print_bill']; ?>', '_blank');
@@ -272,7 +285,7 @@ foreach ($products as $p) {
 
     <div class="row mb-3 align-items-center">
         <div class="col-12">
-            <h2 class="mb-0"><i class="fas fa-cash-register text-primary"></i> ຈຸດຂາຍສິນຄ້າ (POS)</h2>
+            <h2 class="mb-0"><i class="fas fa-cash-register text-primary"></i> <?php echo $lang['pos']; ?></h2>
         </div>
     </div>
 
@@ -286,7 +299,7 @@ foreach ($products as $p) {
                         <div class="input-group-prepend">
                             <span class="input-group-text text-white"><i class="fas fa-search"></i></span>
                         </div>
-                        <input type="text" id="mainSearch" class="form-control" placeholder="ຄົ້ນຫາສິນຄ້າ ຫຼື ສະແກນບາໂຄ້ດ (Search or Scan Barcode)..." autofocus autocomplete="off" style="height: 50px; font-size: 1.1rem;">
+                        <input type="text" id="mainSearch" class="form-control" placeholder="<?php echo $lang['search_scan_barcode']; ?>" autofocus autocomplete="off" style="height: 50px; font-size: 1.1rem;">
                     </div>
                 </div>
             </div>
@@ -295,18 +308,13 @@ foreach ($products as $p) {
             <div class="mb-3">
                 <div class="cat-scroll">
                     <button class="cat-btn active" data-cat="all">
-                        <i class="fas fa-th-large mr-1"></i> ທັງໝົດ
+                        <i class="fas fa-th-large mr-1"></i> <?php echo $lang['all']; ?>
                         <span class="badge badge-danger ml-1"><?php echo count($products); ?></span>
                     </button>
                     <?php 
-                    // $catIcons = [
-                    //     'ເຄື່ອງດື່ມ' => 'fa-glass-cheers',
-                    //     'ອາຫານ' => 'fa-utensils',
-                    //     'ຂະໜົມ' => 'fa-cookie-bite',
-                    // ];
                     foreach($categories as $cat): 
                         $catName = $cat['name'];
-                        // $icon = $catIcons[$catName] ?? 'fa-tag';
+                        $icon = $catIcons[$catName] ?? 'fa-tag';
                         $count = $catCounts[$catName] ?? 0;
                         if ($count == 0) continue;
                     ?>
@@ -325,7 +333,7 @@ foreach ($products as $p) {
                     <div class="row" id="productList">
                         <div id="noResultsMsg" class="col-12 text-center py-5 text-muted" style="display: none;">
                             <i class="fas fa-search fa-3x mb-3 d-block" style="color: #ddd;"></i>
-                            <h5>ບໍ່ມີສິນຄ້າທີ່ທ່ານຄົ້ນຫາ</h5>
+                            <h5><?php echo $lang['no_products_found']; ?></h5>
                         </div>
                         <?php foreach($products as $p): ?>
                             <div class="col-xl-3 col-lg-4 col-md-6 col-6 mb-3 product-item" data-category="<?php echo htmlspecialchars($p['category']); ?>">
@@ -335,7 +343,7 @@ foreach ($products as $p) {
                                     <span class="cat-label"><?php echo htmlspecialchars($p['cat_'.$current_lang] ?? $p['category'] ?? 'ອື່ນໆ'); ?></span>
                                     <!-- Stock Badge -->
                                     <?php if($p['qty'] <= 10): ?>
-                                        <span class="stock-badge badge badge-danger">ໃກ້ໝົດ</span>
+                                        <span class="stock-badge badge badge-danger"><?php echo $lang['low_stock']; ?></span>
                                     <?php endif; ?>
                                     
                                     <?php if(!empty($p['image'])): ?>
@@ -352,7 +360,7 @@ foreach ($products as $p) {
                                         <div class="product-name text-truncate"><?php echo htmlspecialchars($p[$prod_name_col] ?: $p['prod_name']); ?></div>
                                         <div class="text-muted small mb-1"><?php echo htmlspecialchars($p['prod_code'] ?? '-'); ?></div>
                                         <div class="product-price mt-1"><?php echo number_format($p['sprice']); ?> <?php echo $currency_symbol; ?></div>
-                                        <div class="product-stock">ເຫຼືອ: <?php echo number_format($p['qty']); ?></div>
+                                        <div class="product-stock"><?php echo $lang['remaining']; ?>: <?php echo number_format($p['qty']); ?></div>
                                     </div>
                                 </div>
                             </div>
@@ -360,7 +368,7 @@ foreach ($products as $p) {
                         <?php if(empty($products)): ?>
                             <div class="col-12 text-center py-5 text-muted">
                                 <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
-                                <h5>ບໍ່ມີສິນຄ້າພ້ອມຂາຍ</h5>
+                                Safely Localizing pos.php<h5><?php echo $lang['no_products_available']; ?></h5>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -372,34 +380,34 @@ foreach ($products as $p) {
         <div class="col-lg-4 col-md-5">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 4px; display: flex; flex-direction: column;">
                 <div class="card-header bg-white d-flex align-items-center" style="border-radius: 4px 4px 0 0;">
-                    <h5 class="m-0 font-weight-bold"><i class="fas fa-shopping-cart text-primary"></i> ກະຕ່າ</h5>
-                    <button class="btn btn-xs btn-outline-danger ml-auto" onclick="clearCart()" style="font-size: 0.75rem;"><i class="fas fa-trash-alt"></i> ລ້າງທັງໝົດ</button>
+                    <h5 class="m-0 font-weight-bold"><i class="fas fa-shopping-cart text-primary"></i> <?php echo $lang['cart']; ?></h5>
+                    <button class="btn btn-xs btn-outline-danger ml-auto" onclick="clearCart()" style="font-size: 0.75rem;"><i class="fas fa-trash-alt"></i> <?php echo $lang['clear_all_btn']; ?></button>
                 </div>
                 <div class="card-body p-0 cart-container" id="cartItems" style="flex: 1;">
                     <div class="text-center text-muted py-5" id="emptyCartMsg">
                         <i class="fas fa-shopping-basket fa-3x mb-3 d-block" style="color: #ddd;"></i>
-                        <p class="mb-0">ກົດສິນຄ້າເພື່ອເພີ່ມ</p>
+                        <p class="mb-0"><?php echo $lang['click_to_add']; ?></p>
                     </div>
                 </div>
                 <div class="card-footer bg-white border-top" style="border-radius: 0 0 4px 4px;">
                     <div class="px-2 mb-2">
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">ລວມຍ່ອຍ:</span>
+                            <span class="text-muted"><?php echo $lang['subtotal']; ?>:</span>
                             <span class="font-weight-bold"><span id="cartSubtotal">0</span> <?php echo $currency_symbol; ?></span>
                         </div>
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">ພາສີ (<?php echo $tax_percent; ?>%):</span>
+                            <span class="text-muted"><?php echo $lang['tax']; ?> (<?php echo $tax_percent; ?>%):</span>
                             <span class="font-weight-bold text-info"><span id="cartTax">0</span> <?php echo $currency_symbol; ?></span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                            <span class="font-weight-bold text-dark" style="font-size: 1.1rem;">ລວມທັງໝົດ:</span>
+                            <span class="font-weight-bold text-dark" style="font-size: 1.1rem;"><?php echo $lang['grand_total']; ?>:</span>
                             <span class="font-weight-bold text-danger" style="font-size: 1.4rem;"><span id="cartTotal">0</span> <?php echo $currency_symbol; ?></span>
                         </div>
                     </div>
                     <form action="" method="post" id="posForm">
                         <div id="hiddenInputs"></div>
                         <button type="submit" name="checkout_pos" class="btn btn-success btn-lg btn-block" id="btnCheckout" disabled style="border-radius: 4px; font-size: 1rem;">
-                            <i class="fas fa-money-bill-wave"></i> ຊຳລະເງິນ
+                            <i class="fas fa-money-bill-wave"></i> <?php echo $lang['checkout']; ?>
                         </button>
                     </form>
                 </div>
@@ -503,7 +511,7 @@ function addToCart(id, name, price, maxQty, image, code) {
         if (cart[id].qty < maxQty) {
             cart[id].qty++;
         } else {
-            Swal.fire({ icon: 'warning', title: 'ສິນຄ້າໝົດ', text: 'ມີໃນສະຕັອກພຽງ ' + maxQty + ' ຊິ້ນ', timer: 1500, showConfirmButton: false });
+            Swal.fire({ icon: 'warning', title: '<?php echo $lang['out_of_stock']; ?>', text: '<?php echo $lang['stock_only_has']; ?> ' + maxQty + ' <?php echo $lang['unit'] ?? 'ຊິ້ນ'; ?>', timer: 1500, showConfirmButton: false });
             return;
         }
     } else {
@@ -522,7 +530,7 @@ function updateQty(id, delta) {
         if (newQty <= 0) {
             delete cart[id];
         } else if (newQty > cart[id].maxQty) {
-            Swal.fire({ icon: 'warning', title: 'ໝົດສະຕັອກ', timer: 1200, showConfirmButton: false });
+            Swal.fire({ icon: 'warning', title: '<?php echo $lang['out_of_stock']; ?>', timer: 1200, showConfirmButton: false });
         } else {
             cart[id].qty = newQty;
         }
@@ -538,12 +546,12 @@ function removeItem(id) {
 function clearCart() {
     if (Object.keys(cart).length === 0) return;
     Swal.fire({
-        title: 'ລ້າງກະຕ່າ?',
+        title: '<?php echo $lang['clear_cart_question']; ?>',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        confirmButtonText: 'ລ້າງເລີຍ',
-        cancelButtonText: 'ຍົກເລີກ'
+        confirmButtonText: '<?php echo $lang['clear_now']; ?>',
+        cancelButtonText: '<?php echo $lang['cancel']; ?>'
     }).then((result) => {
         if (result.isConfirmed) { cart = {}; localStorage.removeItem('pos_cart'); renderCart(); }
     });
@@ -614,13 +622,13 @@ function renderCart() {
         $('#cartItems').html(`
             <div class="text-center text-muted py-5">
                 <i class="fas fa-shopping-basket fa-3x mb-3 d-block" style="color: #ddd;"></i>
-                <p class="mb-0">ກົດສິນຄ້າເພື່ອເພີ່ມ</p>
+                <p class="mb-0"><?php echo $lang['click_to_add']; ?></p>
             </div>
         `);
-        $('#btnCheckout').prop('disabled', true).html('<i class="fas fa-money-bill-wave"></i> ຊຳລະເງິນ');
+        $('#btnCheckout').prop('disabled', true).html('<i class="fas fa-money-bill-wave"></i> <?php echo $lang['checkout']; ?>');
     } else {
         $('#cartItems').html(html);
-        $('#btnCheckout').prop('disabled', false).html('<i class="fas fa-money-bill-wave"></i> ຊຳລະເງິນ (' + itemCount + ' ລາຍການ)');
+        $('#btnCheckout').prop('disabled', false).html('<i class="fas fa-money-bill-wave"></i> <?php echo $lang['checkout']; ?> (' + itemCount + ' <?php echo $lang['item_label'] ?? 'ລາຍການ'; ?>)');
     }
 
     let taxAmount = Math.round(total * (taxPercent / 100));
@@ -639,31 +647,31 @@ $('#posForm').on('submit', function(e) {
     var totalVal = parseFloat(totalStr.replace(/,/g, '')) || 0;
     
     Swal.fire({
-        title: 'ຊຳລະເງິນ',
+        title: '<?php echo $lang['checkout']; ?>',
         html: `
             <div class="text-left mb-3">
                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                    <span class="font-weight-bold">ຍອດລວມທັງໝົດ:</span>
+                    <span class="font-weight-bold"><?php echo $lang['total_amount_label']; ?>:</span>
                     <strong class="text-danger" style="font-size: 1.5rem;">${totalStr} ${currencySymbol}</strong>
                 </div>
                 <div class="form-group mb-2">
-                    <label class="small font-weight-bold">ວິທີຊຳລະ</label>
+                    <label class="small font-weight-bold"><?php echo $lang['payment_method_label']; ?></label>
                     <select id="swal_payment_method" class="form-control">
-                        <option value="ເງິນສົດ">ເງິນສົດ</option>
-                        <option value="ເງິນໂອນ">ເງິນໂອນ</option>
+                        <option value="Cash"><?php echo $lang['cash']; ?></option>
+                        <option value="Transfer"><?php echo $lang['transfer']; ?></option>
                     </select>
                 </div>
                 <div class="form-group mb-2">
-                    <label class="small font-weight-bold">ຮັບເງິນມາ</label>
+                    <label class="small font-weight-bold"><?php echo $lang['amount_received_label']; ?></label>
                     <div class="input-group">
                         <input type="text" id="swal_received" class="form-control text-right font-weight-bold" placeholder="0">
                         <div class="input-group-append">
-                            <button type="button" id="swal_btn_full" class="btn btn-primary btn-sm px-2">ຮັບເຕັມ</button>
+                            <button type="button" id="swal_btn_full" class="btn btn-primary btn-sm px-2"><?php echo $lang['receive_full']; ?></button>
                         </div>
                     </div>
                 </div>
                 <div class="form-group mb-0">
-                    <label class="small font-weight-bold">ເງິນທອນ</label>
+                    <label class="small font-weight-bold"><?php echo $lang['change_amount_label']; ?></label>
                     <input type="text" id="swal_change" class="form-control text-right text-danger font-weight-bold" value="0" readonly>
                 </div>
             </div>
@@ -671,8 +679,8 @@ $('#posForm').on('submit', function(e) {
         showCancelButton: true,
         confirmButtonColor: '#28a745',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'ຢືນຢັນການຂາຍ',
-        cancelButtonText: 'ຍົກເລີກ',
+        confirmButtonText: '<?php echo $lang['confirm_sale']; ?>',
+        cancelButtonText: '<?php echo $lang['cancel']; ?>',
         didOpen: () => {
             const popup = Swal.getPopup();
             const receivedInput = popup.querySelector('#swal_received');
@@ -696,7 +704,7 @@ $('#posForm').on('submit', function(e) {
             });
 
             methodSelect.addEventListener('change', (e) => {
-                if (e.target.value === 'ເງິນໂອນ') {
+                if (e.target.value === 'Transfer') {
                     receivedInput.value = totalVal.toLocaleString('en-US');
                     receivedInput.readOnly = true;
                     fullBtn.disabled = true;
@@ -722,8 +730,8 @@ $('#posForm').on('submit', function(e) {
             const method = popup.querySelector('#swal_payment_method').value;
             const change = parseFloat(popup.querySelector('#swal_change').value.replace(/,/g, '')) || 0;
 
-            if (received < totalVal && method === 'ເງິນສົດ') {
-                Swal.showValidationMessage('ຍອດເງິນບໍ່ພຽງພໍ!');
+            if (received < totalVal && method === 'Cash') {
+                Swal.showValidationMessage('<?php echo $lang['insufficient_balance_msg']; ?>');
                 return false;
             }
             return { received, method, change };
@@ -753,8 +761,8 @@ $('#posForm').on('submit', function(e) {
     document.body.appendChild(printFrame);
     
     Swal.fire({
-        title: 'ຂາຍສຳເລັດແລ້ວ!',
-        text: 'ລະບົບກຳລັງສັ່ງພິມໃບບິນໃຫ້ທ່ານ...',
+        title: '<?php echo $lang['sale_success']; ?>',
+        text: '<?php echo $lang['printing_receipt_msg']; ?>',
         confirmButtonColor: '#28a745',
         padding: '2rem',
         timer: 3000,

@@ -2,6 +2,15 @@
 session_start();
 require_once '../config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "../lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "../lang/la.php";
+}
+
 if (!isset($_GET['id'])) {
     header("Location: select_rooms.php");
     exit();
@@ -31,11 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
 
     $stmt = $pdo->prepare("UPDATE rooms SET room_number = ?, room_type = ?, bed_type = ?, price = ?, status = ?, housekeeping_status = ? WHERE id = ?");
     if ($stmt->execute([$room_number, $room_type, $bed_type, $price, $status, $housekeeping_status, $id])) {
-        $_SESSION['success'] = "ແກ້ໄຂຂໍ້ມູນຫ້ອງສຳເລັດ";
+        $_SESSION['success'] = $lang['save_success'];
         header("Location: select_rooms.php");
         exit();
     } else {
-        $_SESSION['error'] = "ເກີດຂໍ້ຜິດພາດໃນການແກ້ໄຂ";
+        $_SESSION['error'] = $lang['error_occurred'];
     }
 }
 ?>
@@ -44,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ແກ້ໄຂຂໍ້ມູນຫ້ອງ</title>
+    <title><?php echo $lang['edit_room'] ?? 'ແແກ້ໄຂຂໍ້ມູນຫ້ອງ'; ?></title>
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
     <!-- Font Awesome -->
@@ -66,16 +75,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
         <div class="col-md-6">
             <div class="card card-warning card-outline">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-edit"></i> ແກ້ໄຂຂໍ້ມູນຫ້ອງ (<?php echo htmlspecialchars($room['room_number']); ?>)</h3>
+                    <h3 class="card-title"><i class="fas fa-edit"></i> <?php echo $lang['edit'] ?? 'ແກ້ໄຂ'; ?> (<?php echo htmlspecialchars($room['room_number']); ?>)</h3>
                 </div>
                 <form action="" method="post" id="editRoomForm">
                     <div class="card-body">
                         <div class="form-group">
-                            <label>ເລກຫ້ອງ</label>
+                            <label><?php echo $lang['room_number_label']; ?></label>
                             <input type="text" name="room_number" id="room_number" class="form-control" value="<?php echo htmlspecialchars($room['room_number']); ?>">
                         </div>
                         <div class="form-group">
-                            <label>ປະເພດຫ້ອງ</label>
+                            <label><?php echo $lang['room_type_label']; ?></label>
                             <select name="room_type" id="room_type" class="form-control">
                                 <?php foreach($room_types as $rt): ?>
                                     <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>" <?php echo ($rt['room_type_name'] == $room['room_type']) ? 'selected' : ''; ?>>
@@ -85,36 +94,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>ປະເພດຕຽງ</label>
+                            <label><?php echo $lang['bed_type_label']; ?></label>
                             <select name="bed_type" id="bed_type" class="form-control">
                                 <option value="ຕຽງດ່ຽວ" <?php echo ($room['bed_type'] == 'ຕຽງດ່ຽວ') ? 'selected' : ''; ?>>ຕຽງດ່ຽວ (Single)</option>
                                 <option value="ຕຽງຄູ່" <?php echo ($room['bed_type'] == 'ຕຽງຄູ່') ? 'selected' : ''; ?>>ຕຽງຄູ່ (Double)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>ລາຄາຕໍ່ຄືນ (ກີບ)</label>
+                            <label><?php echo $lang['price_per_night']; ?> (₭)</label>
                             <input type="text" name="price" id="price" class="form-control number-format" value="<?php echo number_format((int)$room['price']); ?>">
                         </div>
                         <div class="form-group">
-                            <label>ສະຖານະຫ້ອງ (ການຈອງ)</label>
+                            <label><?php echo $lang['status_label'] ?? 'ສະຖານະຫ້ອງ'; ?></label>
                             <select name="status" id="status" class="form-control">
-                                <option value="Available" <?php echo ($room['status'] == 'Available') ? 'selected' : ''; ?>>ຫວ່າງ (Available)</option>
-                                <option value="Booked" <?php echo ($room['status'] == 'Booked') ? 'selected' : ''; ?>>ຖືກຈອງແລ້ວ (Booked)</option>
-                                <option value="Occupied" <?php echo ($room['status'] == 'Occupied') ? 'selected' : ''; ?>>ມີແຂກພັກ (Occupied)</option>
+                                <option value="Available" <?php echo ($room['status'] == 'Available') ? 'selected' : ''; ?>><?php echo $lang['available']; ?></option>
+                                <option value="Booked" <?php echo ($room['status'] == 'Booked') ? 'selected' : ''; ?>><?php echo $lang['booked']; ?></option>
+                                <option value="Occupied" <?php echo ($room['status'] == 'Occupied') ? 'selected' : ''; ?>><?php echo $lang['occupied']; ?></option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>ສະຖານະຄວາມພ້ອມ (ແມ່ບ້ານ)</label>
+                            <label><?php echo $lang['housekeeping_status_label']; ?></label>
                             <select name="housekeeping_status" id="housekeeping_status" class="form-control">
-                                <option value="ພ້ອມໃຊ້" <?php echo ($room['housekeeping_status'] == 'ພ້ອມໃຊ້' || $room['housekeeping_status'] == 'Ready') ? 'selected' : ''; ?>>ຫ້ອງສະອາດ (ພ້ອມໃຊ້)</option>
-                                <option value="Cleaning" <?php echo ($room['housekeeping_status'] == 'Cleaning') ? 'selected' : ''; ?>>ຫ້ອງກຳລັງທຳຄວາມສະອາດ (Cleaning)</option>
-                                <option value="Maintenance" <?php echo ($room['housekeeping_status'] == 'Maintenance') ? 'selected' : ''; ?>>ຫ້ອງເສຍ (Maintenance)</option>
+                                <option value="ພ້ອມໃຊ້" <?php echo ($room['housekeeping_status'] == 'ພ້ອມໃຊ້' || $room['housekeeping_status'] == 'Ready') ? 'selected' : ''; ?>><?php echo $lang['ready']; ?></option>
+                                <option value="Cleaning" <?php echo ($room['housekeeping_status'] == 'Cleaning') ? 'selected' : ''; ?>><?php echo $lang['cleaning']; ?></option>
+                                <option value="Maintenance" <?php echo ($room['housekeeping_status'] == 'Maintenance') ? 'selected' : ''; ?>><?php echo $lang['maintenance']; ?></option>
                             </select>
                         </div>
                     </div>
                     <div class="card-footer text-center">
-                        <button type="submit" name="update" class="btn btn-warning"><i class="fas fa-save"></i> ບັນທຶກການແກ້ໄຂ</button>
-                        <a href="select_rooms.php" class="btn btn-default"><i class="fas fa-arrow-left"></i> ກັບຄືນ</a>
+                        <button type="submit" name="update" class="btn btn-warning"><i class="fas fa-save"></i> <?php echo $lang['save']; ?></button>
+                        <a href="select_rooms.php" class="btn btn-default"><i class="fas fa-arrow-left"></i> <?php echo $lang['back']; ?></a>
                     </div>
                 </form>
             </div>

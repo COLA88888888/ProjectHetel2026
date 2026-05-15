@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
         <div class="col-md-4">
             <div class="card card-info card-outline shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-bed"></i> ຂໍ້ມູນຫ້ອງພັກ</h3>
+                    <h3 class="card-title"><i class="fas fa-bed"></i> <?php echo $lang['room_details'] ?? 'ຂໍ້ມູນຫ້ອງພັກ'; ?></h3>
                 </div>
                 <div class="card-body box-profile text-center">
                     <div class="display-3 text-info mb-3">
@@ -236,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>ຍອດຈ່າຍທັງໝົດ (ກີບ) <span class="text-danger">*</span></label>
+                                    <label><?php echo $lang['grand_total']; ?> (₭) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">₭</span>
@@ -285,9 +285,9 @@ $(document).ready(function() {
             e.preventDefault();
             Swal.fire({
                 icon: 'warning',
-                title: 'ຂໍ້ມູນບໍ່ຄົບຖ້ວນ',
-                text: 'ກະລຸນາປ້ອນຊື່ ແລະ ເບີໂທລູກຄ້າໃຫ້ຄົບຖ້ວນ!',
-                confirmButtonText: 'ຕົກລົງ'
+                title: '<?php echo $lang['warning_label'] ?? 'ຂໍ້ມູນບໍ່ຄົບຖ້ວນ'; ?>',
+                text: '<?php echo $lang['enter_name_phone_msg'] ?? 'ກະລຸນາປ້ອນຊື່ ແລະ ເບີໂທລູກຄ້າໃຫ້ຄົບຖ້ວນ!'; ?>',
+                confirmButtonText: '<?php echo $lang['ok']; ?>'
             });
             return false;
         }

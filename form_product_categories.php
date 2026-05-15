@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 // Handle Add Category
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_category'])) {
     $name_la = trim($_POST['name_la']);
@@ -67,14 +76,13 @@ if (isset($_GET['delete'])) {
 $stmt = $pdo->query("SELECT * FROM product_categories ORDER BY id DESC");
 $categories = $stmt->fetchAll();
 
-$current_lang = $_SESSION['lang'] ?? 'la';
 $name_col = "name_" . $current_lang;
 ?>
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="<?php echo $current_lang; ?>">
 <head>
     <meta charset="UTF-8">
-    <title>ຈັດການປະເພດສິນຄ້າ</title>
+    <title><?php echo $lang['manage_product_categories']; ?></title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
@@ -99,42 +107,42 @@ $name_col = "name_" . $current_lang;
     <?php if(isset($_SESSION['success'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'success', title: 'ສຳເລັດ', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 1500 });
+                Swal.fire({ icon: 'success', title: '<?php echo $lang['success_label'] ?? 'ສຳເລັດ'; ?>', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 1500 });
             });
         </script>
     <?php unset($_SESSION['success']); endif; ?>
 
     <div class="row mb-3">
         <div class="col-12">
-            <h2><i class="fas fa-tags"></i> ຈັດການປະເພດສິນຄ້າ</h2>
+            <h2><i class="fas fa-tags"></i> <?php echo $lang['manage_product_categories']; ?></h2>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-4">
             <div class="card card-primary card-outline shadow-sm">
-                <div class="card-header"><h3 class="card-title">ເພີ່ມປະເພດໃໝ່</h3></div>
+                <div class="card-header"><h3 class="card-title"><?php echo $lang['add_new_category']; ?></h3></div>
                 <form action="" method="post">
                     <div class="card-body">
                         <div class="form-group">
-                            <label>ລະຫັດປະເພດ</label>
-                            <input type="text" name="category_code" class="form-control" placeholder="ກະລຸນາປ້ອນລະຫັດປະເພດ...">
+                            <label><?php echo $lang['category_code_label']; ?></label>
+                            <input type="text" name="category_code" class="form-control" placeholder="<?php echo $lang['category_code_label']; ?>...">
                         </div>
                         <div class="form-group">
-                            <label>ຊື່ປະເພດສິນຄ້າ (Lao)</label>
-                            <input type="text" name="name_la" class="form-control" placeholder="ຊື່ພາສາລາວ..." required>
+                            <label><?php echo $lang['category_name_la']; ?></label>
+                            <input type="text" name="name_la" class="form-control" placeholder="Lao..." required>
                         </div>
                         <div class="form-group">
-                            <label>Category Name (English)</label>
-                            <input type="text" name="name_en" class="form-control" placeholder="English name...">
+                            <label><?php echo $lang['category_name_en']; ?></label>
+                            <input type="text" name="name_en" class="form-control" placeholder="English...">
                         </div>
                         <div class="form-group">
-                            <label>类别名称 (Chinese)</label>
-                            <input type="text" name="name_cn" class="form-control" placeholder="Chinese name...">
+                            <label><?php echo $lang['category_name_cn']; ?></label>
+                            <input type="text" name="name_cn" class="form-control" placeholder="Chinese...">
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button type="submit" name="add_category" class="btn btn-primary btn-block"><i class="fas fa-save"></i> ບັນທຶກ</button>
+                        <button type="submit" name="add_category" class="btn btn-primary btn-block"><i class="fas fa-save"></i> <?php echo $lang['save']; ?></button>
                     </div>
                 </form>
             </div>
@@ -142,15 +150,15 @@ $name_col = "name_" . $current_lang;
 
         <div class="col-md-8">
             <div class="card card-success card-outline shadow-sm">
-                <div class="card-header"><h3 class="card-title">ລາຍຊື່ປະເພດສິນຄ້າທັງໝົດ</h3></div>
+                <div class="card-header"><h3 class="card-title"><?php echo $lang['category_list']; ?></h3></div>
                 <div class="card-body p-0">
                     <table class="table table-striped table-hover text-center">
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>ລະຫັດ</th>
-                                <th class="text-left">ຊື່ປະເພດ</th>
-                                <th>ຈັດການ</th>
+                                <th><?php echo $lang['category_code_label']; ?></th>
+                                <th class="text-left"><?php echo $lang['category'] ?? 'Category'; ?></th>
+                                <th><?php echo $lang['action']; ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -167,16 +175,16 @@ $name_col = "name_" . $current_lang;
                                             data-name-en="<?php echo htmlspecialchars($c['name_en'] ?? ''); ?>"
                                             data-name-cn="<?php echo htmlspecialchars($c['name_cn'] ?? ''); ?>"
                                             data-code="<?php echo htmlspecialchars($c['category_code'] ?? ''); ?>"
-                                            title="ແກ້ໄຂ">
+                                            title="<?php echo $lang['edit']; ?>">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $c['id']; ?>" title="ລຶບ"><i class="fas fa-trash-alt"></i></a>
+                                        <a href="#" class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $c['id']; ?>" title="<?php echo $lang['delete']; ?>"><i class="fas fa-trash-alt"></i></a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">ບໍ່ມີຂໍ້ມູນ</td>
+                                    <td colspan="4" class="text-center text-muted py-4"><?php echo $lang['no_data']; ?></td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -192,7 +200,7 @@ $name_col = "name_" . $current_lang;
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header bg-warning text-white">
-        <h5 class="modal-title"><i class="fas fa-edit"></i> ແກ້ໄຂ</h5>
+        <h5 class="modal-title"><i class="fas fa-edit"></i> <?php echo $lang['edit']; ?></h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -202,25 +210,25 @@ $name_col = "name_" . $current_lang;
               <input type="hidden" name="id" id="edit_id">
               <input type="hidden" name="old_name" id="edit_old_name">
               <div class="form-group">
-                  <label>ລະຫັດປະເພດ</label>
+                  <label><?php echo $lang['category_code_label']; ?></label>
                   <input type="text" name="category_code" id="edit_code" class="form-control">
               </div>
               <div class="form-group">
-                  <label>ຊື່ປະເພດສິນຄ້າ (Lao)</label>
+                  <label><?php echo $lang['category_name_la']; ?></label>
                   <input type="text" name="name_la" id="edit_name_la" class="form-control" required>
               </div>
               <div class="form-group">
-                  <label>Category Name (English)</label>
+                  <label><?php echo $lang['category_name_en']; ?></label>
                   <input type="text" name="name_en" id="edit_name_en" class="form-control">
               </div>
               <div class="form-group">
-                  <label>类别名称 (Chinese)</label>
+                  <label><?php echo $lang['category_name_cn']; ?></label>
                   <input type="text" name="name_cn" id="edit_name_cn" class="form-control">
               </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">ຍົກເລີກ</button>
-            <button type="submit" name="edit_category" class="btn btn-warning text-white">ບັນທຶກການແກ້ໄຂ</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal"><?php echo $lang['cancel']; ?></button>
+            <button type="submit" name="edit_category" class="btn btn-warning text-white"><?php echo $lang['save']; ?></button>
           </div>
       </form>
     </div>
@@ -252,12 +260,12 @@ $('.btn-delete').on('click', function(e) {
     e.preventDefault();
     var id = $(this).data('id');
     Swal.fire({
-        title: 'ຍືນຍັນການລຶບ?',
+        title: '<?php echo $lang['confirm_delete'] ?? 'Confirm?'; ?>',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        confirmButtonText: 'ລຶບເລີຍ!'
+        confirmButtonText: '<?php echo $lang['delete']; ?>'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = "?delete=" + id;

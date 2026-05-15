@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 // Handle Add Unit
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_unit'])) {
     $unit_name_la = trim($_POST['unit_name_la']);
@@ -58,14 +67,13 @@ if (isset($_GET['delete'])) {
 $stmt = $pdo->query("SELECT * FROM product_units ORDER BY id DESC");
 $units = $stmt->fetchAll();
 
-$current_lang = $_SESSION['lang'] ?? 'la';
 $unit_name_col = "unit_name_" . $current_lang;
 ?>
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="<?php echo $current_lang; ?>">
 <head>
     <meta charset="UTF-8">
-    <title>ຈັດການຫົວໜ່ວຍສິນຄ້າ</title>
+    <title><?php echo $lang['manage_product_units']; ?></title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
@@ -91,41 +99,41 @@ $unit_name_col = "unit_name_" . $current_lang;
     <?php if(isset($_SESSION['success'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'success', title: 'ສຳເລັດ', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 1500 });
+                Swal.fire({ icon: 'success', title: '<?php echo $lang['success_label'] ?? 'ສຳເລັດ'; ?>', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 1500 });
             });
         </script>
     <?php unset($_SESSION['success']); endif; ?>
 
     <div class="row mb-3 align-items-center">
         <div class="col-sm-6">
-            <h2><i class="fas fa-balance-scale"></i> ຈັດການຫົວໜ່ວຍສິນຄ້າ</h2>
+            <h2><i class="fas fa-balance-scale"></i> <?php echo $lang['manage_product_units']; ?></h2>
         </div>
         <div class="col-sm-6 text-right">
-            <a href="stock.php" class="btn btn-secondary shadow-sm"><i class="fas fa-arrow-left"></i> ກັບຄືນໜ້າສະຕັອກ</a>
+            <a href="stock.php" class="btn btn-secondary shadow-sm"><i class="fas fa-arrow-left"></i> <?php echo $lang['back_to_stock']; ?></a>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-4">
             <div class="card card-info card-outline shadow-sm">
-                <div class="card-header"><h3 class="card-title">ເພີ່ມຫົວໜ່ວຍໃໝ່</h3></div>
+                <div class="card-header"><h3 class="card-title"><?php echo $lang['add_new_unit']; ?></h3></div>
                 <form action="" method="post">
                     <div class="card-body">
                         <div class="form-group">
-                            <label>ຊື່ຫົວໜ່ວຍ (Lao)</label>
-                            <input type="text" name="unit_name_la" class="form-control" placeholder="ຕົວຢ່າງ: ປ໋ອງ, ແກ້ວ..." required>
+                            <label><?php echo $lang['unit_name_la']; ?></label>
+                            <input type="text" name="unit_name_la" class="form-control" placeholder="Lao..." required>
                         </div>
                         <div class="form-group">
-                            <label>Unit Name (English)</label>
-                            <input type="text" name="unit_name_en" class="form-control" placeholder="e.g. Can, Bottle...">
+                            <label><?php echo $lang['unit_name_en']; ?></label>
+                            <input type="text" name="unit_name_en" class="form-control" placeholder="English...">
                         </div>
                         <div class="form-group">
-                            <label>单位名称 (Chinese)</label>
-                            <input type="text" name="unit_name_cn" class="form-control" placeholder="例如：罐, 瓶...">
+                            <label><?php echo $lang['unit_name_cn']; ?></label>
+                            <input type="text" name="unit_name_cn" class="form-control" placeholder="Chinese...">
                         </div>
                     </div>
                     <div class="card-footer bg-white border-0">
-                        <button type="submit" name="add_unit" class="btn btn-info btn-block"><i class="fas fa-save"></i> ບັນທຶກຫົວໜ່ວຍ</button>
+                        <button type="submit" name="add_unit" class="btn btn-info btn-block"><i class="fas fa-save"></i> <?php echo $lang['save']; ?></button>
                     </div>
                 </form>
             </div>
@@ -133,14 +141,14 @@ $unit_name_col = "unit_name_" . $current_lang;
 
         <div class="col-md-8">
             <div class="card card-success card-outline shadow-sm">
-                <div class="card-header"><h3 class="card-title">ລາຍຊື່ຫົວໜ່ວຍທັງໝົດ</h3></div>
+                <div class="card-header"><h3 class="card-title"><?php echo $lang['unit_list']; ?></h3></div>
                 <div class="card-body p-0">
                     <table class="table table-striped table-hover text-center mb-0">
                         <thead class="bg-light text-muted uppercase">
                             <tr>
                                 <th style="width: 80px;">#</th>
-                                <th class="text-left">ຊື່ຫົວໜ່ວຍ</th>
-                                <th style="width: 200px;">ຈັດການ</th>
+                                <th class="text-left"><?php echo $lang['unit'] ?? 'Unit'; ?></th>
+                                <th style="width: 200px;"><?php echo $lang['action']; ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -155,10 +163,10 @@ $unit_name_col = "unit_name_" . $current_lang;
                                             data-name-la="<?php echo htmlspecialchars($u['unit_name_la'] ?: $u['unit_name']); ?>"
                                             data-name-en="<?php echo htmlspecialchars($u['unit_name_en'] ?? ''); ?>"
                                             data-name-cn="<?php echo htmlspecialchars($u['unit_name_cn'] ?? ''); ?>"
-                                            title="ແກ້ໄຂ">
+                                            title="<?php echo $lang['edit']; ?>">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $u['id']; ?>" title="ລຶບ">
+                                        <button class="btn btn-sm btn-danger btn-delete" data-id="<?php echo $u['id']; ?>" title="<?php echo $lang['delete']; ?>">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>
@@ -166,7 +174,7 @@ $unit_name_col = "unit_name_" . $current_lang;
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="3" class="text-center text-muted py-5">ບໍ່ມີຂໍ້ມູນຫົວໜ່ວຍ</td>
+                                    <td colspan="3" class="text-center text-muted py-5"><?php echo $lang['no_data']; ?></td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -182,7 +190,7 @@ $unit_name_col = "unit_name_" . $current_lang;
   <div class="modal-dialog" role="document">
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-warning text-white">
-        <h5 class="modal-title"><i class="fas fa-edit"></i> ແກ້ໄຂຫົວໜ່ວຍ</h5>
+        <h5 class="modal-title"><i class="fas fa-edit"></i> <?php echo $lang['edit']; ?></h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -192,21 +200,21 @@ $unit_name_col = "unit_name_" . $current_lang;
               <input type="hidden" name="id" id="edit_id">
               <input type="hidden" name="old_name" id="edit_old_name">
               <div class="form-group">
-                  <label>ຊື່ຫົວໜ່ວຍ (Lao)</label>
+                  <label><?php echo $lang['unit_name_la']; ?></label>
                   <input type="text" name="unit_name_la" id="edit_name_la" class="form-control" required>
               </div>
               <div class="form-group">
-                  <label>Unit Name (English)</label>
+                  <label><?php echo $lang['unit_name_en']; ?></label>
                   <input type="text" name="unit_name_en" id="edit_name_en" class="form-control">
               </div>
               <div class="form-group">
-                  <label>单位名称 (Chinese)</label>
+                  <label><?php echo $lang['unit_name_cn']; ?></label>
                   <input type="text" name="unit_name_cn" id="edit_name_cn" class="form-control">
               </div>
           </div>
           <div class="modal-footer border-0">
-            <button type="button" class="btn btn-light" data-dismiss="modal">ຍົກເລີກ</button>
-            <button type="submit" name="edit_unit" class="btn btn-warning text-white shadow-sm">ບັນທຶກການແກ້ໄຂ</button>
+            <button type="button" class="btn btn-light" data-dismiss="modal"><?php echo $lang['cancel']; ?></button>
+            <button type="submit" name="edit_unit" class="btn btn-warning text-white shadow-sm"><?php echo $lang['save']; ?></button>
           </div>
       </form>
     </div>
@@ -231,14 +239,14 @@ $('.btn-delete').on('click', function(e) {
     e.preventDefault();
     var id = $(this).data('id');
     Swal.fire({
-        title: 'ຍືນຍັນການລຶບ?',
-        text: 'ຫາກລຶບຫົວໜ່ວຍນີ້, ສິນຄ້າທີ່ກ່ຽວຂ້ອງອາດຈະບໍ່ສະແດງຫົວໜ່ວຍ.',
+        title: '<?php echo $lang['confirm_delete'] ?? 'Confirm?'; ?>',
+        text: '<?php echo $lang['delete_user_warning'] ?? 'Are you sure?'; ?>',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        confirmButtonText: 'ລຶບເລີຍ!',
-        cancelButtonText: 'ຍົກເລີກ'
+        confirmButtonText: '<?php echo $lang['delete']; ?>',
+        cancelButtonText: '<?php echo $lang['cancel']; ?>'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = "?delete=" + id;

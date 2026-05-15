@@ -11,6 +11,10 @@ if (file_exists($lang_file)) {
     include "lang/la.php";
 }
 
+// Fetch default currency
+$stmtCur = $pdo->query("SELECT symbol FROM currency WHERE is_default = 1 LIMIT 1");
+$currency_symbol = $stmtCur->fetchColumn() ?: '₭';
+
 $type = $_GET['type'] ?? 'all';
 // Fetch Tax Percent
 $stmtTax = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
@@ -153,7 +157,7 @@ for ($i = 5; $i >= 0; $i--) {
 $room_type_labels = [];
 $room_type_revenue = [];
 $stmtRT = $pdo->query("
-    SELECT rt.$room_type_col as room_type, SUM((b.total_price + b.food_charge) * $tax_mult) as total 
+    SELECT rt.$room_type_col as room_type, rt.room_type_name, SUM((b.total_price + b.food_charge) * $tax_mult) as total 
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
     JOIN room_types rt ON r.room_type = rt.room_type_name
@@ -162,7 +166,7 @@ $stmtRT = $pdo->query("
     ORDER BY total DESC
 ");
 while($row = $stmtRT->fetch()) {
-    $room_type_labels[] = $row['room_type'] ?: 'Unknown';
+    $room_type_labels[] = $row['room_type'] ?: $row['room_type_name'] ?: 'Unknown';
     $room_type_revenue[] = (float)$row['total'];
 }
 ?>
@@ -298,8 +302,8 @@ while($row = $stmtRT->fetch()) {
         <!-- Today Customers -->
         <div class="stat-card gc-amber">
             <div class="stat-card-top">
-                <div class="stat-card-label">ຈຳນວນລູກຄ້າ (Bill)</div>
-                <div class="stat-card-value"><?php echo $today_customers; ?> <sup style="font-size: 1rem">ບິນ</sup></div>
+                <div class="stat-card-label"><?php echo $lang['customer_count']; ?></div>
+                <div class="stat-card-value"><?php echo $today_customers; ?> <sup style="font-size: 1rem"><?php echo $lang['bill_unit']; ?></sup></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-users"></i></div>
         </div>
@@ -307,8 +311,8 @@ while($row = $stmtRT->fetch()) {
         <!-- Total Guests -->
         <div class="stat-card gc-teal">
             <div class="stat-card-top">
-                <div class="stat-card-label">ແຂກພັກຕົວຈິງ</div>
-                <div class="stat-card-value"><?php echo $total_guests; ?> <sup style="font-size: 1rem">ຄົນ</sup></div>
+                <div class="stat-card-label"><?php echo $lang['actual_guests']; ?></div>
+                <div class="stat-card-value"><?php echo $total_guests; ?> <sup style="font-size: 1rem"><?php echo $lang['person_unit']; ?></sup></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-user-friends"></i></div>
         </div>
@@ -321,7 +325,7 @@ while($row = $stmtRT->fetch()) {
         <div class="col-lg-8 col-12 mb-3">
             <div class="card card-primary card-outline shadow-sm">
                 <div class="card-header bg-white">
-                    <h3 class="card-title font-weight-bold"><i class="fas fa-chart-bar text-primary"></i> ກຣາຟສະຫຼຸບລາຍຮັບ - ລາຍຈ່າຍ (6 ເດືອນຫຼ້າສຸດ)</h3>
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-chart-bar text-primary"></i> <?php echo $lang['revenue_chart_title']; ?></h3>
                 </div>
                 <div class="card-body">
                     <canvas id="financeChart" style="min-height: 250px; height: 350px; max-height: 350px; max-width: 100%;"></canvas>
@@ -334,7 +338,7 @@ while($row = $stmtRT->fetch()) {
         <div class="<?php echo ($type == 'room_revenue') ? 'col-12' : 'col-lg-4 col-12'; ?> mb-3">
             <div class="card card-success card-outline shadow-sm">
                 <div class="card-header bg-white">
-                    <h3 class="card-title font-weight-bold"><i class="fas fa-door-open text-success"></i> ລາຍຮັບແບ່ງຕາມປະເພດຫ້ອງ</h3>
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-door-open text-success"></i> <?php echo $lang['revenue_by_type']; ?></h3>
                 </div>
                 <div class="card-body">
                     <canvas id="roomTypeChart" style="min-height: 250px; height: 350px; max-height: 350px; max-width: 100%;"></canvas>
@@ -366,20 +370,20 @@ while($row = $stmtRT->fetch()) {
         <div class="col-12">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-danger text-white">
-                    <h3 class="card-title"><i class="fas fa-door-closed"></i> ລາຍງານຫ້ອງບໍ່ຫວ່າງ (ຈອງ ແລະ ກຳລັງພັກ)</h3>
+                    <h3 class="card-title"><i class="fas fa-door-closed"></i> <?php echo $lang['unavailable_rooms_report']; ?></h3>
                 </div>
                 <div class="card-body p-2 p-md-3">
                     <div class="table-responsive">
                     <table id="unavailableTable" class="table table-bordered table-striped text-center mb-0" style="min-width: 650px;">
                         <thead class="bg-light">
                             <tr>
-                                <th>ເລກຫ້ອງ</th>
-                                <th>ຊື່ລູກຄ້າ</th>
-                                <th>ສະຖານະ</th>
-                                <th>ວັນທີເຂົ້າ</th>
-                                <th>ວັນທີອອກ</th>
-                                <th>ຈຳນວນຄືນ</th>
-                                <th>ຍອດລວມ</th>
+                                <th><?php echo $lang['room_number_header']; ?></th>
+                                <th><?php echo $lang['customer_name_header']; ?></th>
+                                <th><?php echo $lang['status_header']; ?></th>
+                                <th><?php echo $lang['check_in_header']; ?></th>
+                                <th><?php echo $lang['check_out_header']; ?></th>
+                                <th><?php echo $lang['nights_header']; ?></th>
+                                <th><?php echo $lang['total_header']; ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -390,9 +394,9 @@ while($row = $stmtRT->fetch()) {
                                         <td class="text-left font-weight-bold"><?php echo htmlspecialchars($row['customer_name']); ?></td>
                                         <td>
                                             <?php if($row['status'] == 'Booked'): ?>
-                                                <span class="badge badge-primary px-3"><i class="fas fa-calendar-check"></i> ຈອງ</span>
+                                                <span class="badge badge-primary px-3"><i class="fas fa-calendar-check"></i> <?php echo $lang['booked']; ?></span>
                                             <?php else: ?>
-                                                <span class="badge badge-warning text-white px-3"><i class="fas fa-clock"></i> ກຳລັງພັກ</span>
+                                                <span class="badge badge-warning text-white px-3"><i class="fas fa-clock"></i> <?php echo $lang['occupied']; ?></span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-success"><?php echo date('d/m/Y', strtotime($row['check_in_date'])); ?></td>
@@ -408,7 +412,7 @@ while($row = $stmtRT->fetch()) {
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="7" class="py-4 text-muted">ບໍ່ມີຫ້ອງທີ່ບໍ່ຫວ່າງໃນເວລານີ້</td>
+                                <td colspan="7" class="py-4 text-muted"><?php echo $lang['table_zero_records']; ?></td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -426,22 +430,22 @@ while($row = $stmtRT->fetch()) {
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
-                    <h3 class="card-title"><i class="fas fa-bed text-primary"></i> ປະຫວັດການຈອງຫ້ອງພັກຫຼ້າສຸດ</h3>
+                    <h3 class="card-title"><i class="fas fa-bed text-primary"></i> <?php echo $lang['recent_booking_history'] ?? 'ປະຫວັດການຈອງຫ້ອງພັກຫຼ້າສຸດ'; ?></h3>
                 </div>
                 <div class="card-body p-2 p-md-3">
                     <div class="table-responsive">
                     <table id="reportTable" class="table table-bordered table-striped text-center mb-0" style="min-width: 650px;">
                         <thead>
                             <tr class="bg-light">
-                                <th>ວັນທີ Check-in</th>
-                                <th>ເລກຫ້ອງ</th>
-                                <th>ຊື່ລູກຄ້າ</th>
-                                <th>ຈຳນວນຄືນ</th>
-                                <th>ຈຳນວນແຂກ</th>
-                                <th>ຄ່າຫ້ອງ</th>
-                                <th>ຄ່າອາຫານ</th>
-                                <th class="text-success font-weight-bold">ລວມທັງໝົດ</th>
-                                <th>ສະຖານະ</th>
+                                <th><?php echo $lang['check_in_header']; ?></th>
+                                <th><?php echo $lang['room_number_header']; ?></th>
+                                <th><?php echo $lang['customer_name_header']; ?></th>
+                                <th><?php echo $lang['nights_header']; ?></th>
+                                <th><?php echo $lang['guests']; ?></th>
+                                <th><?php echo $lang['room_price'] ?? 'ຄ່າຫ້ອງ'; ?></th>
+                                <th><?php echo $lang['food_charge'] ?? 'ຄ່າອາຫານ'; ?></th>
+                                <th class="text-success font-weight-bold"><?php echo $lang['total_header']; ?></th>
+                                <th><?php echo $lang['status_header']; ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -461,17 +465,17 @@ while($row = $stmtRT->fetch()) {
                                             echo $diff->format("%a"); 
                                         ?>
                                     </td>
-                                    <td><?php echo $row['guest_count']; ?> ຄົນ</td>
+                                    <td><?php echo $row['guest_count']; ?> <?php echo $lang['person_unit']; ?></td>
                                     <td class="text-right"><?php echo number_format($row['total_price']); ?></td>
                                     <td class="text-right text-info"><?php echo number_format($row['food_charge']); ?></td>
                                     <td class="text-right text-success font-weight-bold"><?php echo number_format($row_total); ?></td>
                                     <td>
                                         <?php if($row['status'] == 'Completed'): ?>
-                                            <span class="badge badge-success"><i class="fas fa-check"></i> ຊຳລະແລ້ວ</span>
+                                            <span class="badge badge-success"><i class="fas fa-check"></i> <?php echo $lang['paid'] ?? 'ຊຳລະແລ້ວ'; ?></span>
                                         <?php elseif($row['status'] == 'Booked'): ?>
-                                            <span class="badge badge-primary"><i class="fas fa-calendar-check"></i> ຈອງ</span>
+                                            <span class="badge badge-primary"><i class="fas fa-calendar-check"></i> <?php echo $lang['booked']; ?></span>
                                         <?php else: ?>
-                                            <span class="badge badge-warning text-white"><i class="fas fa-clock"></i> ກຳລັງພັກ</span>
+                                            <span class="badge badge-warning text-white"><i class="fas fa-clock"></i> <?php echo $lang['occupied']; ?></span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -491,18 +495,18 @@ while($row = $stmtRT->fetch()) {
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
-                    <h3 class="card-title"><i class="fas fa-shopping-cart text-success"></i> ປະຫວັດການຂາຍສິນຄ້າໜ້າຮ້ານ (POS) ຫຼ້າສຸດ</h3>
+                    <h3 class="card-title"><i class="fas fa-shopping-cart text-success"></i> <?php echo $lang['pos_history_title']; ?></h3>
                 </div>
                 <div class="card-body p-2 p-md-3">
                     <div class="table-responsive">
                     <table id="posTable" class="table table-bordered table-striped text-center mb-0" style="min-width: 500px;">
                         <thead>
                             <tr class="bg-light">
-                                <th>ວັນເວລາ</th>
-                                <th class="text-left">ຊື່ສິນຄ້າ</th>
-                                <th>ປະເພດ</th>
-                                <th>ຈຳນວນ</th>
-                                <th class="text-success font-weight-bold">ຍອດລວມ</th>
+                                <th><?php echo $lang['date_time']; ?></th>
+                                <th class="text-left"><?php echo $lang['product_name_header'] ?? 'ຊື່ສິນຄ້າ'; ?></th>
+                                <th><?php echo $lang['category']; ?></th>
+                                <th><?php echo $lang['qty_label']; ?></th>
+                                <th class="text-success font-weight-bold"><?php echo $lang['total_header']; ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -512,7 +516,7 @@ while($row = $stmtRT->fetch()) {
                                     <td class="text-left font-weight-bold"><?php echo htmlspecialchars($row['prod_name']); ?></td>
                                     <td><span class="badge badge-secondary"><?php echo htmlspecialchars($row['category']); ?></span></td>
                                     <td><?php echo $row['o_qty']; ?></td>
-                                    <td class="text-right text-success font-weight-bold"><?php echo number_format($row['amount']); ?> ກີບ</td>
+                                    <td class="text-right text-success font-weight-bold"><?php echo number_format($row['amount']); ?> <?php echo $currency_symbol ?? 'ກີບ'; ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -541,18 +545,14 @@ $(document).ready(function() {
     var dtConfig = {
         "order": [[0, "desc"]],
         "language": {
-            "sProcessing":   "ກຳລັງດຳເນີນການ...",
-            "sLengthMenu":   "ສະແດງ _MENU_ ລາຍການ",
-            "sZeroRecords":  "ບໍ່ມີຂໍ້ມູນໃນຕາຕະລາງ",
-            "sInfo":         "ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ",
-            "sInfoEmpty":    "ສະແດງ 0 ຫາ 0 ຈາກ 0 ລາຍການ",
-            "sInfoFiltered": "(ກັ່ນຕອງຈາກທັງໝົດ _MAX_ ລາຍການ)",
-            "sSearch":       "ຄົ້ນຫາ:",
+            "sSearch": "<?php echo $lang['dt_search'] ?? $lang['search']; ?>:",
+            "sLengthMenu": "<?php echo $lang['dt_length']; ?>",
+            "sInfo": "<?php echo $lang['dt_info']; ?>",
+            "sInfoEmpty": "<?php echo $lang['dt_info_empty'] ?? $lang['table_info_empty']; ?>",
+            "sZeroRecords": "<?php echo $lang['dt_zeroRecords']; ?>",
             "oPaginate": {
-                "sFirst":    "ໜ້າທຳອິດ",
-                "sPrevious": "ກ່ອນໜ້າ",
-                "sNext":     "ຖັດໄປ",
-                "sLast":     "ໜ້າສຸດທ້າຍ"
+                "sNext": "<?php echo $lang['dt_paginate_next'] ?? $lang['next']; ?>",
+                "sPrevious": "<?php echo $lang['dt_paginate_previous'] ?? $lang['previous']; ?>"
             }
         }
     };
@@ -569,19 +569,19 @@ $(document).ready(function() {
       labels  : <?php echo json_encode($months); ?>,
       datasets: [
         {
-          label               : 'ລາຍຮັບຈາກຫ້ອງພັກ',
+          label               : '<?php echo $lang['revenue_room']; ?>',
           backgroundColor     : '#3c8dbc',
           borderColor         : '#3c8dbc',
           data                : <?php echo json_encode($room_revenue_chart); ?>
         },
         {
-          label               : 'ລາຍຮັບຈາກການຂາຍສິນຄ້າ',
+          label               : '<?php echo $lang['revenue_pos']; ?>',
           backgroundColor     : '#28a745',
           borderColor         : '#28a745',
           data                : <?php echo json_encode($pos_revenue_chart); ?>
         },
         {
-          label               : 'ລາຍຈ່າຍ (ນຳເຂົ້າສິນຄ້າ)',
+          label               : '<?php echo $lang['expenses_stock']; ?>',
           backgroundColor     : '#dc3545',
           borderColor         : '#dc3545',
           data                : <?php echo json_encode($expenses_chart); ?>
@@ -623,7 +623,7 @@ $(document).ready(function() {
       tooltips: {
           callbacks: {
               label: function(tooltipItem, data) {
-                  return data.datasets[tooltipItem.datasetIndex].label + ': ' + Number(tooltipItem.yLabel).toLocaleString('en-US') + ' ກີບ';
+                  return data.datasets[tooltipItem.datasetIndex].label + ': ' + Number(tooltipItem.yLabel).toLocaleString('en-US') + ' <?php echo $currency_symbol; ?>';
               }
           }
       }
@@ -663,7 +663,7 @@ $(document).ready(function() {
           callbacks: {
               label: function(tooltipItem, data) {
                   var val = data.datasets[0].data[tooltipItem.index];
-                  return data.labels[tooltipItem.index] + ': ' + Number(val).toLocaleString('en-US') + ' ກີບ';
+                  return data.labels[tooltipItem.index] + ': ' + Number(val).toLocaleString('en-US') + ' <?php echo $currency_symbol; ?>';
               }
           }
       }

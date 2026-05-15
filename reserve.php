@@ -3,26 +3,14 @@ session_start();
 require_once 'config/session_check.php';
 require_once 'config/db.php';
 
-$language = $_SESSION['lang'] ?? 'la'; // ຖ້າບໍ່ມີໃຫ້ເປັນພາສາລາວເປັນ default
-if (file_exists("languages/$language.php")) {
-    include_once "languages/$language.php";
+$language = $_SESSION['lang'] ?? 'la'; 
+$lang_file = "lang/{$language}.php";
+if (file_exists($lang_file)) {
+    include_once $lang_file;
 } else {
-    // ຖ້າຫາໄຟລ໌ບໍ່ເຫັນ ໃຫ້ກຳນົດຄ່າເລີ່ມຕົ້ນໄວ້ກ່ອນເພື່ອບໍ່ໃຫ້ Error
-    $lang = [
-        'bookings' => 'ລາຍການຈອງ',
-        'search' => 'ຄົ້ນຫາ',
-        'room' => 'ຫ້ອງ',
-        'customer' => 'ລູກຄ້າ',
-        'guests' => 'ແຂກ',
-        'phone' => 'ເບີໂທ',
-        'checkin_date' => 'ວັນທີເຂົ້າ',
-        'checkout_date' => 'ວັນທີອອກ',
-        'nights' => 'ຄືນ',
-        'total' => 'ລວມ',
-        'deposit' => 'ມັດຈຳ',
-        'action' => 'ຈັດການ'
-    ];
+    include_once "lang/la.php";
 }
+
 // Fetch room types
 $stmtTypes = $pdo->query("SELECT * FROM room_types ORDER BY id DESC");
 $room_types = $stmtTypes->fetchAll();
@@ -33,7 +21,7 @@ if (isset($_GET['cancel_booking'])) {
     $roomId = (int)$_GET['room_id'];
     $pdo->prepare("DELETE FROM bookings WHERE id = ? AND status = 'Booked'")->execute([$bookingId]);
     $pdo->prepare("UPDATE rooms SET status = 'Available' WHERE id = ?")->execute([$roomId]);
-    $_SESSION['success'] = "ຍົກເລີກການຈອງສຳເລັດ!";
+    $_SESSION['success'] = $lang['success_label'] ?? "ຍົກເລີກການຈອງສຳເລັດ!";
     header("Location: reserve.php");
     exit();
 }
@@ -50,9 +38,6 @@ $nights_count = $d1->diff($d2)->days;
 if($nights_count < 1) $nights_count = 1;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
-    // Variables are already set above safely
-    // Core Logic: Find rooms that are NOT booked between search dates
-    // And also ensure the room isn't currently Occupied if searching for today
     $query = "
         SELECT r.* FROM rooms r 
         WHERE (r.housekeeping_status = 'ພ້ອມໃຊ້' OR r.housekeeping_status = 'Ready')
@@ -65,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
         )
     ";
     
-    // If search includes Today, also exclude rooms currently Occupied/Checked In
     if ($check_in_search == date('Y-m-d')) {
         $query .= " AND r.status NOT IN ('Occupied', 'Checked In')";
     }
@@ -80,9 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
     }
     $available_rooms = $stmt->fetchAll();
 
-    // Alert if rooms are full
     if (count($available_rooms) == 0) {
-        $_SESSION['info_msg'] = "ຂໍອະໄພ, ຫ້ອງພັກທຸກຫ້ອງແມ່ນເຕັມໝົດແລ້ວໃນຊ່ວງວັນທີທີ່ທ່ານເລືອກ!";
+        $_SESSION['info_msg'] = $lang['full_room_msg'] ?? "ຂໍອະໄພ, ຫ້ອງພັກທຸກຫ້ອງແມ່ນເຕັມໝົດແລ້ວໃນຊ່ວງວັນທີທີ່ທ່ານເລືອກ!";
     }
 }
 
@@ -96,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
     $check_out = $_POST['check_out_date'];
     $deposit = (float)str_replace(',', '', $_POST['deposit_amount']);
     
-    // Overlap Check for Update
     $stmtRoomId = $pdo->prepare("SELECT room_id FROM bookings WHERE id = ?");
     $stmtRoomId->execute([$booking_id]);
     $current_room_id = $stmtRoomId->fetchColumn();
@@ -113,12 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
     $is_occupied = $stmtCheck->fetchColumn() > 0;
 
     if ($is_occupied) {
-        $_SESSION['error'] = "ຂໍອະໄພ, ວັນທີທີ່ທ່ານປ່ຽນໃໝ່ມີຄົນຈອງຫ້ອງນີ້ແລ້ວ!";
+        $_SESSION['error'] = $lang['error_label'] ?? "ຂໍອະໄພ, ວັນທີທີ່ທ່ານປ່ຽນໃໝ່ມີຄົນຈອງຫ້ອງນີ້ແລ້ວ!";
         header("Location: reserve.php");
         exit();
     }
 
-    // Get room price to recalculate total
     $stmtPrice = $pdo->prepare("SELECT r.price FROM rooms r JOIN bookings b ON r.id = b.room_id WHERE b.id = ?");
     $stmtPrice->execute([$booking_id]);
     $room_price = $stmtPrice->fetchColumn() ?: 0;
@@ -131,60 +112,58 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
 
     $stmt = $pdo->prepare("UPDATE bookings SET customer_name = ?, customer_phone = ?, guest_count = ?, check_in_date = ?, check_out_date = ?, total_price = ?, deposit_amount = ? WHERE id = ?");
     if ($stmt->execute([$customer_name, $customer_phone, $guest_count, $check_in, $check_out, $total_price, $deposit, $booking_id])) {
-        $_SESSION['success'] = "ແກ້ໄຂການຈອງສຳເລັດ! ຍອດໃໝ່: " . number_format($total_price) . " ກີບ";
+        $_SESSION['success'] = $lang['success_label'] ?? "ແກ້ໄຂການຈອງສຳເລັດ!";
     } else {
-        $_SESSION['error'] = "ບໍ່ສາມາດແກ້ໄຂຂໍ້ມູນໄດ້!";
+        $_SESSION['error'] = $lang['error_label'] ?? "ບໍ່ສາມາດແກ້ໄຂຂໍ້ມູນໄດ້!";
     }
     header("Location: reserve.php");
     exit();
 }
 
-    // Handle reservation submission
-    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reserve'])) {
-        $room_id = (int)$_POST['room_id'];
-        $customer_name = trim($_POST['customer_name']);
-        $customer_phone = trim($_POST['customer_phone']);
-        $passport_number = trim($_POST['passport_number']);
-        $address = trim($_POST['address']);
-        $guest_count = (int)$_POST['guest_count'];
-        $check_in_date = $_POST['check_in_date'];
-        $nights_res = (int)$_POST['nights_count'];
-        $check_out_date = date('Y-m-d', strtotime($check_in_date . " +$nights_res days"));
-        $deposit_amount = (float)str_replace(',', '', $_POST['deposit_amount']);
+// Handle reservation submission
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reserve'])) {
+    $room_id = (int)$_POST['room_id'];
+    $customer_name = trim($_POST['customer_name']);
+    $customer_phone = trim($_POST['customer_phone']);
+    $passport_number = trim($_POST['passport_number']);
+    $address = trim($_POST['address']);
+    $guest_count = (int)$_POST['guest_count'];
+    $check_in_date = $_POST['check_in_date'];
+    $nights_res = (int)$_POST['nights_count'];
+    $check_out_date = date('Y-m-d', strtotime($check_in_date . " +$nights_res days"));
+    $deposit_amount = (float)str_replace(',', '', $_POST['deposit_amount']);
 
-        // Final Overlap Check before inserting
-        $stmtCheck = $pdo->prepare("
-            SELECT COUNT(*) FROM bookings 
-            WHERE room_id = ? 
-            AND status IN ('Booked', 'Occupied', 'Checked In') 
-            AND check_in_date < ? 
-            AND check_out_date > ?
-        ");
-        $stmtCheck->execute([$room_id, $check_out_date, $check_in_date]);
-        $is_occupied = $stmtCheck->fetchColumn() > 0;
+    $stmtCheck = $pdo->prepare("
+        SELECT COUNT(*) FROM bookings 
+        WHERE room_id = ? 
+        AND status IN ('Booked', 'Occupied', 'Checked In') 
+        AND check_in_date < ? 
+        AND check_out_date > ?
+    ");
+    $stmtCheck->execute([$room_id, $check_out_date, $check_in_date]);
+    $is_occupied = $stmtCheck->fetchColumn() > 0;
 
-        if (!$is_occupied) {
-            // Get room price
-            $stmtRoom = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
-            $stmtRoom->execute([$room_id]);
-            $room = $stmtRoom->fetch();
+    if (!$is_occupied) {
+        $stmtRoom = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
+        $stmtRoom->execute([$room_id]);
+        $room = $stmtRoom->fetch();
 
-            if ($room) {
-                $total_price = $room['price'] * $nights_res;
-                $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Booked')");
-                
-                if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount])) {
-                    $_SESSION['success'] = "ຈອງຫ້ອງລ່ວງໜ້າສຳເລັດ! ຫ້ອງ " . $room['room_number'] . " ວັນທີ " . date('d/m/Y', strtotime($check_in_date));
-                    header("Location: reserve.php");
-                    exit();
-                }
+        if ($room) {
+            $total_price = $room['price'] * $nights_res;
+            $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Booked')");
+            
+            if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount])) {
+                $_SESSION['success'] = $lang['success_label'] ?? "ຈອງຫ້ອງລ່ວງໜ້າສຳເລັດ!";
+                header("Location: reserve.php");
+                exit();
             }
-        } else {
-            $_SESSION['error'] = "ຂໍອະໄພ, ຫ້ອງນີ້ມີຄົນຈອງໃນຊ່ວງວັນທີນີ້ແລ້ວ!";
         }
-        header("Location: reserve.php");
-        exit();
+    } else {
+        $_SESSION['error'] = $lang['error_label'] ?? "ຂໍອະໄພ, ຫ້ອງນີ້ມີຄົນຈອງໃນຊ່ວງວັນທີນີ້ແລ້ວ!";
     }
+    header("Location: reserve.php");
+    exit();
+}
 
 // Pagination Logic
 $limit = 10;
@@ -192,7 +171,6 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
-// Get total count for pagination
 $stmtCount = $pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'Booked'");
 $total_records = $stmtCount->fetchColumn();
 $total_pages = ceil($total_records / $limit);
@@ -222,7 +200,7 @@ $reservations = $stmtReserved->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ຈອງຫ້ອງລ່ວງໜ້າ</title>
+    <title><?php echo $lang['booking_title']; ?></title>
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
@@ -270,7 +248,7 @@ $reservations = $stmtReserved->fetchAll();
     <?php if(isset($_SESSION['success'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'success', title: 'ສຳເລັດ', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 2500 });
+                Swal.fire({ icon: 'success', title: '<?php echo $lang['success_label']; ?>', text: '<?php echo $_SESSION['success']; ?>', showConfirmButton: false, timer: 2500 });
             });
         </script>
     <?php unset($_SESSION['success']); endif; ?>
@@ -278,7 +256,7 @@ $reservations = $stmtReserved->fetchAll();
     <?php if(isset($_SESSION['error'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'error', title: 'ຜິດພາດ', text: '<?php echo $_SESSION['error']; ?>', confirmButtonText: 'ຕົກລົງ' });
+                Swal.fire({ icon: 'error', title: '<?php echo $lang['error_label']; ?>', text: '<?php echo $_SESSION['error']; ?>', confirmButtonText: '<?php echo $lang['ok']; ?>' });
             });
         </script>
     <?php unset($_SESSION['error']); endif; ?>
@@ -286,46 +264,46 @@ $reservations = $stmtReserved->fetchAll();
     <?php if(isset($_SESSION['info_msg'])): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({ icon: 'info', title: 'ຫ້ອງເຕັມ', text: '<?php echo $_SESSION['info_msg']; ?>', confirmButtonText: 'ຕົກລົງ' });
+                Swal.fire({ icon: 'info', title: '<?php echo $lang['info_label']; ?>', text: '<?php echo $_SESSION['info_msg']; ?>', confirmButtonText: '<?php echo $lang['ok']; ?>' });
             });
         </script>
     <?php unset($_SESSION['info_msg']); endif; ?>
 
     <div class="row mb-3">
         <div class="col-12">
-            <h2><i class="fas fa-calendar-check text-warning"></i> ຈອງຫ້ອງລ່ວງໜ້າ</h2>
+            <h2><i class="fas fa-calendar-check text-warning"></i> <?php echo $lang['booking_title']; ?></h2>
         </div>
     </div>
 
     <!-- Search Form -->
     <div class="card card-warning card-outline shadow-sm">
-        <div class="card-header"><h3 class="card-title"><i class="fas fa-search"></i> ຄົ້ນຫາຫ້ອງຫວ່າງ</h3></div>
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-search"></i> <?php echo $lang['search_rooms_title']; ?></h3></div>
         <form action="" method="post">
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3 col-6">
                         <div class="form-group">
-                            <label><i class="fas fa-calendar-alt text-success"></i> ວັນທີເຂົ້າພັກ</label>
+                            <label><i class="fas fa-calendar-alt text-success"></i> <?php echo $lang['checkin_date']; ?></label>
                             <input type="date" name="check_in_search" id="search_checkin" class="form-control" value="<?php echo $check_in_search; ?>" required>
                         </div>
                     </div>
                     <div class="col-md-2 col-6">
                         <div class="form-group">
-                            <label><i class="fas fa-moon text-warning"></i> ຈຳນວນຄືນ</label>
+                            <label><i class="fas fa-moon text-warning"></i> <?php echo $lang['nights_count']; ?></label>
                             <input type="number" id="search_nights" class="form-control" value="<?php echo $nights_count; ?>" min="1">
                         </div>
                     </div>
                     <div class="col-md-3 col-12">
                         <div class="form-group">
-                            <label><i class="fas fa-calendar-check text-danger"></i> ວັນທີອອກ</label>
+                            <label><i class="fas fa-calendar-check text-danger"></i> <?php echo $lang['checkout_date']; ?></label>
                             <input type="date" name="check_out_search" id="search_checkout" class="form-control" value="<?php echo $check_out_search; ?>" required>
                         </div>
                     </div>
                     <div class="col-md-2 col-12">
                         <div class="form-group">
-                            <label>ປະເພດຫ້ອງ</label>
+                            <label><?php echo $lang['room_type']; ?></label>
                             <select name="room_type" class="form-control">
-                                <option value="all">-- ທຸກປະເພດ --</option>
+                                <option value="all">-- <?php echo $lang['all']; ?> --</option>
                                 <?php foreach($room_types as $rt): ?>
                                     <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>" <?php echo ($selected_type == $rt['room_type_name']) ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($rt['room_type_name']); ?>
@@ -337,7 +315,7 @@ $reservations = $stmtReserved->fetchAll();
                     <div class="col-md-2 col-12 d-flex align-items-end">
                         <div class="form-group w-100">
                             <button type="submit" name="search" class="btn btn-warning btn-block text-white">
-                                <i class="fas fa-search"></i> ຄົ້ນຫາ
+                                <i class="fas fa-search"></i> <?php echo $lang['search']; ?>
                             </button>
                         </div>
                     </div>
@@ -349,7 +327,7 @@ $reservations = $stmtReserved->fetchAll();
     <!-- Available Rooms Results -->
     <?php if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])): ?>
     <div class="card card-outline card-success shadow-sm">
-        <div class="card-header"><h3 class="card-title"><i class="fas fa-door-open"></i> ຫ້ອງຫວ່າງ (<?php echo count($available_rooms); ?> ຫ້ອງ)</h3></div>
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-door-open"></i> <?php echo $lang['available_rooms']; ?> (<?php echo count($available_rooms); ?> <?php echo $lang['room_unit']; ?>)</h3></div>
         <div class="card-body bg-light">
             <?php if (count($available_rooms) > 0): ?>
                 <div class="row">
@@ -358,21 +336,21 @@ $reservations = $stmtReserved->fetchAll();
                             <div class="card room-card shadow-sm border-warning">
                                 <div class="card-body text-center p-3">
                                     <div class="display-4 text-warning mb-2"><i class="fas fa-door-closed"></i></div>
-                                    <h4 class="font-weight-bold">ຫ້ອງ <?php echo htmlspecialchars($room['room_number']); ?></h4>
+                                    <h4 class="font-weight-bold"><?php echo $lang['room']; ?> <?php echo htmlspecialchars($room['room_number']); ?></h4>
                                     <p class="text-muted mb-1 small"><?php echo htmlspecialchars($room['room_type']); ?> (<?php echo htmlspecialchars($room['bed_type']); ?>)</p>
                                     <hr class="my-2">
-                                    <p class="room-price mb-0 text-orange font-weight-bold" style="font-size: 1.2rem;"><?php echo number_format($room['price']); ?> ກີບ / ຄືນ</p>
+                                    <p class="room-price mb-0 text-orange font-weight-bold" style="font-size: 1.2rem;"><?php echo number_format($room['price']); ?> <?php echo $lang['per_night']; ?></p>
                                     <div class="mt-3 p-2 border-success rounded shadow-sm" style="background-color: #e8f5e9; border: 1px dashed #28a745;">
-                                        <div class="text-success small font-weight-bold mb-1"><i class="fas fa-check-circle"></i> ຫວ່າງວັນທີ:</div>
+                                        <div class="text-success small font-weight-bold mb-1"><i class="fas fa-check-circle"></i> <?php echo $lang['available']; ?>:</div>
                                         <div class="h6 mb-0 font-weight-bold text-dark">
                                             <?php echo date('d/m/Y', strtotime($check_in_search)); ?> 
-                                            <span class="text-muted mx-1">ຫາ</span> 
+                                            <span class="text-muted mx-1"><?php echo $lang['to'] ?? 'ຫາ'; ?></span> 
                                             <?php echo date('d/m/Y', strtotime($check_out_search)); ?>
                                         </div>
                                     </div>
                                     <?php if($nights_count > 1): ?>
                                         <div class="mt-2 text-primary font-weight-bold">
-                                            <i class="fas fa-info-circle"></i> ລວມ <?php echo $nights_count; ?> ຄືນ: <?php echo number_format($room['price'] * $nights_count); ?> ກີບ
+                                            <i class="fas fa-info-circle"></i> <?php echo $lang['total_nights']; ?> <?php echo $nights_count; ?> <?php echo $lang['nights_unit']; ?>: <?php echo number_format($room['price'] * $nights_count); ?> ₭
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -385,7 +363,7 @@ $reservations = $stmtReserved->fetchAll();
                                         data-nights="<?php echo $nights_count; ?>"
                                         data-total="<?php echo $room['price'] * $nights_count; ?>"
                                         data-checkin="<?php echo $check_in_search; ?>">
-                                        <i class="fas fa-calendar-plus"></i> ຈອງລ່ວງໜ້າ
+                                        <i class="fas fa-calendar-plus"></i> <?php echo $lang['bookings']; ?>
                                     </button>
                                 </div>
                             </div>
@@ -395,7 +373,7 @@ $reservations = $stmtReserved->fetchAll();
             <?php else: ?>
                 <div class="text-center py-4">
                     <i class="fas fa-times-circle text-danger fa-3x mb-3 d-block"></i>
-                    <h5 class="text-danger">ບໍ່ມີຫ້ອງຫວ່າງ</h5>
+                    <h5 class="text-danger"><?php echo $lang['no_available_rooms_msg']; ?></h5>
                 </div>
             <?php endif; ?>
         </div>
@@ -438,7 +416,7 @@ $reservations = $stmtReserved->fetchAll();
                         <td><strong><?php echo htmlspecialchars($res['room_number']); ?></strong><br><small class="text-muted"><?php echo htmlspecialchars($res['room_type']); ?></small></td>
                         <td class="text-left">
                             <div class="font-weight-bold customer-name-text"><?php echo htmlspecialchars($res['customer_name']); ?></div>
-                            <div class="small text-muted"><i class="fas fa-users mr-1"></i> ມາ: <strong><?php echo $res['guest_count']; ?></strong> ຄົນ</div>
+                            <div class="small text-muted"><i class="fas fa-users mr-1"></i> <?php echo $lang['guests']; ?>: <strong><?php echo $res['guest_count']; ?></strong> <?php echo $lang['person_unit']; ?></div>
                         </td>
                         <td class="customer-phone-text"><?php echo htmlspecialchars($res['customer_phone']); ?></td>
                         <td class="text-success font-weight-bold"><?php echo date('d/m/Y', strtotime($res['check_in_date'])); ?></td>
@@ -453,7 +431,7 @@ $reservations = $stmtReserved->fetchAll();
                         <td class="text-right text-info"><?php echo number_format($res['deposit_amount']); ?> ₭</td>
                         <td class="align-middle text-center">
                             <div class="btn-action-group">
-                                <a href="checkin_reserved.php?booking_id=<?php echo $res['id']; ?>" class="btn btn-sm btn-success" title="ເຂົ້າພັກ">
+                                <a href="checkin_reserved.php?booking_id=<?php echo $res['id']; ?>" class="btn btn-sm btn-success" title="<?php echo $lang['check_in_now']; ?>">
                                     <i class="fas fa-sign-in-alt"></i>
                                 </a>
                                 <button class="btn btn-sm btn-primary btn-view-reserve" 
@@ -469,7 +447,7 @@ $reservations = $stmtReserved->fetchAll();
                                     data-checkout="<?php echo date('d/m/Y', strtotime($res['check_out_date'])); ?>"
                                     data-total="<?php echo number_format($res['total_price']); ?>"
                                     data-deposit="<?php echo number_format($res['deposit_amount']); ?>"
-                                    title="ເບິ່ງລາຍລະອຽດ">
+                                    title="<?php echo $lang['view_details']; ?>">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 <button class="btn btn-sm btn-info btn-edit-reserve" 
@@ -480,10 +458,10 @@ $reservations = $stmtReserved->fetchAll();
                                     data-checkin="<?php echo $res['check_in_date']; ?>"
                                     data-checkout="<?php echo $res['check_out_date']; ?>"
                                     data-deposit="<?php echo $res['deposit_amount']; ?>"
-                                    title="ແກ້ໄຂ">
+                                    title="<?php echo $lang['edit']; ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <a href="#" class="btn btn-sm btn-danger btn-cancel-reserve" data-id="<?php echo $res['id']; ?>" data-room-id="<?php echo $res['room_id']; ?>" title="ຍົກເລີກ">
+                                <a href="#" class="btn btn-sm btn-danger btn-cancel-reserve" data-id="<?php echo $res['id']; ?>" data-room-id="<?php echo $res['room_id']; ?>" title="<?php echo $lang['cancel']; ?>">
                                     <i class="fas fa-times-circle"></i>
                                 </a>
                             </div>
@@ -498,7 +476,7 @@ $reservations = $stmtReserved->fetchAll();
             <?php if ($total_pages > 1): ?>
             <div class="mt-3 d-flex justify-content-between align-items-center">
                 <div class="text-muted small">
-                    ສະແດງ <?php echo $offset + 1; ?> ຫາ <?php echo min($offset + $limit, $total_records); ?> ຈາກທັງໝົດ <?php echo $total_records; ?> ລາຍການ
+                    <?php echo $lang['dt_info'] ?? 'ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ'; ?>
                 </div>
                 <nav>
                     <ul class="pagination pagination-sm m-0">
@@ -539,7 +517,7 @@ $reservations = $stmtReserved->fetchAll();
                     <div class="alert alert-info py-2 mb-3">
                         <strong><i class="fas fa-info-circle"></i> <?php echo $lang['booking_info']; ?>:</strong> 
                         <?php echo $lang['room']; ?> <span id="info_room" class="font-weight-bold"></span> | 
-                        <?php echo $lang['date'] ?? 'ວັນທີ'; ?>: <span id="info_date" class="text-success"></span> | 
+                        <?php echo $lang['date_label']; ?>: <span id="info_date" class="text-success"></span> | 
                         <span id="info_nights"></span> <?php echo $lang['nights']; ?> | 
                         <?php echo $lang['total']; ?>: <span id="info_total" class="text-danger font-weight-bold"></span> ₭
                     </div>
@@ -618,7 +596,7 @@ $reservations = $stmtReserved->fetchAll();
                 </table>
             </div>
             <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">ປິດ</button>
+                <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal"><?php echo $lang['close']; ?></button>
             </div>
         </div>
     </div>
@@ -631,44 +609,44 @@ $reservations = $stmtReserved->fetchAll();
             <form action="" method="post">
                 <input type="hidden" name="booking_id" id="edit_booking_id">
                 <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title"><i class="fas fa-edit"></i> ແກ້ໄຂຂໍ້ມູນການຈອງ</h5>
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> <?php echo $lang['edit_booking']; ?></h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>ຊື່ລູກຄ້າ</label>
+                        <label><?php echo $lang['customer']; ?></label>
                         <input type="text" name="customer_name" id="edit_name" class="form-control" required>
                     </div>
                     <div class="form-group">
-                        <label>ເບີໂທ</label>
+                        <label><?php echo $lang['phone']; ?></label>
                         <input type="text" name="customer_phone" id="edit_phone" class="form-control" required>
                     </div>
                     <div class="form-group">
-                        <label>ຈຳນວນແຂກ</label>
+                        <label><?php echo $lang['guest_count']; ?></label>
                         <input type="number" name="guest_count" id="edit_guests" class="form-control" min="1" required>
                     </div>
                     <div class="row">
                         <div class="col-6">
                             <div class="form-group">
-                                <label>ວັນທີເຂົ້າ (Check-in)</label>
+                                <label><?php echo $lang['check_in']; ?></label>
                                 <input type="date" name="check_in_date" id="edit_checkin" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="form-group">
-                                <label>ວັນທີອອກ (Check-out)</label>
+                                <label><?php echo $lang['check_out']; ?></label>
                                 <input type="date" name="check_out_date" id="edit_checkout" class="form-control" required>
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>ເງິນມັດຈຳ</label>
+                        <label><?php echo $lang['deposit']; ?></label>
                         <input type="text" name="deposit_amount" id="edit_deposit" class="form-control number-format">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">ປິດ</button>
-                    <button type="submit" name="update_reserve" class="btn btn-info">ບັນທຶກການແກ້ໄຂ</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal"><?php echo $lang['close']; ?></button>
+                    <button type="submit" name="update_reserve" class="btn btn-info"><?php echo $lang['save']; ?></button>
                 </div>
             </form>
         </div>
@@ -742,9 +720,9 @@ $(document).ready(function() {
         $('#modal_room_id').val(roomId);
         $('#modal_checkin').val(checkin);
         $('#modal_nights').val(diff);
-        $('#modal_room_label').text('ຫ້ອງ ' + roomNum);
+        $('#modal_room_label').text('<?php echo $lang['room']; ?> ' + roomNum);
         $('#info_room').text(roomNum);
-        $('#info_date').text(checkin + ' ຫາ ' + checkout);
+        $('#info_date').text(checkin + ' <?php echo $lang['to'] ?? 'ຫາ'; ?> ' + checkout);
         $('#info_nights').text(diff);
         $('#info_total').text(new Intl.NumberFormat().format(total));
         
@@ -772,15 +750,15 @@ $(document).ready(function() {
     $('.btn-view-reserve').on('click', function() {
         var btn = $(this);
         $('#v_name').text(btn.data('name'));
-        $('#v_room_info').text('ຫ້ອງ ' + btn.data('room') + ' (' + btn.data('type') + ')');
+        $('#v_room_info').text('<?php echo $lang['room']; ?> ' + btn.data('room') + ' (' + btn.data('type') + ')');
         $('#v_phone').text(btn.data('phone'));
         $('#v_passport').text(btn.data('passport'));
         $('#v_address').text(btn.data('address'));
         $('#v_guests').text(btn.data('guests'));
         $('#v_checkin').text(btn.data('checkin'));
         $('#v_checkout').text(btn.data('checkout'));
-        $('#v_total').text(btn.data('total') + ' ກີບ');
-        $('#v_deposit').text(btn.data('deposit') + ' ກີບ');
+        $('#v_total').text(btn.data('total') + ' ₭');
+        $('#v_deposit').text(btn.data('deposit') + ' ₭');
         $('#viewReserveModal').modal('show');
     });
 
@@ -790,14 +768,14 @@ $(document).ready(function() {
         var id = $(this).data('id');
         var roomId = $(this).data('room-id');
         Swal.fire({
-            title: 'ຢືນຢັນການຍົກເລີກ?',
-            text: "ທ່ານຕ້ອງການຍົກເລີກການຈອງນີ້ແທ້ຫຼືບໍ່?",
+            title: '<?php echo $lang['cancel_booking_title']; ?>',
+            text: "<?php echo $lang['cancel_booking_question']; ?>",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'ຢືນຢັນ',
-            cancelButtonText: 'ຍົກເລີກ'
+            confirmButtonText: '<?php echo $lang['confirm']; ?>',
+            cancelButtonText: '<?php echo $lang['cancel']; ?>'
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = 'reserve.php?cancel_booking=' + id + '&room_id=' + roomId;

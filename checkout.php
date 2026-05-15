@@ -198,9 +198,9 @@ if (isset($_GET['booking_id'])) {
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
                     icon: 'error',
-                    title: 'ຜິດພາດ',
+                    title: '<?php echo $lang['error_label'] ?? 'ຜິດພາດ'; ?>',
                     text: '<?php echo $_SESSION['error']; ?>',
-                    confirmButtonText: 'ຕົກລົງ'
+                    confirmButtonText: '<?php echo $lang['ok']; ?>'
                 });
             });
         </script>
@@ -417,7 +417,7 @@ if (isset($_GET['booking_id'])) {
                 <div class="card shadow-sm text-center py-5">
                     <div class="card-body">
                         <i class="fas fa-hand-pointer text-muted fa-4x mb-3"></i>
-                        <h4 class="text-muted">ກະລຸນາເລືອກຫ້ອງທີ່ຕ້ອງການ Check-out ຈາກລາຍຊື່ດ້ານຊ້າຍມື</h4>
+                        <h4 class="text-muted"><?php echo $lang['checkout_prompt']; ?></h4>
                     </div>
                 </div>
             <?php endif; ?>
@@ -485,22 +485,22 @@ $(document).ready(function() {
         if (received < grandTotal && method === 'ເງິນສົດ') {
             Swal.fire({
                 icon: 'error',
-                title: 'ຍອດເງິນບໍ່ພຽງພໍ',
-                text: 'ຈຳນວນເງິນທີ່ຮັບມາ ໜ້ອຍກວ່າຍອດທີ່ຕ້ອງຊຳລະ!',
-                confirmButtonText: 'ຕົກລົງ'
+                title: '<?php echo $lang['insufficient_balance']; ?>',
+                text: '<?php echo $lang['insufficient_balance_msg']; ?>',
+                confirmButtonText: '<?php echo $lang['ok']; ?>'
             });
             return false;
         }
 
         Swal.fire({
-            title: statusMsg ? statusMsg + 'ຢືນຢັນ Check-out?' : 'ຢືນຢັນ Check-out?',
-            text: statusMsg ? "ຄຳເຕືອນ: " + statusMsg + " ລະບົບຈະບັນທຶກການຊຳລະເງິນ ແລະ ປ່ຽນສະຖານະຫ້ອງເປັນຫ້ອງຫວ່າງ" : "ລະບົບຈະບັນທຶກການຊຳລະເງິນ ແລະ ປ່ຽນສະຖານະຫ້ອງເປັນຫ້ອງຫວ່າງອັດຕະໂນມັດ",
+            title: statusMsg ? '<?php echo $lang['warning_label']; ?>: ' + statusMsg + ' <?php echo $lang['confirm_checkout_question']; ?>' : '<?php echo $lang['confirm_checkout_question']; ?>',
+            text: statusMsg ? '<?php echo $lang['warning_label']; ?>: ' + statusMsg + ' <?php echo $lang['confirm_checkout_msg']; ?>' : '<?php echo $lang['confirm_checkout_msg']; ?>',
             icon: statusMsg ? 'warning' : 'question',
             showCancelButton: true,
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Check-out',
-            cancelButtonText: 'ຍົກເລີກ'
+            cancelButtonText: '<?php echo $lang['cancel']; ?>'
         }).then((result) => {
             if (result.isConfirmed) {
                 $('#checkoutForm')[0].submit();
