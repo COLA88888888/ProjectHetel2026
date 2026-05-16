@@ -122,141 +122,128 @@ foreach ($products as $p) {
         if (window.top === window.self) { window.location.href = 'menu_admin.php'; }
     </script>
     <style>
-        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', 'Phetsarath OT', 'Saysettha OT', sans-serif !important; }
+        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
         .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
-        body { background-color: #f8f9fa; padding: 10px; }
+        body { background-color: #f8f9fa; padding: 8px; }
         
         /* Category Buttons */
         .cat-btn {
             border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            padding: 8px 16px;
+            border-radius: 6px;
+            padding: 6px 14px;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             cursor: pointer;
             background: #fff;
             color: #555;
             white-space: nowrap;
-            transition: none;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
         .cat-btn.active {
             background: #3498DB;
             color: #fff;
             border-color: #3498DB;
+            box-shadow: 0 4px 8px rgba(52,152,219,0.2);
         }
-        .cat-btn .badge { font-size: 0.7rem; }
-        .cat-scroll { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 8px; scrollbar-width: thin; }
-        .cat-scroll::-webkit-scrollbar { height: 4px; }
-        .cat-scroll::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+        .cat-btn .badge { font-size: 0.65rem; padding: 3px 6px; }
+        .cat-scroll { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none; }
+        .cat-scroll::-webkit-scrollbar { display: none; }
         
         /* Product Cards */
-        .product-card {
-            cursor: pointer;
-            border: none !important;
-            border-radius: 12px !important;
-            overflow: hidden;
-            position: relative;
-            background: #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-            transition: all 0.2s ease;
-        }
-        .product-card:active { transform: scale(0.96); background: #f8f9fa; }
-        .product-img {
-            width: 100%;
-            height: 120px;
-            object-fit: cover;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .product-placeholder {
-            width: 100%;
-            height: 120px;
-            background: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .product-name { font-size: 0.82rem; font-weight: 600; color: #444; line-height: 1.4; min-height: 2.8em; }
-        .product-price { font-size: 0.92rem; font-weight: 700; color: #2ecc71; }
-        .product-stock { font-size: 0.7rem; color: #aaa; margin-top: 4px; }
-        .stock-badge {
+        .qty-badge {
             position: absolute;
             top: 5px;
             right: 5px;
-            font-size: 0.6rem;
-            padding: 2px 6px;
-            border-radius: 2px;
+            background: #ff4757;
+            color: white;
+            min-width: 26px;
+            height: 26px;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            z-index: 30;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.4);
+            border: 2px solid white;
         }
         .cat-label {
             position: absolute;
             top: 5px;
             left: 5px;
-            font-size: 0.55rem;
-            padding: 2px 6px;
-            border-radius: 2px;
             background: rgba(0,0,0,0.5);
             color: #fff;
-            z-index: 5;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 10;
         }
-        .qty-badge {
+        .stock-badge {
             position: absolute;
-            top: 0;
-            right: 0;
-            background: #e74c3c;
-            color: white;
-            width: 38px;
-            height: 38px;
+            bottom: 115px;
+            right: 5px;
+            z-index: 10;
+            font-size: 0.6rem;
+        }
+        .product-card:active { transform: scale(0.96); background: #f8f9fa; }
+        .product-img {
+            width: 100%;
+            height: 110px;
+            object-fit: cover;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .product-placeholder {
+            width: 100%;
+            height: 110px;
+            background: #f8f9fa;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            font-size: 1.25rem;
-            z-index: 20;
-            border-radius: 0 12px 0 15px;
-            box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
         }
-        
-        /* Cart */
-        .cart-container { height: 55vh; overflow-y: auto; background: #fff; border-radius: 4px; }
-        .cart-item { border-bottom: 1px solid #f8f8f8; padding: 12px 10px; }
+        .product-name { font-size: 0.8rem; font-weight: 700; color: #333; line-height: 1.3; min-height: 2.6em; margin-bottom: 4px; }
+        .product-price { font-size: 0.9rem; font-weight: 800; color: #2ecc71; }
+        .product-stock { font-size: 0.65rem; color: #999; margin-top: 2px; }
         
         /* Mobile Adjustments */
         @media (max-width: 768px) {
             body { padding: 5px; }
-            h2 { font-size: 1.25rem !important; }
-            .product-name { font-size: 0.75rem !important; min-height: 2em !important; }
-            .product-price { font-size: 0.85rem !important; }
-            .product-stock { font-size: 0.65rem !important; }
-            .product-img, .product-placeholder { height: 100px !important; }
-            .cat-btn { padding: 6px 12px; font-size: 0.75rem; }
-            .cart-container { height: 42vh; }
+            h2 { font-size: 1.1rem !important; }
+            .product-name { font-size: 0.72rem !important; min-height: 2.6em !important; }
+            .product-price { font-size: 0.8rem !important; }
+            .product-stock { font-size: 0.6rem !important; }
+            .product-img, .product-placeholder { height: 90px !important; }
+            .cat-btn { padding: 5px 10px; font-size: 0.7rem; }
+            .cart-container { height: 38vh; }
+            #mainSearch { height: 42px !important; font-size: 0.9rem !important; }
         }
 
         /* Barcode Input Styling */
-        #barcodeInput {
-            height: 45px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 0 8px 8px 0 !important;
-            transition: all 0.3s ease;
-            background-color: #fff;
-        }
-        #barcodeInput:focus {
-            background-color: #fff9db;
-            border-color: #f1c40f;
-            box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+        .barcode-group {
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #e0e6ed;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03) !important;
         }
         .barcode-group .input-group-text {
-            border-radius: 8px 0 0 8px !important;
-            padding: 0 15px;
-            font-size: 1.2rem;
             background: linear-gradient(135deg, #3498DB, #2980B9);
             border: none;
+            color: #fff;
+            padding: 0 15px;
         }
-        .barcode-group {
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #3498DB;
+        #mainSearch {
+            height: 45px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 500;
         }
+        #mainSearch:focus {
+            box-shadow: none;
+            background-color: #fff;
+        }
+        <audio id="successSound" src="https://assets.mixkit.co/active_storage/sfx/2868/2868-preview.mp3" preload="auto"></audio>
     </style>
 </head>
 <body>
@@ -519,8 +506,8 @@ function addToCart(id, name, price, maxQty, image, code) {
             cart[id] = { name: name, price: price, qty: 1, maxQty: maxQty, image: image, code: code };
         }
     }
-    // Mini animation toast
-    Swal.fire({ icon: 'success', title: name, toast: true, position: 'top-end', showConfirmButton: false, timer: 800, timerProgressBar: true });
+    // Mini animation toast removed to keep UI still
+    // Swal.fire({ icon: 'success', title: name, toast: true, position: 'top-end', showConfirmButton: false, timer: 800, timerProgressBar: true });
     renderCart();
 }
 
@@ -760,6 +747,10 @@ $('#posForm').on('submit', function(e) {
     printFrame.src = printUrl;
     document.body.appendChild(printFrame);
     
+    let sound = document.getElementById('successSound');
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play().catch(e => console.log("Sound play blocked"));
     Swal.fire({
         title: '<?php echo $lang['sale_success']; ?>',
         text: '<?php echo $lang['printing_receipt_msg']; ?>',

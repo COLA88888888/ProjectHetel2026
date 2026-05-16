@@ -9,6 +9,19 @@ if (isset($_SESSION['checked'])) {
     exit();
 }
 require_once 'config/db.php';
+
+// Language Selection Logic
+if (isset($_GET['lang'])) {
+    $_SESSION['lang'] = $_GET['lang'];
+}
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 try {
     $stmtLogo = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'hotel_logo'");
     $logo_val = $stmtLogo->fetchColumn();
@@ -44,47 +57,104 @@ try {
             font-family: 'Noto Sans Lao Looped', sans-serif !important;
             margin: 0;
             background-color: #f8f9fa;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            position: relative;
         }
         .hero-bg {
             background: linear-gradient(rgba(0, 123, 255, 0.7), rgba(0, 123, 255, 0.7)), url('assets/img/hotel_pool.jpg');
             background-size: cover;
             background-position: center;
-            height: 45vh;
+            height: 40vh;
             width: 100%;
-            position: relative;
-            clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            clip-path: polygon(0 0, 100% 0, 100% 80%, 0 100%);
+            z-index: 1;
         }
         .login-wrapper {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: -22vh; /* Moved up more */
+            position: relative;
             z-index: 10;
+            padding: 20px;
         }
         .login-card {
             width: 100%;
-            max-width: 450px;
-            background: #fff;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            position: relative;
-            z-index: 1000; /* Ensure it's on top */
+            max-width: 420px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 35px 40px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            margin-top: 5vh;
         }
-        .lang-icon {
+        .lang-switcher {
             position: absolute;
-            top: 20px;
+            top: 25px;
             right: 25px;
-            color: #333;
-            font-size: 1.2rem;
+            display: flex;
+            gap: 12px;
+            z-index: 2000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        .lang-item {
+            text-decoration: none !important;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+            opacity: 0.6;
+            padding: 2px;
+        }
+        .lang-item:hover, .lang-item.active {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        .lang-flag {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #ddd;
+        }
+        .lang-text {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #444;
         }
         .login-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 35px;
+        }
+        .hotel-logo-wrapper {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            background: #fff;
+            border-radius: 50%;
+            padding: 5px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .hotel-logo-wrapper img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
         }
         .login-header h2 {
             color: var(--primary-blue);
@@ -151,14 +221,35 @@ try {
         }
         
         @media (max-width: 576px) {
-            .login-card { padding: 30px 20px; width: 80%; max-width: 280px; margin: 0 auto; }
-            .login-header h2 { font-size: 1.3rem; }
-            .login-header p { font-size: 0.8rem; }
-            .form-label { font-size: 0.85rem; }
-            .form-control { height: 42px; font-size: 0.9rem; }
-            .btn-login { height: 42px; font-size: 0.9rem; }
+            .lang-switcher {
+                top: 15px;
+                right: 15px;
+                padding: 5px 10px;
+                gap: 8px;
+            }
+            .lang-text {
+                display: none; /* Hide text on mobile to save space */
+            }
+            .lang-flag {
+                width: 26px;
+                height: 26px;
+            }
+            .login-card { 
+                padding: 30px 25px; 
+                width: 92%; 
+                max-width: 340px; 
+                margin: 0 auto; 
+                border-radius: 20px;
+            }
+            .hotel-logo-wrapper {
+                width: 65px;
+                height: 65px;
+            }
+            .login-header h2 { font-size: 1.4rem; }
+            .login-header p { font-size: 0.85rem; }
+            .form-control { height: 45px; font-size: 1rem; }
+            .btn-login { height: 45px; font-size: 1rem; }
             .hero-bg { height: 35vh; }
-            .login-wrapper { margin-top: -15vh; }
         }
         .remember-me {
             margin-top: 15px;
@@ -175,7 +266,7 @@ try {
         }
         .footer-info {
             position: relative;
-            padding: 20px 0;
+            padding: 30px 0 50px; /* Increased bottom padding to move text up */
             width: 100%;
             text-align: center;
             color: #999;
@@ -186,38 +277,51 @@ try {
 </head>
 <body>
 
+    <div class="lang-switcher">
+        <a href="?lang=la" class="lang-item <?php echo $current_lang == 'la' ? 'active' : ''; ?>">
+            <img src="assets/img/flags/Laos.png" class="lang-flag">
+            <span class="lang-text">Lao</span>
+        </a>
+        <a href="?lang=en" class="lang-item <?php echo $current_lang == 'en' ? 'active' : ''; ?>">
+            <img src="assets/img/flags/uk.png" class="lang-flag">
+            <span class="lang-text">English</span>
+        </a>
+        <a href="?lang=cn" class="lang-item <?php echo $current_lang == 'cn' ? 'active' : ''; ?>">
+            <img src="assets/img/flags/China.png" class="lang-flag">
+            <span class="lang-text">Chinese</span>
+        </a>
+    </div>
+
     <div class="hero-bg"></div>
 
     <div class="login-wrapper">
         <div class="login-card">
-            <!-- <div class="lang-icon">
-                <i class="fas fa-globe"></i>
-            </div> -->
-            
             <div class="login-header">
-                <!-- <img src="assets/img/logo.png" alt="Logo" style="width: 120px; height: 120px; object-fit: contain; margin-bottom: 20px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1));"> -->
-                <h2>ຍິນດີຕ້ອນຮັບ!</h2>
-                <p>ລະບົບບໍລິຫານ ໂຮງແຮມ Hotel Management</p>
+                <div class="hotel-logo-wrapper">
+                    <img src="<?php echo $hotel_logo; ?>" alt="Logo">
+                </div>
+                <h2><?php echo $lang['welcome_back']; ?></h2>
+                <p><?php echo $lang['login_subtitle']; ?></p>
             </div>
 
             <form id="loginForm">
                 <div class="form-group mb-3">
-                    <label class="form-label">ຊື່ຜູ້ນຳໃຊ້:</label>
+                    <label class="form-label"><?php echo $lang['username']; ?>:</label>
                     <div style="position: relative;">
                         <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888;">
                             <i class="fas fa-user"></i>
                         </span>
-                        <input type="text" id="username" class="form-control" placeholder="ປ້ອນຊື່ຜູ້ນຳໃຊ້..." required autofocus style="padding-left: 45px;">
+                        <input type="text" id="username" class="form-control" placeholder="<?php echo $lang['username_placeholder']; ?>" required autofocus style="padding-left: 45px;">
                     </div>
                 </div>
                 
                 <div class="form-group mb-3">
-                    <label class="form-label">ລະຫັດຜ່ານ:</label>
+                    <label class="form-label"><?php echo $lang['password']; ?>:</label>
                     <div class="password-container">
                         <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888; z-index: 5;">
                             <i class="fas fa-lock"></i>
                         </span>
-                        <input type="password" id="password" class="form-control" placeholder="...." required style="padding-left: 45px; padding-right: 45px;">
+                        <input type="password" id="password" class="form-control" placeholder="<?php echo $lang['password_placeholder']; ?>" required style="padding-left: 45px; padding-right: 45px;">
                         <span class="password-toggle" id="togglePassword">
                             <i class="fas fa-eye" id="eyeIcon"></i>
                         </span>
@@ -228,16 +332,16 @@ try {
                     <input type="checkbox" id="remember">
                     <label for="remember" class="mb-0">ຈື່ຂ້ອຍໄວ້ໃນລະບົບ</label>
                 </div> -->
-
                 <button type="submit" class="btn-login" id="btnLogin">
-                    <i class="fas fa-user-check mr-2"></i> ເຂົ້າສູ່ລະບົບ
+                    <i class="fas fa-user-check mr-2"></i> <?php echo $lang['login_btn']; ?>
                 </button>
             </form>
         </div>
     </div>
 
     <div class="footer-info">
-        ລະບົບບໍລິຫານ ໂຮງແຮມ Hotel Management V 1.0.0 ພັດທະນາໂດຍ: SoneDev
+        <?php echo $lang['login_subtitle']; ?> V 1.0.0<br>
+        <?php echo $lang['developed_by']; ?>: SoneDev
     </div>
 
     <!-- Use CDN for maximum reliability -->
@@ -265,11 +369,11 @@ try {
                 var btn = $('#btnLogin');
 
                 if (!username || !password) {
-                    Swal.fire({ icon: 'warning', title: 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ!' });
+                    Swal.fire({ icon: 'warning', title: '<?php echo $lang['login_required_msg']; ?>' });
                     return;
                 }
 
-                btn.prop('disabled', true).html('<i class="fas fa-circle-notch fa-spin"></i> ກຳລັງກວດສອບ...');
+                btn.prop('disabled', true).html('<i class="fas fa-circle-notch fa-spin"></i> <?php echo $lang['searching'] ?? 'ກຳລັງກວດສອບ...'; ?>');
 
                 $.ajax({
                     url: 'Check_user.php',
@@ -281,10 +385,10 @@ try {
                         if (response.success) {
                             window.location.href = response.redirect;
                         } else {
-                            btn.prop('disabled', false).text('ເຂົ້າສູ່ລະບົບ');
+                            btn.prop('disabled', false).text('<?php echo $lang['login_btn']; ?>');
                             Swal.fire({
                                 icon: 'error',
-                                title: 'ຜິດພາດ',
+                                title: '<?php echo $lang['error_label']; ?>',
                                 text: response.message,
                                 confirmButtonColor: '#007bff'
                             });
@@ -292,11 +396,11 @@ try {
                     },
                     error: function(xhr, status, error) {
                         console.error("AJAX Error:", status, error); // Debug log
-                        btn.prop('disabled', false).text('ເຂົ້າສູ່ລະບົບ');
+                        btn.prop('disabled', false).text('<?php echo $lang['login_btn']; ?>');
                         Swal.fire({
                             icon: 'error',
-                            title: 'ຜິດພາດ',
-                            text: 'ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບ Server ໄດ້! (Error: ' + error + ')'
+                            title: '<?php echo $lang['error_label']; ?>',
+                            text: '<?php echo $lang['cannot_connect_server'] ?? "ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບ Server ໄດ້!"; ?> (Error: ' + error + ')'
                         });
                     }
                 });

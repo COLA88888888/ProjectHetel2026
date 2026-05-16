@@ -27,11 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
 
     if ($selected_type === 'all' || empty($selected_type)) {
         // Find all available rooms
-        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້' OR housekeeping_status = 'Ready')");
+        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້ງານ' OR housekeeping_status = 'Ready')");
         $stmt->execute();
     } else {
         // Find available rooms by type
-        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE room_type = ? AND status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້' OR housekeeping_status = 'Ready')");
+        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE room_type = ? AND status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້ງານ' OR housekeeping_status = 'Ready')");
         $stmt->execute([$selected_type]);
     }
     
@@ -60,19 +60,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
     <style>
         *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
         .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
-        body { background-color: #f4f6f9; padding: 20px; }
-        .room-card { transition: transform 0.2s; }
-        .room-card:hover { transform: scale(1.02); cursor: pointer; border-color: #28a745; }
-        .room-price { font-size: 1.2rem; font-weight: 600; color: #28a745; }
+        body { background-color: #f8f9fa; padding: 20px; }
+        
+        .room-card { 
+            border: 1px solid #dee2e6 !important;
+            border-radius: 12px !important;
+            transition: all 0.2s;
+            background: #fff;
+            height: 100%;
+        }
+        .room-card:hover { 
+            border-color: #007bff !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08) !important;
+        }
+        
+        .room-card-body {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .room-icon-wrapper {
+            font-size: 2.5rem;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        
+        .room-number {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .room-type {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+        
+        .room-price { 
+            font-size: 1.25rem; 
+            font-weight: 700; 
+            color: #28a745;
+        }
+        
+        .btn-choose {
+            border-radius: 0 0 12px 12px !important;
+            padding: 10px;
+            font-weight: 600;
+        }
         
         @media (max-width: 768px) {
             body { padding: 10px; }
-            h2 { font-size: 1.2rem !important; }
-            h4 { font-size: 0.95rem !important; }
-            .room-price { font-size: 1rem; }
-            .card-title { font-size: 0.9rem !important; }
-            .btn { font-size: 0.85rem !important; }
-            .form-control { font-size: 0.85rem !important; }
+            .room-header { padding: 20px 10px; }
+            .room-icon { font-size: 2.2rem; }
+            .room-number-badge { font-size: 1.2rem; }
+            .room-price { font-size: 1.1rem; }
         }
     </style>
 </head>
@@ -171,25 +214,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
             <?php if (count($available_rooms) > 0): ?>
                 <div class="row">
                     <?php foreach($available_rooms as $room): ?>
-                        <div class="col-md-3">
-                            <div class="card room-card shadow-sm border-success">
-                                <div class="card-body text-center">
-                                    <div class="display-4 text-success mb-2">
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                            <div class="card room-card shadow-sm">
+                                <div class="room-card-body">
+                                    <div class="room-icon-wrapper">
                                         <i class="fas fa-door-closed"></i>
                                     </div>
-                                    <h4 class="font-weight-bold"><?php echo $lang['room']; ?> <?php echo htmlspecialchars($room['room_number']); ?></h4>
-                                    <p class="text-muted mb-1"><?php echo htmlspecialchars($room['room_type']); ?> (<?php echo htmlspecialchars($room['bed_type']); ?>)</p>
-                                    <hr>
-                                    <p class="room-price mb-0"><?php echo number_format($room['price']); ?> ₭ / <?php echo $lang['nights_count']; ?></p>
+                                    <div class="room-number"><?php echo $lang['room']; ?> <?php echo htmlspecialchars($room['room_number']); ?></div>
+                                    <div class="room-type">
+                                        <?php 
+                                            $r_type = $room['room_type'];
+                                            $b_type = $room['bed_type'];
+                                            echo htmlspecialchars($r_type);
+                                            if (strpos(strtoupper($r_type), 'VIP') !== false || (strpos($r_type, 'ຕຽງ') === false && strpos(strtolower($r_type), 'bed') === false)) {
+                                                echo " (" . htmlspecialchars($b_type) . ")";
+                                            }
+                                        ?>
+                                    </div>
+                                    <div class="room-price"><?php echo formatCurrency($room['price']); ?> <span class="small text-muted">/ <?php echo $lang['nights_count']; ?></span></div>
+                                    
                                     <?php if($nights > 1): ?>
-                                        <p class="text-muted small"><?php echo $lang['subtotal']; ?> <?php echo $nights; ?> <?php echo $lang['nights_count']; ?>: <strong><?php echo number_format($room['price'] * $nights); ?> ₭</strong></p>
+                                        <div class="mt-2 text-primary font-weight-bold small">
+                                            <?php echo $lang['subtotal']; ?>: <?php echo formatCurrency($room['price'] * $nights); ?>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
-                                <div class="card-footer p-0">
-                                    <a href="checkin.php?room_id=<?php echo $room['id']; ?>&nights=<?php echo $nights; ?>" class="btn btn-success btn-block rounded-0">
-                                        <i class="fas fa-check-circle"></i> <?php echo $lang['choose_this_room']; ?>
-                                    </a>
-                                </div>
+                                <a href="checkin.php?room_id=<?php echo $room['id']; ?>&nights=<?php echo $nights; ?>" class="btn btn-success btn-choose btn-block">
+                                    <i class="fas fa-check-circle"></i> <?php echo $lang['choose_this_room']; ?>
+                                </a>
                             </div>
                         </div>
                     <?php endforeach; ?>

@@ -64,10 +64,10 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif; font-size: 12px; margin: 0; padding: 0; color: #000; background: #f4f4f4; overflow-x: hidden; }
-        .receipt { width: 100%; max-width: 75mm; margin: 10px auto; background: #fff; padding: 4mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .receipt { width: 100%; max-width: 75mm; margin: 10px auto; background: #fff; padding: 4mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); page-break-inside: avoid; }
         .header { text-align: center; margin-bottom: 15px; }
         .hotel-name { font-size: 16px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
-        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+        .divider { border-top: 1px dashed #000; margin: 5px 0; }
         .info-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; font-size: 11px; line-height: 1.3; }
         .info-row span:first-child { flex: 1; padding-right: 5px; color: #555; }
         .info-row span:last-child { text-align: right; font-weight: bold; color: #000; }
@@ -76,9 +76,9 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
         .item-table td { padding: 6px 0; vertical-align: top; border-bottom: 1px solid #eee; word-wrap: break-word; }
         .item-table tr:last-child td { border-bottom: none; }
         .text-right { text-align: right !important; }
-        .total-section { margin-top: 12px; }
+        .total-section { margin-top: 8px; }
         .grand-total { font-size: 15px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; }
-        .footer { text-align: center; margin-top: 25px; font-size: 10px; font-style: italic; line-height: 1.4; color: #444; }
+        .footer { text-align: center; margin-top: 10px; font-size: 10px; font-style: italic; line-height: 1.2; color: #444; }
         
         @media print {
             body { background: none; padding: 0; margin: 0; }
@@ -140,7 +140,7 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
             <tr>
                 <th><?php echo $lang['item_label'] ?? 'ລາຍການ'; ?></th>
                 <th class="text-right"><?php echo $lang['qty_label'] ?? 'ຈຳນວນ'; ?></th>
-                <th class="text-right"><?php echo $lang['total_label']; ?></th>
+                <th class="text-right"><?php echo $lang['total_label'] ?? 'ລວມ'; ?></th>
             </tr>
         </thead>
         <tbody>
@@ -210,7 +210,7 @@ $date = date('d/m/Y H:i', strtotime($items[0]['created_at']));
         <?php if(!empty($settings['hotel_qr'])): ?>
             <div style="margin-top: 10px; text-align: center;">
                 <p style="margin-bottom: 5px; font-weight: bold; font-size: 10px; color: #555;"><?php echo $lang['scan_to_pay_msg'] ?? 'SCAN TO PAY (ສະແກນເພື່ອຊຳລະ)'; ?></p>
-                <img src="assets/img/QR/<?php echo $settings['hotel_qr']; ?>" style="width: 130px; height: 130px; border: 1px solid #eee; padding: 5px; background: #fff;">
+                <img src="assets/img/QR/<?php echo $settings['hotel_qr']; ?>" style="width: 110px; height: 110px; border: 1px solid #eee; padding: 5px; background: #fff;">
             </div>
         <?php endif; ?>
         <br>

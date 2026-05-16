@@ -220,6 +220,7 @@ $low_stock_count = $stmtLow->fetch()['low_stock_count'] ?? 0;
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 20px; }
         .btn-edit { background: transparent !important; border: none !important; color: #ffc107 !important; font-size: 1.15rem; padding: 0 8px; }
         .btn-restock { background: transparent !important; border: none !important; color: #17a2b8 !important; font-size: 1.15rem; padding: 0 8px; }

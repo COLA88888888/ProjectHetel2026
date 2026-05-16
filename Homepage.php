@@ -64,23 +64,28 @@ try {
     $unavailable_rooms = $pdo->query("
         SELECT COUNT(DISTINCT id) FROM rooms 
         WHERE status != 'Available' 
-        OR (housekeeping_status != 'ພ້ອມໃຊ້' AND housekeeping_status != 'Ready')
+        OR (housekeeping_status != 'ພ້ອມໃຊ້ງານ' AND housekeeping_status != 'Ready')
         OR id IN (SELECT room_id FROM bookings WHERE status IN ('Booked', 'Occupied', 'Checked In'))
     ")->fetchColumn() ?: 0;
     
     $available_rooms = $total_rooms - $unavailable_rooms;
     $guest_count = $pdo->query("SELECT COALESCE(SUM(guest_count), 0) FROM bookings WHERE status IN ('Occupied', 'Checked In')")->fetchColumn() ?: 0;
     
+    // Fetch Tax Percent
+    $stmtTaxSetting = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'tax_percent'");
+    $tax_percent_val = (float)($stmtTaxSetting->fetchColumn() ?: 0);
+    $tax_mult = 1 + ($tax_percent_val / 100);
+
     // Revenue calculations (Room + POS)
     // Updated to include 'Occupied', 'Completed', and 'Checked In' to ensure Walk-in revenue shows up immediately
-    $room_revenue = $pdo->query("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied')")->fetchColumn() ?: 0;
+    $room_revenue = $pdo->query("SELECT SUM((total_price + COALESCE(food_charge, 0)) * $tax_mult) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied')")->fetchColumn() ?: 0;
     $pos_revenue = $pdo->query("SELECT SUM(amount) FROM orders")->fetchColumn() ?: 0;
     $total_revenue = $room_revenue + $pos_revenue;
 
     // Use current date from PHP to ensure sync with MySQL
     $current_date = date('Y-m-d');
     
-    $stmtTR = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?)");
+    $stmtTR = $pdo->prepare("SELECT SUM((total_price + COALESCE(food_charge, 0)) * $tax_mult) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?)");
     $stmtTR->execute([$current_date, $current_date]);
     $today_room = $stmtTR->fetchColumn() ?: 0;
 
@@ -110,11 +115,11 @@ try {
 
     // 2. Today's Revenue Breakdown (Cash vs Transfer)
     // Bookings
-    $stmtCashRoom = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?) AND (payment_method LIKE '%ເງິນສົດ%' OR payment_method LIKE '%Cash%')");
+    $stmtCashRoom = $pdo->prepare("SELECT SUM(CASE WHEN status = 'Booked' THEN deposit_amount ELSE (total_price + COALESCE(food_charge, 0)) * $tax_mult END) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied', 'Booked') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?) AND (payment_method LIKE '%ເງິນສົດ%' OR payment_method LIKE '%Cash%')");
     $stmtCashRoom->execute([$current_date, $current_date]);
     $today_cash_room = $stmtCashRoom->fetchColumn() ?: 0;
 
-    $stmtTransferRoom = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?) AND (payment_method LIKE '%ເງິນໂອນ%' OR payment_method LIKE '%Transfer%')");
+    $stmtTransferRoom = $pdo->prepare("SELECT SUM(CASE WHEN status = 'Booked' THEN deposit_amount ELSE (total_price + COALESCE(food_charge, 0)) * $tax_mult END) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied', 'Booked') AND (DATE(check_in_date) = ? OR DATE(created_at) = ?) AND (payment_method LIKE '%ເງິນໂອນ%' OR payment_method LIKE '%Transfer%')");
     $stmtTransferRoom->execute([$current_date, $current_date]);
     $today_transfer_room = $stmtTransferRoom->fetchColumn() ?: 0;
 
@@ -131,7 +136,7 @@ try {
     $today_transfer_total = $today_transfer_room + $today_transfer_pos;
 
     // 3. Monthly Revenue (Bookings + POS)
-    $stmtMonthRoom = $pdo->prepare("SELECT SUM(total_price + COALESCE(food_charge, 0)) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied') AND MONTH(check_in_date) = MONTH(CURDATE()) AND YEAR(check_in_date) = YEAR(CURDATE())");
+    $stmtMonthRoom = $pdo->prepare("SELECT SUM(CASE WHEN status = 'Booked' THEN deposit_amount ELSE (total_price + COALESCE(food_charge, 0)) * $tax_mult END) FROM bookings WHERE status IN ('Completed', 'Checked In', 'Occupied', 'Booked') AND MONTH(check_in_date) = MONTH(CURDATE()) AND YEAR(check_in_date) = YEAR(CURDATE())");
     $stmtMonthRoom->execute();
     $monthly_revenue_room = $stmtMonthRoom->fetchColumn() ?: 0;
 
@@ -290,7 +295,7 @@ try {
         </a>
 
         <!-- Card 2: Today's Bookings -->
-        <a href="reserve.php" class="stat-card gc-amber">
+        <a href="reserve.php?today=1" class="stat-card gc-amber">
           <div class="stat-card-top">
             <div>
               <div class="stat-card-label"><?php echo $lang['today_bookings_label']; ?></div>
@@ -308,7 +313,7 @@ try {
           <div class="stat-card-top">
             <div>
               <div class="stat-card-label"><?php echo $lang['today_cash_label']; ?></div>
-              <div class="stat-card-value"><?= number_format($today_cash_total) ?> <span style="font-size:0.9rem;font-weight:600;">₭</span></div>
+              <div class="stat-card-value"><?= formatCurrency($today_cash_total) ?></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></div>
           </div>
@@ -322,7 +327,7 @@ try {
           <div class="stat-card-top">
             <div>
               <div class="stat-card-label"><?php echo $lang['today_transfer_label']; ?></div>
-              <div class="stat-card-value"><?= number_format($today_transfer_total) ?> <span style="font-size:0.9rem;font-weight:600;">₭</span></div>
+              <div class="stat-card-value"><?= formatCurrency($today_transfer_total) ?></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-university"></i></div>
           </div>
@@ -336,7 +341,7 @@ try {
           <div class="stat-card-top">
             <div>
               <div class="stat-card-label"><?php echo $lang['today_revenue_label']; ?></div>
-              <div class="stat-card-value"><?= number_format($today_revenue) ?> <span style="font-size:0.9rem;font-weight:600;">₭</span></div>
+              <div class="stat-card-value"><?= formatCurrency($today_revenue) ?></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-wallet"></i></div>
           </div>
@@ -350,7 +355,7 @@ try {
           <div class="stat-card-top">
             <div>
               <div class="stat-card-label"><?php echo $lang['monthly_revenue_label']; ?></div>
-              <div class="stat-card-value"><?= number_format($monthly_revenue ?? 0) ?> <span style="font-size:0.9rem;font-weight:600;">₭</span></div>
+              <div class="stat-card-value"><?= formatCurrency($monthly_revenue ?? 0) ?></div>
             </div>
             <div class="stat-card-icon"><i class="fas fa-chart-line"></i></div>
           </div>

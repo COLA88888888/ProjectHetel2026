@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
                         <div class="form-group">
                             <label><?php echo $lang['housekeeping_status_label']; ?></label>
                             <select name="housekeeping_status" id="housekeeping_status" class="form-control">
-                                <option value="ພ້ອມໃຊ້" <?php echo ($room['housekeeping_status'] == 'ພ້ອມໃຊ້' || $room['housekeeping_status'] == 'Ready') ? 'selected' : ''; ?>><?php echo $lang['ready']; ?></option>
+                                <option value="ພ້ອມໃຊ້ງານ" <?php echo ($room['housekeeping_status'] == 'ພ້ອມໃຊ້ງານ' || $room['housekeeping_status'] == 'Ready') ? 'selected' : ''; ?>><?php echo $lang['ready']; ?></option>
                                 <option value="Cleaning" <?php echo ($room['housekeeping_status'] == 'Cleaning') ? 'selected' : ''; ?>><?php echo $lang['cleaning']; ?></option>
                                 <option value="Maintenance" <?php echo ($room['housekeeping_status'] == 'Maintenance') ? 'selected' : ''; ?>><?php echo $lang['maintenance']; ?></option>
                             </select>

@@ -2,6 +2,15 @@
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['checked']) || $_SESSION['checked'] !== 1) {
@@ -26,9 +35,15 @@ while ($row = $stmtLow->fetch()) {
     $total_count++;
 }
 
-// 2. New Room Service Orders (Last 5 minutes)
-$stmtService = $pdo->query("SELECT item_name, created_at FROM room_services WHERE created_at >= NOW() - INTERVAL 5 MINUTE LIMIT 5");
+// 2. New Room Service Orders (Last 15 minutes)
+$stmtService = $pdo->query("SELECT id, item_name, created_at FROM room_services WHERE created_at >= NOW() - INTERVAL 15 MINUTE ORDER BY id DESC LIMIT 5");
+$latest_order_id = 0;
+$first = true;
 while ($row = $stmtService->fetch()) {
+    if ($first) {
+        $latest_order_id = $row['id'];
+        $first = false;
+    }
     $notifications[] = [
         'type' => 'room_service',
         'title' => 'ມີລາຍການສັ່ງໃໝ່!',
@@ -54,7 +69,31 @@ while ($row = $stmtCheckout->fetch()) {
     $total_count++;
 }
 
+// 3. New Payment Confirmations (Last 15 minutes)
+$stmtPay = $pdo->query("SELECT id, room_number, amount, created_at FROM payment_notifications WHERE status = 'New' AND created_at >= NOW() - INTERVAL 15 MINUTE ORDER BY id DESC");
+while ($row = $stmtPay->fetch()) {
+    $notifications[] = [
+        'id' => 'pay_' . $row['id'],
+        'title' => ($lang['payment_confirmed'] ?? 'ຮັບເງິນໂອນແລ້ວ'),
+        'text' => ($lang['room'] ?? 'ຫ້ອງ') . ' ' . $row['room_number'] . ': ' . formatCurrency($row['amount']),
+        'icon' => 'fas fa-hand-holding-usd',
+        'color' => 'text-success',
+        'link' => 'report.php', 
+        'time' => $row['created_at']
+    ];
+    $total_count++;
+}
+
+// Get max timestamp for tracking updates
+$stmtMaxTime = $pdo->query("SELECT GREATEST(
+    IFNULL((SELECT MAX(created_at) FROM room_services WHERE created_at >= NOW() - INTERVAL 15 MINUTE), '2000-01-01 00:00:00'),
+    IFNULL((SELECT MAX(created_at) FROM payment_notifications WHERE created_at >= NOW() - INTERVAL 15 MINUTE), '2000-01-01 00:00:00')
+)");
+$max_time = $stmtMaxTime->fetchColumn() ?: '';
+
 echo json_encode([
     'count' => $total_count,
+    'latest_order_id' => $latest_order_id,
+    'max_time' => $max_time,
     'items' => $notifications
 ]);

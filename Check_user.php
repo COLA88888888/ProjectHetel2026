@@ -3,6 +3,15 @@ header('Content-Type: application/json');
 session_start();
 require_once 'config/db.php';
 
+// Language Selection Logic
+$current_lang = $_SESSION['lang'] ?? 'la';
+$lang_file = "lang/{$current_lang}.php";
+if (file_exists($lang_file)) {
+    include $lang_file;
+} else {
+    include "lang/la.php";
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
     exit();
@@ -12,7 +21,7 @@ $username = trim($_POST['username'] ?? '');
 $password = $_POST['password'] ?? '';
 
 if (empty($username) || empty($password)) {
-    echo json_encode(['success' => false, 'message' => 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ!']);
+    echo json_encode(['success' => false, 'message' => $lang['login_required_msg']]);
     exit();
 }
 
@@ -53,17 +62,17 @@ try {
 
             $redirect = ($user['status'] == "ຜູ້ບໍລິຫານ") ? 'menu_admin.php' : 'menu_user.php';
             
-            logActivity($pdo, "ເຂົ້າສູ່ລະບົບ", "ຊື່ຜູ້ໃຊ້: $username");
+            logActivity($pdo, $lang['log_login'], $lang['username'] . ": $username");
 
             echo json_encode([
                 'success' => true, 
                 'redirect' => $redirect
             ]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ!']);
+            echo json_encode(['success' => false, 'message' => $lang['login_failed_password']]);
         }
     } else {
-        echo json_encode(['success' => false, 'message' => 'ບໍ່ພົບຊື່ຜູ້ນຳໃຊ້ນີ້ໃນລະບົບ!']);
+        echo json_encode(['success' => false, 'message' => $lang['login_failed_user']]);
     }
 } catch (PDOException $e) {
     echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);

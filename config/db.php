@@ -21,7 +21,23 @@ try {
      $defCurr = $stmtCur->fetch();
      if(!$defCurr) {
          // Fallback if none selected
-         $defCurr = ['currency_name' => 'ກີບ', 'symbol' => '₭', 'currency_code' => 'LAK'];
+         $defCurr = ['currency_name' => 'ກີບ', 'symbol' => '₭', 'currency_code' => 'LAK', 'exchange_rate' => 1];
+     }
+
+     // Global Currency Converter Function
+     function formatCurrency($amount_kip) {
+         global $defCurr;
+         $rate = (float)($defCurr['exchange_rate'] ?? 1);
+         if ($rate <= 0) $rate = 1;
+         
+         $converted = $amount_kip / $rate;
+         
+         // Format based on currency type (Decimals for USD/CNY, integer for LAK/THB)
+         if (in_array($defCurr['currency_code'], ['USD', 'CNY', 'EUR'])) {
+             return number_format($converted, 2) . ' ' . $defCurr['currency_name'];
+         } else {
+             return number_format($converted) . ' ' . $defCurr['currency_name'];
+         }
      }
 } catch (\PDOException $e) {
      throw new \PDOException($e->getMessage(), (int)$e->getCode());

@@ -81,6 +81,29 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
+// Set as Default Currency
+if (isset($_GET['set_default'])) {
+    $id = (int)$_GET['set_default'];
+    
+    // Begin transaction
+    $pdo->beginTransaction();
+    try {
+        // Reset all to 0
+        $pdo->query("UPDATE currency SET is_default = 0");
+        // Set selected to 1
+        $stmt = $pdo->prepare("UPDATE currency SET is_default = 1 WHERE id = ?");
+        $stmt->execute([$id]);
+        
+        $pdo->commit();
+        $_SESSION['success'] = $lang['save_success'];
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $_SESSION['error'] = $lang['error_occurred'];
+    }
+    header("Location: form_currency.php");
+    exit();
+}
+
 // Fetch all currencies
 $stmt = $pdo->query("SELECT * FROM currency ORDER BY is_default DESC, id ASC");
 $currencies = $stmt->fetchAll();
@@ -138,6 +161,12 @@ $symbol_col = "symbol_" . $current_lang;
                     text: '<?php echo $_SESSION['success']; ?>',
                     showConfirmButton: false,
                     timer: 1500
+                }).then(() => {
+                    // Force refresh the entire parent window (the dashboard) 
+                    // to reflect currency changes in the top bar and sidebar immediately.
+                    if (window.top !== window.self) {
+                        window.top.location.reload();
+                    }
                 });
             });
         </script>
@@ -260,6 +289,11 @@ $symbol_col = "symbol_" . $current_lang;
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
+                                                <?php if(!$c['is_default']): ?>
+                                                    <a href="?set_default=<?php echo $c['id']; ?>" class="btn btn-success btn-action" title="<?php echo $lang['set_as_main_currency'] ?? 'ຕັ້ງເປັນເງິນຫຼັກ'; ?>">
+                                                        <i class="fas fa-check-circle"></i>
+                                                    </a>
+                                                <?php endif; ?>
                                                 <button class="btn btn-warning text-white btn-action btn-edit" 
                                                     data-id="<?php echo $c['id']; ?>"
                                                     data-code="<?php echo htmlspecialchars($c['currency_code']); ?>"

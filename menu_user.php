@@ -359,8 +359,14 @@ $is_admin = ($_SESSION['status'] === 'ຜູ້ບໍລິຫານ');
           <?php if($is_admin || in_array('report', $perms)): ?>
           <li class="nav-item">
             <a href="report.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-chart-bar"></i>
+              <p><?php echo $lang['financial_report']; ?></p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="expenses.php" target="frame" class="nav-link">
               <i class="nav-icon fas fa-file-invoice-dollar"></i>
-              <p><?php echo $lang['personal_sales_report']; ?></p>
+              <p><?php echo $lang['expenses_management']; ?></p>
             </a>
           </li>
           <?php endif; ?>

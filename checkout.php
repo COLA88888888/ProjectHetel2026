@@ -146,16 +146,27 @@ if (isset($_GET['booking_id'])) {
         }
         
         @media (max-width: 768px) {
-            body { padding: 10px; }
-            h2 { font-size: 1.3rem !important; }
-            h4 { font-size: 1rem !important; }
-            .invoice-title { font-size: 1.2rem; }
-            .total-row { font-size: 1.1rem; }
-            .grand-total { font-size: 1.3rem; }
-            .card-title { font-size: 1rem !important; }
-            .table-responsive { font-size: 0.85rem; }
-            .btn-lg { padding: 8px 16px; font-size: 1rem; }
-            #room_list_container { max-height: 400px; }
+            body { padding: 8px; }
+            h2 { font-size: 1.1rem !important; }
+            h3 { font-size: 1rem !important; }
+            h4 { font-size: 0.9rem !important; }
+            h5 { font-size: 0.85rem !important; }
+            .invoice-title { font-size: 1rem; margin-bottom: 10px; }
+            .total-row { font-size: 0.95rem; }
+            .grand-total { font-size: 1.1rem; }
+            .card-title { font-size: 0.9rem !important; }
+            .table-responsive { font-size: 0.75rem !important; }
+            .btn-lg { padding: 6px 12px; font-size: 0.9rem; }
+            #room_list_container { max-height: 300px; }
+            
+            /* Specific fixes for screenshot */
+            .room-num { font-size: 0.95rem; }
+            .guest-name { font-size: 0.8rem; }
+            .display-4 { font-size: 1.8rem !important; } /* For 'ຫ້ອງ 203' */
+            .btn-choose { font-size: 0.8rem; padding: 5px 10px; }
+            .info-row { font-size: 0.85rem; }
+            .table th, .table td { padding: 6px !important; }
+            .input-group-text, .form-control { font-size: 0.85rem !important; }
         }
     </style>
     <script>
@@ -255,105 +266,114 @@ if (isset($_GET['booking_id'])) {
             <?php if ($selected_booking): ?>
                 <div class="card shadow-sm border-success">
                     <div class="card-body p-4">
-                        <div class="invoice-title text-success">
-                            <i class="fas fa-file-invoice-dollar"></i> <?php echo $lang['invoice_title']; ?>
-                            <span class="float-right font-weight-normal text-dark" style="font-size: 1rem;">
-                                <?php echo $lang['date_label']; ?>: <?php echo date('d/m/Y'); ?>
-                            </span>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="card-title text-success font-weight-bold" style="font-size: 1.5rem;">
+                                <i class="fas fa-file-invoice-dollar mr-2"></i> ສະຫຼຸບການຊຳລະເງິນ (Summary)
+                            </h3>
+                            <span class="text-muted small"><?php echo $lang['date_label']; ?>: <?php echo date('d/m/Y'); ?></span>
                         </div>
                         
-                        <div class="row mb-4">
-                            <div class="col-sm-6">
-                                <h6 class="text-muted mb-1"><?php echo $lang['customer_info']; ?>:</h6>
-                                <h5><strong><?php echo htmlspecialchars($selected_booking['customer_name']); ?></strong></h5>
-                                <div><?php echo $lang['phone']; ?>: <?php echo htmlspecialchars($selected_booking['customer_phone']); ?></div>
+                        <div class="row mb-3">
+                            <div class="col-6 col-sm-6 mb-3">
+                                <div class="text-muted small text-uppercase font-weight-bold mb-1"><?php echo $lang['customer_info']; ?></div>
+                                <div class="font-weight-bold"><?php echo htmlspecialchars($selected_booking['customer_name']); ?></div>
+                                <div class="small text-muted"><i class="fas fa-phone-alt"></i> <?php echo htmlspecialchars($selected_booking['customer_phone']); ?></div>
                                 <?php if($selected_booking['address']): ?>
-                                    <div><?php echo $lang['address']; ?>: <?php echo htmlspecialchars($selected_booking['address']); ?></div>
+                                    <div class="small text-muted"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($selected_booking['address']); ?></div>
                                 <?php endif; ?>
                             </div>
-                            <div class="col-sm-6 text-right">
-                                <h6 class="text-muted mb-1"><?php echo $lang['stay_info']; ?>:</h6>
-                                <h5><strong><?php echo $lang['room']; ?> <?php echo htmlspecialchars($selected_booking['room_number']); ?></strong> (<?php echo htmlspecialchars($selected_booking['room_type_localized'] ?: $selected_booking['room_type_base']); ?>)</h5>
-                                <div>Check-in: <span class="text-success"><?php echo date('d/m/Y', strtotime($selected_booking['check_in_date'])); ?></span></div>
+                            <div class="col-6 col-sm-6 text-right mb-3">
+                                <div class="text-muted small text-uppercase font-weight-bold mb-1"><?php echo $lang['stay_info']; ?></div>
+                                <div class="font-weight-bold text-success"><i class="fas fa-door-open"></i> <?php echo $lang['room']; ?> <?php echo htmlspecialchars($selected_booking['room_number']); ?></div>
+                                <div class="small text-muted"><?php echo htmlspecialchars($selected_booking['room_type_localized'] ?: $selected_booking['room_type_base']); ?></div>
+                            </div>
+                            <div class="col-12 mt-2 pt-2 border-top">
+                                <div class="d-flex justify-content-between small">
+                                    <span>Check-in: <span class="font-weight-bold text-dark"><?php echo date('d/m/Y', strtotime($selected_booking['check_in_date'])); ?></span></span>
+                                    <span>Check-out: <span class="font-weight-bold text-danger"><?php echo date('d/m/Y', strtotime($selected_booking['check_out_date'])); ?></span></span>
+                                </div>
                                 <?php 
                                     $today = date('Y-m-d');
                                     $checkout_date = $selected_booking['check_out_date'];
-                                    $date_warning = "";
-                                    if ($today < $checkout_date) {
-                                        $date_warning = '<span class="badge badge-warning ml-2"><i class="fas fa-exclamation-triangle"></i> ' . $lang['not_due_yet'] . '</span>';
-                                    } elseif ($today > $checkout_date) {
-                                        $date_warning = '<span class="badge badge-danger ml-2"><i class="fas fa-clock"></i> ' . $lang['overdue'] . '</span>';
-                                    }
-                                ?>
-                                <div>Check-out: <span class="text-danger"><?php echo date('d/m/Y', strtotime($selected_booking['check_out_date'])); ?></span> <?php echo $date_warning; ?></div>
+                                    if ($today < $checkout_date): ?>
+                                        <div class="alert alert-warning py-1 px-2 mt-2 mb-0 small"><i class="fas fa-exclamation-triangle"></i> <?php echo $lang['not_due_yet']; ?></div>
+                                    <?php elseif ($today > $checkout_date): ?>
+                                        <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small"><i class="fas fa-clock"></i> <?php echo $lang['overdue']; ?></div>
+                                    <?php endif; ?>
                             </div>
                         </div>
 
-                        <div class="table-responsive mb-4">
-                            <table class="table table-bordered">
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered mb-0" style="font-size: 0.9rem;">
                                 <thead class="bg-light">
-                                    <tr>
-                                        <th><?php echo $lang['item_label']; ?></th>
-                                        <th class="text-center"><?php echo $lang['total'] ?? 'Qty'; ?></th>
+                                    <tr style="font-size: 0.8rem; color: #555;">
+                                        <th width="50%"><?php echo $lang['item_label'] ?? 'ລາຍການ'; ?></th>
+                                        <th class="text-center"><?php echo $lang['qty_label'] ?? 'ຈຳນວນ'; ?></th>
                                         <th class="text-right"><?php echo $lang['price']; ?></th>
                                         <th class="text-right"><?php echo $lang['total']; ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <?php 
+                                        $d1 = new DateTime($selected_booking['check_in_date']);
+                                        $d2 = new DateTime($selected_booking['check_out_date']);
+                                        $nights = $d1->diff($d2)->days ?: 1;
+                                        $price_per_night = $selected_booking['total_price'] / $nights;
+                                    ?>
                                     <!-- Room Charge -->
-                                    <tr>
-                                        <td><strong><?php echo $lang['room_charge']; ?></strong></td>
+                                    <tr class="bg-light-yellow">
+                                        <td>
+                                            <strong><?php echo $lang['room']; ?> <?php echo $selected_booking['room_number']; ?></strong> (<?php echo $nights; ?> <?php echo $lang['nights_label'] ?? 'ຄືນ'; ?>)
+                                        </td>
                                         <td class="text-center">-</td>
-                                        <td class="text-right">-</td>
-                                        <td class="text-right font-weight-bold text-primary"><?php echo number_format($selected_booking['total_price']); ?> <?php echo $defCurr['currency_name']; ?></td>
+                                        <td class="text-right"><?php echo formatCurrency($price_per_night); ?></td>
+                                        <td class="text-right font-weight-bold text-primary"><?php echo formatCurrency($selected_booking['total_price']); ?></td>
                                     </tr>
                                     
                                     <!-- Food & Services -->
                                     <?php if(count($room_services) > 0): ?>
-                                        <tr>
-                                            <td colspan="4" class="bg-light text-info"><strong><i class="fas fa-utensils"></i> <?php echo $lang['additional_services']; ?>:</strong></td>
+                                        <tr class="bg-light">
+                                            <td colspan="4" class="py-1"><strong><i class="fas fa-utensils mr-1"></i> <?php echo $lang['additional_services'] ?? 'ຄ່າອາຫານ/ບໍລິການ'; ?></strong></td>
                                         </tr>
                                         <?php foreach($room_services as $svc): ?>
-                                            <tr>
-                                                <td class="pl-4"><?php echo htmlspecialchars($svc[$prod_name_col] ?: $svc['item_name']); ?></td>
+                                            <tr style="font-size: 0.85rem;">
+                                                <td class="pl-3"><?php echo htmlspecialchars($svc[$prod_name_col] ?: $svc['item_name']); ?></td>
                                                 <td class="text-center"><?php echo $svc['qty']; ?></td>
-                                                <td class="text-right"><?php echo number_format($svc['price']); ?></td>
-                                                <td class="text-right text-info"><?php echo number_format($svc['total_price']); ?></td>
+                                                <td class="text-right"><?php echo formatCurrency($svc['price']); ?></td>
+                                                <td class="text-right"><?php echo formatCurrency($svc['total_price']); ?></td>
                                             </tr>
                                         <?php endforeach; ?>
-                                        <!-- Subtotal Services -->
-                                        <tr>
-                                            <td colspan="3" class="text-right"><strong><?php echo $lang['total_additional_services']; ?>:</strong></td>
-                                            <td class="text-right font-weight-bold text-info"><?php echo number_format($selected_booking['food_charge']); ?> <?php echo $defCurr['currency_name']; ?></td>
-                                        </tr>
                                     <?php endif; ?>
                                     
-                                    <!-- Deposit -->
-                                    <?php if($selected_booking['deposit_amount'] > 0): ?>
-                                        <tr class="text-success">
-                                            <td colspan="3" class="text-right"><strong><?php echo $lang['deduct_deposit']; ?>:</strong></td>
-                                            <td class="text-right font-weight-bold">- <?php echo number_format($selected_booking['deposit_amount']); ?> <?php echo $defCurr['currency_name']; ?></td>
-                                        </tr>
-                                    <?php endif; ?>
-                                    
+                                    <!-- Calculation Rows -->
                                     <?php 
                                         $subtotal = $selected_booking['total_price'] + $selected_booking['food_charge'];
                                         $tax_amount = round($subtotal * ($tax_percent / 100));
                                         $total_after_tax = $subtotal + $tax_amount;
                                         $grand_total = $total_after_tax - $selected_booking['deposit_amount'];
                                     ?>
+                                    <tr style="border-top: 2px solid #dee2e6;">
+                                        <td colspan="3" class="text-right"><?php echo $lang['subtotal'] ?? 'ລວມຍ່ອຍ'; ?>:</td>
+                                        <td class="text-right"><strong><?php echo formatCurrency($subtotal); ?></strong></td>
+                                    </tr>
+
+                                    <?php if($selected_booking['deposit_amount'] > 0): ?>
+                                        <tr class="text-success">
+                                            <td colspan="3" class="text-right"><?php echo $lang['deduct_deposit']; ?>:</td>
+                                            <td class="text-right"><strong>- <?php echo formatCurrency($selected_booking['deposit_amount']); ?></strong></td>
+                                        </tr>
+                                    <?php endif; ?>
                                     
-                                    <!-- Tax Row -->
                                     <?php if($tax_percent > 0): ?>
-                                    <tr class="text-info">
-                                        <td colspan="3" class="text-right"><strong><?php echo $lang['tax_percent'] ?? 'Tax'; ?> (<?php echo $tax_percent; ?>%):</strong></td>
-                                        <td class="text-right font-weight-bold"><?php echo number_format($tax_amount); ?> <?php echo $defCurr['currency_name']; ?></td>
+                                    <tr class="text-muted" style="font-size: 0.8rem;">
+                                        <td colspan="3" class="text-right"><?php echo $lang['tax_percent'] ?? 'Tax'; ?> (<?php echo $tax_percent; ?>%):</td>
+                                        <td class="text-right"><?php echo formatCurrency($tax_amount); ?></td>
                                     </tr>
                                     <?php endif; ?>
 
-                                    <tr class="total-row">
-                                        <td colspan="3" class="text-right"><?php echo $lang['total_due']; ?>:</td>
-                                        <td class="text-right grand-total"><?php echo number_format($grand_total); ?> <?php echo $defCurr['currency_name']; ?></td>
+                                    <tr class="bg-dark text-white">
+                                        <td colspan="3" class="text-right py-2"><?php echo $lang['total_due']; ?>:</td>
+                                        <td class="text-right py-2 font-weight-bold" style="font-size: 1.3rem;"><?php echo formatCurrency($grand_total); ?></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -382,6 +402,9 @@ if (isset($_GET['booking_id'])) {
                                             <option value="Transfer"><?php echo $lang['transfer']; ?></option>
                                         </select>
                                     </div>
+                                    <button type="button" id="btn_notify_transfer" class="btn btn-outline-info btn-block d-none">
+                                        <i class="fas fa-paper-plane"></i> <?php echo $lang['notify_transfer'] ?? 'ແຈ້ງ Admin ວ່າໂອນແລ້ວ'; ?>
+                                    </button>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -441,8 +464,6 @@ $(document).ready(function() {
     $('#btn_full_pay').on('click', function() {
         $('#amount_received').val(grandTotal.toLocaleString('en-US'));
         calculateChange();
-        // Trigger checkout confirmation immediately
-        $('#checkoutForm').submit();
     });
 
     // Number formatting
@@ -475,6 +496,47 @@ $(document).ready(function() {
         if (change < 0) change = 0;
         $('#change_amount').val(change.toLocaleString('en-US'));
     }
+
+    // Show/Hide notify button
+    $('#payment_method').change(function() {
+        if($(this).val() === 'Transfer') {
+            $('#btn_notify_transfer').removeClass('d-none');
+        } else {
+            $('#btn_notify_transfer').addClass('d-none');
+        }
+    }).trigger('change');
+
+    // Handle Notify Button
+    $('#btn_notify_transfer').click(function() {
+        const bid = <?php echo $selected_booking['id'] ?? 0; ?>;
+        const rnum = '<?php echo $selected_booking['room_number'] ?? ''; ?>';
+        const amt = grandTotal;
+        
+        if(bid === 0) return;
+
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> ກຳລັງແຈ້ງ...');
+
+        $.post('ajax_confirm_payment.php', {
+            booking_id: bid,
+            room_number: rnum,
+            amount: amt
+        }, function(res) {
+            const data = JSON.parse(res);
+            if(data.status === 'success') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ແຈ້ງ Admin ສຳເລັດ',
+                    text: 'Admin ຈະໄດ້ຮັບການແຈ້ງເຕືອນທັນທີ',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                $('#btn_notify_transfer').html('<i class="fas fa-check"></i> ແຈ້ງແລ້ວ').addClass('btn-success').removeClass('btn-outline-info');
+            } else {
+                Swal.fire('Error', 'ບໍ່ສາມາດແຈ້ງໄດ້', 'error');
+                $('#btn_notify_transfer').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> ແຈ້ງ Admin ວ່າໂອນແລ້ວ');
+            }
+        });
+    });
 
     $('#checkoutForm').on('submit', function(e) {
         e.preventDefault();

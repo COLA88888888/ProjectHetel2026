@@ -54,11 +54,9 @@ try {
 <html>
  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;700&display=swap" rel="stylesheet">
 <style>
- *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
- .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
- html, body, .nav-link, .brand-text, h1, h2, h3, h4, h5, h6, .btn, .form-control, .card-title { 
-    font-family: 'Noto Sans Lao Looped', sans-serif !important; 
- }
+  *:not(.fas):not(.far):not(.fab):not(.fa) { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+  body { font-family: 'Noto Sans Lao Looped', sans-serif !important; }
+  .fas, .far, .fab, .fa { font-family: "Font Awesome 5 Free" !important; font-weight: 900 !important; }
  .nav-sidebar .menu-is-opening > .nav-link p > .right.fa-angle-right,
  .nav-sidebar .menu-open > .nav-link p > .right.fa-angle-right {
    transform: rotate(90deg) !important;
@@ -373,6 +371,12 @@ try {
               <p><?php echo $lang['financial_report']; ?></p>
             </a>
           </li>
+          <li class="nav-item">
+            <a href="expenses.php" target="frame" class="nav-link">
+              <i class="nav-icon fas fa-file-invoice-dollar"></i>
+              <p><?php echo $lang['expenses_management']; ?></p>
+            </a>
+          </li>
           <?php endif; ?>
           <?php if($is_admin): ?>
           <li class="nav-item">
@@ -470,12 +474,14 @@ try {
 <!-- AdminLTE App -->
 <script src="dist/js/adminlte.js"></script>
 <!-- Notification Sound -->
-<audio id="notiSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+<audio id="notiSound" src="https://assets.mixkit.co/active_storage/sfx/2868/2868-preview.mp3" preload="auto"></audio>
 
 <script>
   $(function() {
     // ===== Notifications Logic =====
     let lastNotiCount = 0;
+    let lastOrderId = 0;
+    let lastMaxTime = '';
 
     function fetchNotifications() {
       $.ajax({
@@ -502,27 +508,35 @@ try {
             });
             $('#notiList').html(html);
 
-            // Play sound if count increased
-            if (data.count > lastNotiCount) {
-              document.getElementById('notiSound').play().catch(e => console.log("Sound play blocked"));
+            // Trigger sound if count increased OR new ID OR new timestamp
+            if (data.count > lastNotiCount || 
+                (data.latest_order_id > 0 && data.latest_order_id > lastOrderId) ||
+                (data.max_time && data.max_time !== lastMaxTime)) {
+              
+              let sound = document.getElementById('notiSound');
+              sound.pause();
+              sound.currentTime = 0;
+              sound.play().catch(e => console.log("Sound play blocked"));
             }
           } else {
             $('#notiCount').hide();
             $('#notiList').html(`
               <a href="#" class="dropdown-item text-center py-4 text-muted">
                 <i class="fas fa-bell-slash mb-2 d-block fa-2x opacity-2"></i>
-                <span>ບໍ່ມີການແຈ້ງເຕືອນໃໝ່</span>
+                <span><?php echo $lang['no_notifications'] ?? 'ບໍ່ມີການແຈ້ງເຕືອນໃໝ່'; ?></span>
               </a>
             `);
           }
           lastNotiCount = data.count;
+          lastOrderId = data.latest_order_id || 0;
+          lastMaxTime = data.max_time || '';
         }
       });
     }
 
     // Initial fetch and set interval
     fetchNotifications();
-    setInterval(fetchNotifications, 30000); // Every 30 seconds
+    setInterval(fetchNotifications, 5000); // Every 5 seconds
 
     // ===== Active Menu Highlight =====
     var $navLinks = $('.nav-sidebar .nav-link[target="frame"]');

@@ -40,7 +40,7 @@ if($nights_count < 1) $nights_count = 1;
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
     $query = "
         SELECT r.* FROM rooms r 
-        WHERE (r.housekeeping_status = 'ພ້ອມໃຊ້' OR r.housekeeping_status = 'Ready')
+        WHERE (r.housekeeping_status = 'ພ້ອມໃຊ້ງານ' OR r.housekeeping_status = 'Ready')
         AND r.status != 'Maintenance'
         AND r.id NOT IN (
             SELECT room_id FROM bookings 
@@ -110,8 +110,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
     if($nights < 1) $nights = 1;
     $total_price = $room_price * $nights;
 
-    $stmt = $pdo->prepare("UPDATE bookings SET customer_name = ?, customer_phone = ?, guest_count = ?, check_in_date = ?, check_out_date = ?, total_price = ?, deposit_amount = ? WHERE id = ?");
-    if ($stmt->execute([$customer_name, $customer_phone, $guest_count, $check_in, $check_out, $total_price, $deposit, $booking_id])) {
+    $stmt = $pdo->prepare("UPDATE bookings SET customer_name = ?, customer_phone = ?, guest_count = ?, check_in_date = ?, check_out_date = ?, total_price = ?, deposit_amount = ?, payment_method = ? WHERE id = ?");
+    if ($stmt->execute([$customer_name, $customer_phone, $guest_count, $check_in, $check_out, $total_price, $deposit, $_POST['payment_method'], $booking_id])) {
         $_SESSION['success'] = $lang['success_label'] ?? "ແກ້ໄຂການຈອງສຳເລັດ!";
     } else {
         $_SESSION['error'] = $lang['error_label'] ?? "ບໍ່ສາມາດແກ້ໄຂຂໍ້ມູນໄດ້!";
@@ -150,9 +150,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reserve'])) {
 
         if ($room) {
             $total_price = $room['price'] * $nights_res;
-            $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Booked')");
+            $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, payment_method, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Booked')");
             
-            if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount])) {
+            if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount, $_POST['payment_method']])) {
                 $_SESSION['success'] = $lang['success_label'] ?? "ຈອງຫ້ອງລ່ວງໜ້າສຳເລັດ!";
                 header("Location: reserve.php");
                 exit();
@@ -171,7 +171,13 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
-$stmtCount = $pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'Booked'");
+$today_filter = isset($_GET['today']) && $_GET['today'] == 1;
+$where_clause = "WHERE b.status = 'Booked'";
+if ($today_filter) {
+    $where_clause .= " AND DATE(b.created_at) = CURDATE()";
+}
+
+$stmtCount = $pdo->query("SELECT COUNT(*) FROM bookings b $where_clause");
 $total_records = $stmtCount->fetchColumn();
 $total_pages = ceil($total_records / $limit);
 
@@ -186,7 +192,7 @@ $stmtReserved = $pdo->prepare("
      AND b2.check_out_date > b.check_in_date) as other_bookings
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
-    WHERE b.status = 'Booked' 
+    $where_clause
     ORDER BY b.check_in_date ASC
     LIMIT :limit OFFSET :offset
 ");
@@ -213,7 +219,7 @@ $reservations = $stmtReserved->fetchAll();
         .room-price { font-size: 1.1rem; font-weight: 600; color: #f39c12; }
         .btn-action-group { 
             display: flex;
-            gap: 12px;
+            gap: 8px;
             justify-content: center;
             align-items: center;
         }
@@ -224,8 +230,18 @@ $reservations = $stmtReserved->fetchAll();
             width: auto;
             height: auto;
             box-shadow: none !important;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             transition: opacity 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1;
+        }
+        .btn-action-group .btn span {
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-top: 2px;
+            white-space: nowrap;
         }
         .btn-action-group .btn:hover { opacity: 0.7; }
         .btn-action-group .btn-success { color: #28a745 !important; }
@@ -233,9 +249,18 @@ $reservations = $stmtReserved->fetchAll();
         .btn-action-group .btn-info { color: #17a2b8 !important; }
         .btn-action-group .btn-danger { color: #dc3545 !important; }
         @media (max-width: 768px) {
-            h2 { font-size: 1.2rem; }
-            .room-card .display-4 { font-size: 2rem; }
-            .room-card h4 { font-size: 1rem; }
+            body { padding: 5px; }
+            h2 { font-size: 1.1rem !important; }
+            h3 { font-size: 1rem !important; }
+            .room-card .display-4 { font-size: 1.5rem; }
+            .room-card h4 { font-size: 0.9rem; }
+            .table { font-size: 0.75rem !important; }
+            .table th, .table td { padding: 6px 4px !important; }
+            .card-header { padding: 8px 12px !important; }
+            .card-title { font-size: 0.9rem !important; }
+            .btn-sm { padding: 0.2rem 0.4rem; font-size: 0.75rem; }
+            .form-control-sm, .input-group-sm > .form-control { font-size: 0.8rem; }
+            .stat-card-value { font-size: 1.2rem; }
         }
     </style>
     <script>
@@ -315,7 +340,7 @@ $reservations = $stmtReserved->fetchAll();
                     <div class="col-md-2 col-12 d-flex align-items-end">
                         <div class="form-group w-100">
                             <button type="submit" name="search" class="btn btn-warning btn-block text-white">
-                                <i class="fas fa-search"></i> <?php echo $lang['search']; ?>
+                                <i class="fas fa-search"></i> <span class="d-none d-md-inline"><?php echo $lang['search']; ?></span>
                             </button>
                         </div>
                     </div>
@@ -337,7 +362,16 @@ $reservations = $stmtReserved->fetchAll();
                                 <div class="card-body text-center p-3">
                                     <div class="display-4 text-warning mb-2"><i class="fas fa-door-closed"></i></div>
                                     <h4 class="font-weight-bold"><?php echo $lang['room']; ?> <?php echo htmlspecialchars($room['room_number']); ?></h4>
-                                    <p class="text-muted mb-1 small"><?php echo htmlspecialchars($room['room_type']); ?> (<?php echo htmlspecialchars($room['bed_type']); ?>)</p>
+                                    <p class="text-muted mb-1 small">
+                                        <?php 
+                                            $r_type = $room['room_type'];
+                                            $b_type = $room['bed_type'];
+                                            echo htmlspecialchars($r_type);
+                                            if (strpos(strtoupper($r_type), 'VIP') !== false || (strpos($r_type, 'ຕຽງ') === false && strpos(strtolower($r_type), 'bed') === false)) {
+                                                echo " (" . htmlspecialchars($b_type) . ")";
+                                            }
+                                        ?>
+                                    </p>
                                     <hr class="my-2">
                                     <p class="room-price mb-0 text-orange font-weight-bold" style="font-size: 1.2rem;"><?php echo number_format($room['price']); ?> <?php echo $lang['per_night']; ?></p>
                                     <div class="mt-3 p-2 border-success rounded shadow-sm" style="background-color: #e8f5e9; border: 1px dashed #28a745;">
@@ -350,7 +384,8 @@ $reservations = $stmtReserved->fetchAll();
                                     </div>
                                     <?php if($nights_count > 1): ?>
                                         <div class="mt-2 text-primary font-weight-bold">
-                                            <i class="fas fa-info-circle"></i> <?php echo $lang['total_nights']; ?> <?php echo $nights_count; ?> <?php echo $lang['nights_unit']; ?>: <?php echo number_format($room['price'] * $nights_count); ?> ₭
+                                            <div class="room-price"><?php echo formatCurrency($room['price']); ?> <span class="small text-muted">/ <?php echo $lang['nights_count']; ?></span></div>
+                                            <?php echo $lang['total']; ?>: <?php echo formatCurrency($room['price'] * $nights_count); ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -427,12 +462,12 @@ $reservations = $stmtReserved->fetchAll();
                                 echo $diff->format("%a"); 
                             ?>
                         </td>
-                        <td class="text-right"><?php echo number_format($res['total_price']); ?> ₭</td>
-                        <td class="text-right text-info"><?php echo number_format($res['deposit_amount']); ?> ₭</td>
+                        <td class="text-right"><?php echo formatCurrency($res['total_price']); ?></td>
+                        <td class="text-right text-info"><?php echo formatCurrency($res['deposit_amount']); ?></td>
                         <td class="align-middle text-center">
                             <div class="btn-action-group">
                                 <a href="checkin_reserved.php?booking_id=<?php echo $res['id']; ?>" class="btn btn-sm btn-success" title="<?php echo $lang['check_in_now']; ?>">
-                                    <i class="fas fa-sign-in-alt"></i>
+                                    <i class="fas fa-sign-in-alt"></i> <span class="d-none d-md-inline"><?php echo $lang['check_in'] ?? 'Check-in'; ?></span>
                                 </a>
                                 <button class="btn btn-sm btn-primary btn-view-reserve" 
                                     data-id="<?php echo $res['id']; ?>"
@@ -447,8 +482,9 @@ $reservations = $stmtReserved->fetchAll();
                                     data-checkout="<?php echo date('d/m/Y', strtotime($res['check_out_date'])); ?>"
                                     data-total="<?php echo number_format($res['total_price']); ?>"
                                     data-deposit="<?php echo number_format($res['deposit_amount']); ?>"
+                                    data-payment="<?php echo $res['payment_method'] ?? 'Cash'; ?>"
                                     title="<?php echo $lang['view_details']; ?>">
-                                    <i class="fas fa-eye"></i>
+                                    <i class="fas fa-eye"></i> <span class="d-none d-md-inline"><?php echo $lang['view'] ?? 'ເບິ່ງ'; ?></span>
                                 </button>
                                 <button class="btn btn-sm btn-info btn-edit-reserve" 
                                     data-id="<?php echo $res['id']; ?>"
@@ -458,11 +494,12 @@ $reservations = $stmtReserved->fetchAll();
                                     data-checkin="<?php echo $res['check_in_date']; ?>"
                                     data-checkout="<?php echo $res['check_out_date']; ?>"
                                     data-deposit="<?php echo $res['deposit_amount']; ?>"
+                                    data-payment="<?php echo $res['payment_method'] ?? 'Cash'; ?>"
                                     title="<?php echo $lang['edit']; ?>">
-                                    <i class="fas fa-edit"></i>
+                                    <i class="fas fa-edit"></i> <span class="d-none d-md-inline"><?php echo $lang['edit']; ?></span>
                                 </button>
                                 <a href="#" class="btn btn-sm btn-danger btn-cancel-reserve" data-id="<?php echo $res['id']; ?>" data-room-id="<?php echo $res['room_id']; ?>" title="<?php echo $lang['cancel']; ?>">
-                                    <i class="fas fa-times-circle"></i>
+                                    <i class="fas fa-times-circle"></i> <span class="d-none d-md-inline"><?php echo $lang['cancel']; ?></span>
                                 </a>
                             </div>
                         </td>
@@ -473,7 +510,13 @@ $reservations = $stmtReserved->fetchAll();
             </div>
 
             <!-- Pagination UI -->
-            <?php if ($total_pages > 1): ?>
+            <?php 
+                if ($total_pages > 1): 
+                $params = $_GET;
+                unset($params['page']);
+                $query_str = http_build_query($params);
+                if ($query_str) $query_str = '&' . $query_str;
+            ?>
             <div class="mt-3 d-flex justify-content-between align-items-center">
                 <div class="text-muted small">
                     <?php echo $lang['dt_info'] ?? 'ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ'; ?>
@@ -481,15 +524,15 @@ $reservations = $stmtReserved->fetchAll();
                 <nav>
                     <ul class="pagination pagination-sm m-0">
                         <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
-                            <a class="page-item page-link" href="?page=<?php echo $page - 1; ?>"><i class="fas fa-chevron-left"></i></a>
+                            <a class="page-link" href="?page=<?php echo $page - 1 . $query_str; ?>"><i class="fas fa-chevron-left"></i></a>
                         </li>
                         <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                             <li class="page-item <?php echo ($page == $i) ? 'active' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                <a class="page-link" href="?page=<?php echo $i . $query_str; ?>"><?php echo $i; ?></a>
                             </li>
                         <?php endfor; ?>
                         <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?page=<?php echo $page + 1; ?>"><i class="fas fa-chevron-right"></i></a>
+                            <a class="page-link" href="?page=<?php echo $page + 1 . $query_str; ?>"><i class="fas fa-chevron-right"></i></a>
                         </li>
                     </ul>
                 </nav>
@@ -519,7 +562,7 @@ $reservations = $stmtReserved->fetchAll();
                         <?php echo $lang['room']; ?> <span id="info_room" class="font-weight-bold"></span> | 
                         <?php echo $lang['date_label']; ?>: <span id="info_date" class="text-success"></span> | 
                         <span id="info_nights"></span> <?php echo $lang['nights']; ?> | 
-                        <?php echo $lang['total']; ?>: <span id="info_total" class="text-danger font-weight-bold"></span> ₭
+                        <?php echo $lang['subtotal']; ?>: <?php echo formatCurrency($room['price'] * $nights); ?>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -554,8 +597,17 @@ $reservations = $stmtReserved->fetchAll();
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label><?php echo $lang['deposit']; ?> (₭)</label>
+                                <label><?php echo $lang['deposit']; ?> (<?php echo $lang['currency_symbol'] ?? '₭'; ?>)</label>
                                 <input type="text" name="deposit_amount" id="modal_deposit" class="form-control number-format" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label><?php echo $lang['payment_method_label']; ?></label>
+                                <select name="payment_method" class="form-control" required>
+                                    <option value="Cash"><?php echo $lang['cash']; ?></option>
+                                    <option value="Transfer"><?php echo $lang['transfer']; ?></option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -593,6 +645,7 @@ $reservations = $stmtReserved->fetchAll();
                     <tr><td class="text-muted"><?php echo $lang['checkout_date']; ?>:</td><td class="text-danger font-weight-bold" id="v_checkout"></td></tr>
                     <tr><td class="text-muted"><?php echo $lang['total']; ?>:</td><td class="font-weight-bold text-primary" id="v_total"></td></tr>
                     <tr><td class="text-muted"><?php echo $lang['deposit']; ?>:</td><td class="font-weight-bold text-info" id="v_deposit"></td></tr>
+                    <tr><td class="text-muted"><?php echo $lang['payment_method_label']; ?>:</td><td class="font-weight-bold" id="v_payment"></td></tr>
                 </table>
             </div>
             <div class="modal-footer bg-light">
@@ -639,9 +692,22 @@ $reservations = $stmtReserved->fetchAll();
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label><?php echo $lang['deposit']; ?></label>
-                        <input type="text" name="deposit_amount" id="edit_deposit" class="form-control number-format">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label><?php echo $lang['deposit']; ?></label>
+                                <input type="text" name="deposit_amount" id="edit_deposit" class="form-control number-format">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label><?php echo $lang['payment_method_label']; ?></label>
+                                <select name="payment_method" id="edit_payment_method" class="form-control" required>
+                                    <option value="Cash"><?php echo $lang['cash']; ?></option>
+                                    <option value="Transfer"><?php echo $lang['transfer']; ?></option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -743,6 +809,7 @@ $(document).ready(function() {
         $('#edit_checkin').val(btn.data('checkin'));
         $('#edit_checkout').val(btn.data('checkout'));
         $('#edit_deposit').val(new Intl.NumberFormat().format(btn.data('deposit')));
+        $('#edit_payment_method').val(btn.data('payment'));
         $('#editReserveModal').modal('show');
     });
 
@@ -759,6 +826,7 @@ $(document).ready(function() {
         $('#v_checkout').text(btn.data('checkout'));
         $('#v_total').text(btn.data('total') + ' ₭');
         $('#v_deposit').text(btn.data('deposit') + ' ₭');
+        $('#v_payment').text(btn.data('payment'));
         $('#viewReserveModal').modal('show');
     });
 

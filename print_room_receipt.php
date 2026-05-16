@@ -40,15 +40,15 @@ if (!$booking) {
     die("Booking details not found.");
 }
 
-// Fetch Room Services (Food/Drink) with localized names
+// Fetch Room Services (Food/Drink) with localized names - REMOVED GROUP BY
 $prod_name_col = "prod_name_" . $current_lang;
 $svcStmt = $pdo->prepare("
-    SELECT rs.item_name, rs.price, SUM(rs.qty) as qty, SUM(rs.total_price) as total_price, 
-           MAX(p.prod_code) as prod_code, MAX(p.$prod_name_col) as prod_name_localized
+    SELECT rs.item_name, rs.price, rs.qty, rs.total_price, 
+           p.prod_code, p.$prod_name_col as prod_name_localized
     FROM room_services rs 
     LEFT JOIN products p ON rs.prod_id = p.prod_id 
     WHERE rs.booking_id = ?
-    GROUP BY rs.prod_id, rs.item_name, rs.price
+    ORDER BY rs.id ASC
 ");
 $svcStmt->execute([$booking_id]);
 $services = $svcStmt->fetchAll();
@@ -68,10 +68,10 @@ $final_payable = $grand_total - $booking['deposit_amount'];
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <style>
         body { font-family: 'Noto Sans Lao Looped', sans-serif; font-size: 12px; margin: 0; padding: 0; color: #000; background: #f4f4f4; overflow-x: hidden; }
-        .receipt { width: 100%; max-width: 75mm; margin: 10px auto; background: #fff; padding: 4mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .receipt { width: 100%; max-width: 75mm; margin: 10px auto; background: #fff; padding: 4mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); page-break-inside: avoid; }
         .header { text-align: center; margin-bottom: 12px; }
         .hotel-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; }
-        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+        .divider { border-top: 1px dashed #000; margin: 5px 0; }
         .info-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; font-size: 11px; line-height: 1.3; }
         .info-row span:first-child { flex: 1; padding-right: 5px; color: #555; }
         .info-row span:last-child { text-align: right; font-weight: bold; color: #000; }
@@ -80,9 +80,9 @@ $final_payable = $grand_total - $booking['deposit_amount'];
         .item-table td { padding: 6px 0; vertical-align: top; border-bottom: 1px solid #eee; word-wrap: break-word; }
         .item-table tr:last-child td { border-bottom: none; }
         .text-right { text-align: right !important; }
-        .total-section { margin-top: 12px; }
+        .total-section { margin-top: 8px; }
         .grand-total { font-size: 15px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; color: #d9534f; }
-        .footer { text-align: center; margin-top: 25px; font-size: 10px; font-style: italic; line-height: 1.4; color: #444; }
+        .footer { text-align: center; margin-top: 10px; font-size: 10px; font-style: italic; line-height: 1.2; color: #444; }
         
         @media print {
             body { background: none; padding: 0; margin: 0; }
@@ -127,7 +127,10 @@ $final_payable = $grand_total - $booking['deposit_amount'];
         <div style="font-size: 11px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($hotel_address); ?></div>
         <div style="font-size: 11px;"><i class="fas fa-phone-alt"></i> Tel: <?php echo htmlspecialchars($hotel_phone); ?></div>
         <div class="divider"></div>
-        <div style="font-weight: bold; font-size: 13px;"><i class="fas fa-bed"></i> ໃບບິນຄ່າທີ່ພັກ (ROOM INVOICE)</div>
+        <div style="font-weight: bold; font-size: 13px; margin-bottom: 5px;">
+            <i class="fas fa-bed mr-1"></i> <?php echo $lang['room_invoice'] ?? 'ໃບບິນຄ່າທີ່ພັກ'; ?><br>
+            <small style="font-weight: normal; color: #666;">(ROOM INVOICE / OFFICIAL RECEIPT)</small>
+        </div>
     </div>
 
     <div class="info-row">
@@ -161,7 +164,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
         <tbody>
             <tr>
                 <td>ຄ່າຫ້ອງພັກ</td>
-                <td class="text-right"><?php echo number_format($booking['total_price']); ?></td>
+                <td class="text-right"><?php echo formatCurrency($booking['total_price']); ?></td>
             </tr>
             <?php if(count($services) > 0): ?>
                 <tr>
@@ -172,7 +175,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
                     <td style="padding-left: 10px;">
                         <?php echo htmlspecialchars($s['prod_name_localized'] ?: $s['item_name']); ?> (x<?php echo $s['qty']; ?>)
                     </td>
-                    <td class="text-right"><?php echo number_format($s['total_price']); ?></td>
+                    <td class="text-right"><?php echo formatCurrency($s['total_price']); ?></td>
                 </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -186,22 +189,22 @@ $final_payable = $grand_total - $booking['deposit_amount'];
     <div class="total-section">
         <div class="info-row" style="font-weight: normal; font-size: 12px;">
             <span>ລວມຍ່ອຍ:</span>
-            <span><?php echo number_format($subtotal); ?></span>
+            <span><?php echo formatCurrency($subtotal); ?></span>
         </div>
         <?php if($tax_percent > 0): ?>
         <div class="info-row" style="font-weight: normal; font-size: 12px;">
             <span>ພາສີ (<?php echo $tax_percent; ?>%):</span>
-            <span><?php echo number_format($tax_amount); ?></span>
+            <span><?php echo formatCurrency($tax_amount); ?></span>
         </div>
         <?php endif; ?>
         <div class="info-row">
             <span>ລວມທັງໝົດ:</span>
-            <span><?php echo number_format($grand_total); ?></span>
+            <span><?php echo formatCurrency($grand_total); ?></span>
         </div>
         <?php if($booking['deposit_amount'] > 0): ?>
         <div class="info-row" style="font-weight: normal; font-size: 12px; color: green;">
             <span>ຫັກມັດຈຳແລ້ວ:</span>
-            <span>- <?php echo number_format($booking['deposit_amount']); ?></span>
+            <span>- <?php echo formatCurrency($booking['deposit_amount']); ?></span>
         </div>
         <?php endif; ?>
         <div class="info-row" style="border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; font-size: 16px; color: red;">
@@ -229,7 +232,7 @@ $final_payable = $grand_total - $booking['deposit_amount'];
         <?php if(!empty($settings['hotel_qr'])): ?>
             <div style="margin-top: 10px; text-align: center;">
                 <p style="margin-bottom: 5px; font-weight: bold; font-size: 10px; color: #555;">SCAN TO PAY (ສະແກນເພື່ອຊຳລະ)</p>
-                <img src="assets/img/QR/<?php echo $settings['hotel_qr']; ?>" style="width: 130px; height: 130px; border: 1px solid #eee; padding: 5px; background: #fff;">
+                <img src="assets/img/QR/<?php echo $settings['hotel_qr']; ?>" style="width: 110px; height: 110px; border: 1px solid #eee; padding: 5px; background: #fff;">
             </div>
         <?php endif; ?>
         <br>

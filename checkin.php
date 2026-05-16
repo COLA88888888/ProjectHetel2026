@@ -22,7 +22,7 @@ if ($room_id > 0) {
     $room = $stmt->fetch();
 
     if (!$room) {
-        $_SESSION['error'] = $lang['room_not_available_msg'] ?? "ຂໍອະໄພ! ຫ້ອງນີ້ບໍ່ຫວ່າງແລ້ວ ຫຼື ຖືກຈອງໄປແລ້ວ.";
+        $_SESSION['error'] = $lang['room_not_available_msg'];
         header("Location: walkin.php");
         exit();
     }
@@ -78,12 +78,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
         $_SESSION['success'] = $lang['checkin_success'];
         $_SESSION['print_booking'] = $booking_id;
         
-        logActivity($pdo, "Check-in ເຂົ້າພັກ", "ລູກຄ້າ: $customer_name, ຫ້ອງ: " . $room['room_number']);
+        logActivity($pdo, $lang['log_checkin'], $lang['customer_label'] . ": $customer_name, " . $lang['room'] . ": " . $room['room_number']);
         
         header("Location: walkin.php");
         exit();
     } else {
-        $error = "ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກຂໍ້ມູນ!";
+        $error = $lang['error_occurred'];
     }
 }
 ?>
@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
         <div class="col-md-4">
             <div class="card card-info card-outline shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-bed"></i> <?php echo $lang['room_details'] ?? 'ຂໍ້ມູນຫ້ອງພັກ'; ?></h3>
+                    <h3 class="card-title"><i class="fas fa-bed"></i> <?php echo $lang['room_details']; ?></h3>
                 </div>
                 <div class="card-body box-profile text-center">
                     <div class="display-3 text-info mb-3">

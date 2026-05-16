@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_service'])) {
             // Update existing row
             $newQty = $existingItem['qty'] + $qty;
             $newTotalPrice = $existingItem['total_price'] + $total_price;
-            $stmt = $pdo->prepare("UPDATE room_services SET qty = ?, total_price = ? WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE room_services SET qty = ?, total_price = ?, created_at = NOW() WHERE id = ?");
             $stmt->execute([$newQty, $newTotalPrice, $existingItem['id']]);
         } else {
             // Insert new row
@@ -324,20 +324,22 @@ if ($selected_booking_id > 0) {
         }
         .qty-badge {
             position: absolute;
-            top: 0;
-            right: 0;
-            background: #e74c3c;
+            top: 5px;
+            right: 5px;
+            background: #ff4757;
             color: white;
-            width: 35px;
-            height: 35px;
+            min-width: 28px;
+            height: 28px;
+            padding: 0 5px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 1.2rem;
-            z-index: 20;
-            border-radius: 0 15px 0 15px;
-            box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+            font-size: 0.95rem;
+            z-index: 30;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.4);
+            border: 2px solid white;
         }
         .product-card:active {
             transform: scale(0.98);
@@ -682,6 +684,7 @@ if ($selected_booking_id > 0) {
             overflow: hidden;
             margin-bottom: 0;
         }
+    <audio id="orderSound" src="https://assets.mixkit.co/active_storage/sfx/2868/2868-preview.mp3" preload="auto"></audio>
     </style>
 </head>
 <body>
@@ -750,7 +753,7 @@ if ($selected_booking_id > 0) {
                     <div class="product-card-body">
                         <div class="text-muted small mb-1"><?php echo htmlspecialchars($p['prod_code'] ?? '-'); ?></div>
                         <div class="product-name"><?php echo htmlspecialchars($p[$prod_name_col] ?: $p['prod_name']); ?></div>
-                        <div class="product-price"><?php echo number_format($p['sprice']); ?> ₭</div>
+                        <div class="product-price"><?php echo formatCurrency($p['sprice']); ?></div>
                         <div class="product-stock"><?php echo $lang['remaining']; ?>: <?php echo $p['qty']; ?></div>
                     </div>
                 </div>
@@ -807,10 +810,10 @@ if ($selected_booking_id > 0) {
                             <?php if(!empty($row['prod_code'])): ?>
                                 <div class="text-muted small" style="font-size: 0.7rem;">Code: <?php echo htmlspecialchars($row['prod_code']); ?></div>
                             <?php endif; ?>
-                            <div class="order-item-price text-success font-weight-bold"><?php echo number_format($row['price']); ?> ₭ x <?php echo $row['qty']; ?></div>
+                            <div class="order-item-price text-success font-weight-bold"><?php echo formatCurrency($row['price']); ?> x <?php echo $row['qty']; ?></div>
                         </div>
                         <div class="text-right mr-3">
-                            <div class="font-weight-bold"><?php echo number_format($row['total_price']); ?> ₭</div>
+                            <div class="font-weight-bold"><?php echo formatCurrency($row['total_price']); ?></div>
                         </div>
                         <div class="delete-item" onclick="confirmDelete(<?php echo $row['id']; ?>, <?php echo $selected_booking_id; ?>)">
                             <i class="fas fa-times-circle fa-lg"></i>
@@ -828,7 +831,7 @@ if ($selected_booking_id > 0) {
         <div class="order-footer">
             <div class="total-box">
                 <span class="total-label"><?php echo $lang['grand_total']; ?>:</span>
-                <span class="total-amount"><?php echo number_format($total_accumulated); ?> ₭</span>
+                <span class="total-amount"><?php echo formatCurrency($total_accumulated); ?></span>
             </div>
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-outline-danger btn-block rounded-pill" onclick="clearAllItems(<?php echo $selected_booking_id; ?>)">
@@ -1093,6 +1096,7 @@ $(function() {
                     updateProductBadges();
                 });
                 
+                /* 
                 const Toast = Swal.mixin({
                     toast: true,
                     position: 'top-end',
@@ -1104,6 +1108,13 @@ $(function() {
                     icon: 'success',
                     title: '<?php echo str_replace('%s', "' + name + '", $lang['added_msg']); ?>'
                 });
+                */
+                
+                // Play sound immediately on success
+                let sound = document.getElementById('orderSound');
+                sound.pause();
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("Sound play blocked"));
             }
         });
     }
@@ -1180,6 +1191,36 @@ function clearAllItems(booking_id) {
         }
     });
 }
+    function notifyTransfer(bid, rnum, amt) {
+        if(bid === 0) return;
+        
+        Swal.fire({
+            title: 'ແຈ້ງ Admin ວ່າໂອນແລ້ວ?',
+            text: 'ຈຳນວນ: ' + amt.toLocaleString() + ' ' + '<?php echo $defCurr['currency_name']; ?>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ແຈ້ງເລີຍ',
+            cancelButtonText: 'ຍົກເລີກ'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('ajax_confirm_payment.php', {
+                    booking_id: bid,
+                    room_number: rnum,
+                    amount: amt
+                }, function(res) {
+                    const data = JSON.parse(res);
+                    if(data.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'ແຈ້ງ Admin ສຳເລັດ',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    }
+                });
+            }
+        });
+    }
 </script>
 
 <!-- Hidden form for Quick Add -->

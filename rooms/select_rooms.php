@@ -199,13 +199,13 @@ $room_types = $stmtTypes->fetchAll();
                             </select>
                         </div>
                         <div class="form-group">
-                            <label><?php echo $lang['price_per_night']; ?> (₭)</label>
+                            <label><?php echo $lang['price_per_night']; ?> (<?php echo $lang['currency_symbol'] ?? '₭'; ?>)</label>
                             <input type="text" name="price" id="price" class="form-control number-format" placeholder="<?php echo $lang['enter_price']; ?>">
                         </div>
                         <div class="form-group">
                             <label><?php echo $lang['housekeeping_status_label']; ?></label>
                             <select name="housekeeping_status" id="housekeeping_status" class="form-control">
-                                <option value="ພ້ອມໃຊ້"><?php echo $lang['ready']; ?></option>
+                                <option value="ພ້ອມໃຊ້ງານ"><?php echo $lang['ready']; ?></option>
                                 <option value="Cleaning"><?php echo $lang['cleaning']; ?></option>
                                 <option value="Maintenance"><?php echo $lang['maintenance']; ?></option>
                             </select>
@@ -248,11 +248,11 @@ $room_types = $stmtTypes->fetchAll();
                                         <td><?php echo htmlspecialchars($row[$bed_name_col] ?: $row['bed_type']); ?></td>
                                         <td class="price-cell">
                                             <?php echo number_format($row['price']); ?>
-                                            <span class="currency-label">₭</span>
+                                            <span class="currency-label"><?php echo $lang['currency_symbol'] ?? '₭'; ?></span>
                                         </td>
                                         <td>
                                             <?php if($row['status'] == 'Available'): ?>
-                                                <?php if($row['housekeeping_status'] == 'ພ້ອມໃຊ້' || $row['housekeeping_status'] == 'Ready'): ?>
+                                                <?php if($row['housekeeping_status'] == 'ພ້ອມໃຊ້ງານ' || $row['housekeeping_status'] == 'Ready'): ?>
                                                     <span class="badge badge-available badge-status"><?php echo $lang['available']; ?></span>
                                                 <?php elseif($row['housekeeping_status'] == 'Cleaning'): ?>
                                                     <span class="badge badge-booked badge-status"><?php echo $lang['cleaning']; ?></span>
@@ -275,7 +275,7 @@ $room_types = $stmtTypes->fetchAll();
                                                 elseif ($hk == 'Maintenance') $hk_class = 'hk-maintenance';
                                             ?>
                                             <select class="hk-select <?php echo $hk_class; ?>" data-room-id="<?php echo $row['id']; ?>">
-                                                <option value="ພ້ອມໃຊ້" <?php echo ($hk == 'ພ້ອມໃຊ້' || $hk == 'Ready') ? 'selected' : ''; ?>><?php echo $lang['ready']; ?></option>
+                                                <option value="ພ້ອມໃຊ້ງານ" <?php echo ($hk == 'ພ້ອມໃຊ້ງານ' || $hk == 'Ready') ? 'selected' : ''; ?>><?php echo $lang['ready']; ?></option>
                                                 <option value="Cleaning" <?php echo ($hk == 'Cleaning') ? 'selected' : ''; ?>><?php echo $lang['cleaning']; ?></option>
                                                 <option value="Maintenance" <?php echo ($hk == 'Maintenance') ? 'selected' : ''; ?>><?php echo $lang['maintenance']; ?></option>
                                             </select>
@@ -405,7 +405,7 @@ $(document).ready(function() {
             $sel.removeClass('hk-saving');
             // Update color class
             $sel.removeClass('hk-ready hk-cleaning hk-maintenance');
-            if (newStatus === 'ພ້ອມໃຊ້') $sel.addClass('hk-ready');
+            if (newStatus === 'ພ້ອມໃຊ້ງານ') $sel.addClass('hk-ready');
             else if (newStatus === 'Cleaning') $sel.addClass('hk-cleaning');
             else $sel.addClass('hk-maintenance');
             
