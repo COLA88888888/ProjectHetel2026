@@ -1,8 +1,10 @@
 <?php
+// --- ສ່ວນເລີ່ມຕົ້ນ Session ແລະ ດຶງໄຟລ໌ເຊື່ອມຕໍ່ຖານຂໍ້ມູນ & ລະບົບບັນທຶກປະຫວັດ (Logger) ---
 session_start();
 require_once 'config/db.php';
+require_once 'config/logger.php';
 
-// Language Selection Logic
+// --- ສ່ວນກວດສອບ ແລະ ໂຫຼດໄຟລ໌ແປພາສາ (Lao, English, Chinese) ຕາມ session ຂອງຜູ້ໃຊ້ ---
 $current_lang = $_SESSION['lang'] ?? 'la';
 $lang_file = "lang/{$current_lang}.php";
 if (file_exists($lang_file)) {
@@ -11,12 +13,13 @@ if (file_exists($lang_file)) {
     include "lang/la.php";
 }
 
-// Fetch all settings
+// --- ດຶງຂໍ້ມູນການຕັ້ງຄ່າທັງໝົດຂອງໂຮງແຮມຈາກຖານຂໍ້ມູນມາເກັບໃນຕົວແປ $settings_data ---
 $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
 $settings_data = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-// Handle form submission
+// --- ສ່ວນຈັດການເມື່ອມີການສົ່ງຟອມບັນທຶກການຕັ້ງຄ່າ (POST request) ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
+    // ບັນທຶກຂໍ້ມູນທົ່ວໄປ (ຊື່ໂຮງແຮມ, ເບີໂທ, ທີ່ຢູ່, ທ້າຍບິນ, ອາກອນ)
     $keys_to_update = ['hotel_name', 'hotel_phone', 'hotel_address', 'receipt_footer', 'tax_percent'];
     foreach ($keys_to_update as $k) {
         if (isset($_POST[$k])) {
@@ -25,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
         }
     }
 
-    // Handle Logo Upload
+    // --- ສ່ວນຈັດການອັບໂຫຼດ ໂລໂກ້ໂຮງແຮມ (Hotel Logo Upload) ---
     if (isset($_FILES['hotel_logo']) && $_FILES['hotel_logo']['error'] == 0) {
         $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         $filename = $_FILES['hotel_logo']['name'];
@@ -37,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
             }
         }
     }
-    // Handle Payment QR Upload
+    // --- ສ່ວນຈັດການອັບໂຫຼດ QR ຮັບເງິນ (Payment QR Upload) ---
     if (isset($_FILES['hotel_qr']) && $_FILES['hotel_qr']['error'] == 0) {
         $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         $filename = $_FILES['hotel_qr']['name'];
@@ -50,13 +53,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
         }
     }
 
+    // --- ບັນທຶກປະຫວັດການແກ້ໄຂການຕັ້ງຄ່າລົງໃນລະບົບ System Logs ---
+    logActivity($pdo, "ແກ້ໄຂການຕັ້ງຄ່າ", "ອັບເດດຂໍ້ມູນໂຮງແຮມ / ການຕັ້ງຄ່າລະບົບ");
+
     $_SESSION['success'] = $lang['save_success'] ?? 'ບັນທຶກສຳເລັດ!';
     header("Location: settings.php");
     exit();
 }
 ?>
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="<?php echo $current_lang; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -94,16 +100,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
                 <div class="card-header p-0 border-bottom-0">
                     <ul class="nav nav-tabs" id="settingsTab" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="general-tab" data-toggle="pill" href="#general" role="tab"><i class="fas fa-hotel mr-1"></i> ຂໍ້ມູນໂຮງແຮມ</a>
+                            <a class="nav-link active" id="general-tab" data-toggle="pill" href="#general" role="tab"><i class="fas fa-hotel mr-1"></i> <?php echo $lang['hotel_info'] ?? 'ຂໍ້ມູນໂຮງແຮມ'; ?></a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="qr-tab" data-toggle="pill" href="#qr" role="tab"><i class="fas fa-qrcode mr-1"></i> QR ສັ່ງອາຫານ</a>
+                            <a class="nav-link" id="qr-tab" data-toggle="pill" href="#qr" role="tab"><i class="fas fa-qrcode mr-1"></i> <?php echo $lang['qr_ordering'] ?? 'QR ສັ່ງອາຫານ'; ?></a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="finance-tab" data-toggle="pill" href="#finance" role="tab"><i class="fas fa-coins mr-1"></i> ການເງິນ & ພາສີ</a>
+                            <a class="nav-link" id="finance-tab" data-toggle="pill" href="#finance" role="tab"><i class="fas fa-coins mr-1"></i> <?php echo $lang['finance_tax'] ?? 'ການເງິນ & ພາສີ'; ?></a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="network-tab" data-toggle="pill" href="#network" role="tab"><i class="fas fa-network-wired mr-1"></i> ການເຂົ້າເຖິງ</a>
+                            <a class="nav-link" id="network-tab" data-toggle="pill" href="#network" role="tab"><i class="fas fa-network-wired mr-1"></i> <?php echo $lang['system_access'] ?? 'ການເຂົ້າເຖິງ'; ?></a>
                         </li>
                     </ul>
                 </div>
@@ -115,39 +121,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
                             <form action="" method="post" enctype="multipart/form-data">
                                 <div class="row mb-4 text-center">
                                     <div class="col-sm-6 border-right">
-                                        <label class="d-block">ໂລໂກ້ໂຮງແຮມ</label>
+                                        <label class="d-block"><?php echo $lang['hotel_logo'] ?? 'ໂລໂກ້ໂຮງແຮມ'; ?></label>
                                         <img id="prevLogo" src="assets/img/logo/<?php echo $settings_data['hotel_logo'] ?? 'logo.png'; ?>" class="logo-preview mb-2 shadow-sm">
                                         <div class="mt-1">
                                             <label for="hotel_logo" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-image mr-1"></i> ປ່ຽນໂລໂກ້
+                                                <i class="fas fa-image mr-1"></i> <?php echo $lang['change_logo'] ?? 'ປ່ຽນໂລໂກ້'; ?>
                                             </label>
                                             <input type="file" name="hotel_logo" id="hotel_logo" class="d-none" onchange="previewImg(this, 'prevLogo')">
                                         </div>
                                     </div>
                                     <div class="col-sm-6">
-                                        <label class="d-block">QR ຮັບເງິນ (Payment)</label>
+                                        <label class="d-block"><?php echo $lang['payment_qr'] ?? 'QR ຮັບເງິນ (Payment)'; ?></label>
                                         <img id="prevQR" src="assets/img/QR/<?php echo $settings_data['hotel_qr'] ?? 'qr.png'; ?>" class="logo-preview mb-2 shadow-sm">
                                         <div class="mt-1">
                                             <label for="hotel_qr" class="btn btn-sm btn-outline-success">
-                                                <i class="fas fa-qrcode mr-1"></i> ປ່ຽນ QR
+                                                <i class="fas fa-qrcode mr-1"></i> <?php echo $lang['change_qr'] ?? 'ປ່ຽນ QR'; ?>
                                             </label>
                                             <input type="file" name="hotel_qr" id="hotel_qr" class="d-none" onchange="previewImg(this, 'prevQR')">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="form-group row">
-                                    <label class="col-sm-3 col-form-label">ຊື່ໂຮງແຮມ</label>
+                                    <label class="col-sm-3 col-form-label"><?php echo $lang['hotel_name'] ?? 'ຊື່ໂຮງແຮມ'; ?></label>
                                     <div class="col-sm-9"><input type="text" name="hotel_name" class="form-control" value="<?php echo htmlspecialchars($settings_data['hotel_name'] ?? ''); ?>"></div>
                                 </div>
                                 <div class="form-group row">
-                                    <label class="col-sm-3 col-form-label">ເບີໂທລະສັບ</label>
+                                    <label class="col-sm-3 col-form-label"><?php echo $lang['phone_number'] ?? 'ເບີໂທລະສັບ'; ?></label>
                                     <div class="col-sm-9"><input type="text" name="hotel_phone" class="form-control" value="<?php echo htmlspecialchars($settings_data['hotel_phone'] ?? ''); ?>"></div>
                                 </div>
                                 <div class="form-group row">
-                                    <label class="col-sm-3 col-form-label">ທີ່ຢູ່</label>
+                                    <label class="col-sm-3 col-form-label"><?php echo $lang['address'] ?? 'ທີ່ຢູ່'; ?></label>
                                     <div class="col-sm-9"><textarea name="hotel_address" class="form-control" rows="2"><?php echo htmlspecialchars($settings_data['hotel_address'] ?? ''); ?></textarea></div>
                                 </div>
-                                <div class="text-right"><button type="submit" name="save_settings" class="btn btn-primary px-4">ບັນທຶກ</button></div>
+                                <div class="text-right"><button type="submit" name="save_settings" class="btn btn-primary px-4"><?php echo $lang['save'] ?? 'ບັນທຶກ'; ?></button></div>
                             </form>
                         </div>
 
@@ -160,13 +166,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
                                     $qr_url = "$protocol://$host/ProjectHotel2026/customer_order.php";
                                     $qr_api = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($qr_url);
                                 ?>
-                                <h4 class="mb-4">QR Code ສຳລັບໃຫ້ລູກຄ້າສະແກນສັ່ງອາຫານ</h4>
+                                <h4 class="mb-4"><?php echo $lang['qr_desc_customer'] ?? 'QR Code ສຳລັບໃຫ້ລູກຄ້າສະແກນສັ່ງອາຫານ'; ?></h4>
                                 <div id="printableQR" class="p-4 border d-inline-block bg-white shadow-sm mb-4">
                                     <h5 class="font-weight-bold mb-3"><?php echo htmlspecialchars($settings_data['hotel_name'] ?? 'Hotel Service'); ?></h5>
                                     <img src="<?php echo $qr_api; ?>" class="img-fluid mb-3">
-                                    <p class="text-muted mb-0">ສະແກນເພື່ອສັ່ງອາຫານ</p>
+                                    <p class="text-muted mb-0"><?php echo $lang['scan_to_order'] ?? 'ສະແກນເພື່ອສັ່ງອາຫານ'; ?></p>
                                 </div>
-                                <div><button class="btn btn-success btn-lg" onclick="printQR()"><i class="fas fa-print mr-2"></i> ພິມ QR Code</button></div>
+                                <div><button class="btn btn-success btn-lg" onclick="printQR()"><i class="fas fa-print mr-2"></i> <?php echo $lang['print_qr_code'] ?? 'ພິມ QR Code'; ?></button></div>
                             </div>
                         </div>
 
@@ -174,22 +180,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
                         <div class="tab-pane fade" id="finance" role="tabpanel">
                             <form action="" method="post">
                                 <div class="form-group row">
-                                    <label class="col-sm-3 col-form-label text-right">ອາກອນ (%)</label>
+                                    <label class="col-sm-3 col-form-label text-right"><?php echo $lang['tax_percent'] ?? 'ອາກອນ (%)'; ?></label>
                                     <div class="col-sm-9"><input type="number" name="tax_percent" class="form-control" value="<?php echo htmlspecialchars($settings_data['tax_percent'] ?? '0'); ?>"></div>
                                 </div>
                                 <div class="form-group row">
-                                    <label class="col-sm-3 col-form-label text-right">ຂໍ້ຄວາມທ້າຍບິນ</label>
+                                    <label class="col-sm-3 col-form-label text-right"><?php echo $lang['receipt_footer'] ?? 'ຂໍ້ຄວາມທ້າຍບິນ'; ?></label>
                                     <div class="col-sm-9"><input type="text" name="receipt_footer" class="form-control" value="<?php echo htmlspecialchars($settings_data['receipt_footer'] ?? ''); ?>"></div>
                                 </div>
-                                <div class="text-right"><button type="submit" name="save_settings" class="btn btn-primary px-4">ບັນທຶກ</button></div>
+                                <div class="text-right"><button type="submit" name="save_settings" class="btn btn-primary px-4"><?php echo $lang['save'] ?? 'ບັນທຶກ'; ?></button></div>
                             </form>
                         </div>
 
                         <!-- Tab 4: Network -->
                         <div class="tab-pane fade" id="network" role="tabpanel">
                             <div class="alert alert-info border-0">
-                                <h5><i class="fas fa-network-wired"></i> ການເຂົ້າເຖິງລະບົບ</h5>
-                                <p>ໃຊ້ IP ນີ້ເພື່ອເຂົ້າລະບົບຈາກເຄື່ອງອື່ນ:</p>
+                                <h5><i class="fas fa-network-wired"></i> <?php echo $lang['system_access'] ?? 'ການເຂົ້າເຖິງ'; ?></h5>
+                                <p><?php echo $lang['use_ip_access'] ?? 'ໃຊ້ IP ນີ້ເພື່ອເຂົ້າລະບົບຈາກເຄື່ອງອື່ນ:'; ?></p>
                                 <h3 class="text-center font-weight-bold">http://<?php echo gethostbyname(gethostname()); ?>/ProjectHotel2026</h3>
                             </div>
                         </div>

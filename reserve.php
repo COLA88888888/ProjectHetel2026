@@ -2,7 +2,10 @@
 session_start();
 require_once 'config/session_check.php';
 require_once 'config/db.php';
+require_once 'config/logger.php';
 
+// --- 1. ສ່ວນໂຫຼດໄຟລ໌ພາສາ ແລະ ຕັ້ງຄ່າ Session (Language File Loader) ---
+// ກວດສອບ ແລະ ດຶງພາສາປັດຈຸບັນຈາກ Session, ຫາກບໍ່ມີໃຫ້ໃຊ້ພາສາລາວ 'la' ເປັນຫຼັກ
 $language = $_SESSION['lang'] ?? 'la'; 
 $lang_file = "lang/{$language}.php";
 if (file_exists($lang_file)) {
@@ -11,7 +14,12 @@ if (file_exists($lang_file)) {
     include_once "lang/la.php";
 }
 
-// Fetch room types
+// 2. ກຳນົດຊື່ຄໍລຳແປພາສາຂອງປະເພດຫ້ອງ (Room Type Column Name Map)
+// ເພື່ອກວດສອບ ແລະ ດຶງຄໍລຳແປພາສາທີ່ຖືກຕ້ອງຈາກຖານຂໍ້ມູນ ເຊັ່ນ: room_type_name_la, room_type_name_en, room_type_name_cn
+$rt_name_col = "room_type_name_" . $language;
+
+// 3. ດຶງຂໍ້ມູນປະເພດຫ້ອງທັງໝົດ (Fetch Room Types)
+// ສົ່ງຄຳສັ່ງ SQL ໄປດຶງລາຍການປະເພດຫ້ອງທັງໝົດມາສະແດງຜົນໃນ Select Option
 $stmtTypes = $pdo->query("SELECT * FROM room_types ORDER BY id DESC");
 $room_types = $stmtTypes->fetchAll();
 
@@ -19,9 +27,20 @@ $room_types = $stmtTypes->fetchAll();
 if (isset($_GET['cancel_booking'])) {
     $bookingId = (int)$_GET['cancel_booking'];
     $roomId = (int)$_GET['room_id'];
+    
+    // Fetch customer and room details before deleting
+    $stmtFetch = $pdo->prepare("SELECT b.customer_name, r.room_number FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.id = ?");
+    $stmtFetch->execute([$bookingId]);
+    $bk = $stmtFetch->fetch();
+    $cust = $bk['customer_name'] ?? '';
+    $roomNum = $bk['room_number'] ?? '';
+
     $pdo->prepare("DELETE FROM bookings WHERE id = ? AND status = 'Booked'")->execute([$bookingId]);
     $pdo->prepare("UPDATE rooms SET status = 'Available' WHERE id = ?")->execute([$roomId]);
-    $_SESSION['success'] = $lang['success_label'] ?? "ຍົກເລີກການຈອງສຳເລັດ!";
+
+    logActivity($pdo, "ຍົກເລີກການຈອງ", "ຍົກເລີກການຈອງຫ້ອງ $roomNum ຂອງລູກຄ້າ $cust");
+
+    $_SESSION['success'] = $lang['booking_cancel_success'] ?? "ຍົກເລີກການຈອງສຳເລັດ!";
     header("Location: reserve.php");
     exit();
 }
@@ -39,7 +58,9 @@ if($nights_count < 1) $nights_count = 1;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
     $query = "
-        SELECT r.* FROM rooms r 
+        SELECT r.*, rt.room_type_name_la, rt.room_type_name_en, rt.room_type_name_cn 
+        FROM rooms r 
+        LEFT JOIN room_types rt ON r.room_type = rt.room_type_name
         WHERE (r.housekeeping_status = 'ພ້ອມໃຊ້ງານ' OR r.housekeeping_status = 'Ready')
         AND r.status != 'Maintenance'
         AND r.id NOT IN (
@@ -110,9 +131,47 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_reserve'])) {
     if($nights < 1) $nights = 1;
     $total_price = $room_price * $nights;
 
+    // Fetch old details before update to compare what was edited
+    $stmtOld = $pdo->prepare("SELECT b.*, r.room_number FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.id = ?");
+    $stmtOld->execute([$booking_id]);
+    $old = $stmtOld->fetch();
+
     $stmt = $pdo->prepare("UPDATE bookings SET customer_name = ?, customer_phone = ?, guest_count = ?, check_in_date = ?, check_out_date = ?, total_price = ?, deposit_amount = ?, payment_method = ? WHERE id = ?");
     if ($stmt->execute([$customer_name, $customer_phone, $guest_count, $check_in, $check_out, $total_price, $deposit, $_POST['payment_method'], $booking_id])) {
-        $_SESSION['success'] = $lang['success_label'] ?? "ແກ້ໄຂການຈອງສຳເລັດ!";
+        $changes = [];
+        if ($old['customer_name'] !== $customer_name) {
+            $changes[] = "ຊື່ລູກຄ້າ: '{$old['customer_name']}' -> '{$customer_name}'";
+        }
+        if ($old['customer_phone'] !== $customer_phone) {
+            $changes[] = "ເບີໂທ: '{$old['customer_phone']}' -> '{$customer_phone}'";
+        }
+        if ((int)$old['guest_count'] !== $guest_count) {
+            $changes[] = "ແຂກ: '{$old['guest_count']}' -> '{$guest_count}'";
+        }
+        if ($old['check_in_date'] !== $check_in) {
+            $changes[] = "ວັນທີເຂົ້າ: '{$old['check_in_date']}' -> '{$check_in}'";
+        }
+        if ($old['check_out_date'] !== $check_out) {
+            $changes[] = "ວັນທີອອກ: '{$old['check_out_date']}' -> '{$check_out}'";
+        }
+        if ((float)$old['deposit_amount'] !== $deposit) {
+            $changes[] = "ມັດຈຳ: '" . number_format($old['deposit_amount']) . "' -> '" . number_format($deposit) . "'";
+        }
+        if ($old['payment_method'] !== $_POST['payment_method']) {
+            $changes[] = "ຊ່ອງທາງຊຳລະ: '{$old['payment_method']}' -> '{$_POST['payment_method']}'";
+        }
+
+        $roomNum = $old['room_number'] ?? '';
+        $details = "ແກ້ໄຂການຈອງຫ້ອງ $roomNum";
+        if (!empty($changes)) {
+            $details .= " (" . implode(', ', $changes) . ")";
+        } else {
+            $details .= " (ບໍ່ມີການປ່ຽນແປງຂໍ້ມູນ)";
+        }
+
+        logActivity($pdo, "ແກ້ໄຂການຈອງ", $details);
+
+        $_SESSION['success'] = $lang['booking_edit_success'] ?? "ແກ້ໄຂການຈອງສຳເລັດ!";
     } else {
         $_SESSION['error'] = $lang['error_label'] ?? "ບໍ່ສາມາດແກ້ໄຂຂໍ້ມູນໄດ້!";
     }
@@ -153,7 +212,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reserve'])) {
             $stmt = $pdo->prepare("INSERT INTO bookings (room_id, customer_name, customer_phone, passport_number, address, guest_count, check_in_date, check_out_date, total_price, deposit_amount, payment_method, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Booked')");
             
             if ($stmt->execute([$room_id, $customer_name, $customer_phone, $passport_number, $address, $guest_count, $check_in_date, $check_out_date, $total_price, $deposit_amount, $_POST['payment_method']])) {
-                $_SESSION['success'] = $lang['success_label'] ?? "ຈອງຫ້ອງລ່ວງໜ້າສຳເລັດ!";
+                // Fetch room number
+                $stmtRoomNum = $pdo->prepare("SELECT room_number FROM rooms WHERE id = ?");
+                $stmtRoomNum->execute([$room_id]);
+                $roomNum = $stmtRoomNum->fetchColumn() ?: '';
+
+                logActivity($pdo, "ຈອງຫ້ອງພັກ", "ຈອງຫ້ອງ $roomNum ໃຫ້ລູກຄ້າ $customer_name, ວັນທີ $check_in_date ຫາ $check_out_date");
+
+                $_SESSION['success'] = $lang['booking_success'] ?? "ຈອງຫ້ອງສຳເລັດ!";
                 header("Location: reserve.php");
                 exit();
             }
@@ -165,24 +231,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reserve'])) {
     exit();
 }
 
-// Pagination Logic
-$limit = 10;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-if($page < 1) $page = 1;
-$offset = ($page - 1) * $limit;
-
 $today_filter = isset($_GET['today']) && $_GET['today'] == 1;
 $where_clause = "WHERE b.status = 'Booked'";
 if ($today_filter) {
     $where_clause .= " AND DATE(b.created_at) = CURDATE()";
 }
 
-$stmtCount = $pdo->query("SELECT COUNT(*) FROM bookings b $where_clause");
-$total_records = $stmtCount->fetchColumn();
-$total_pages = ceil($total_records / $limit);
-
 $stmtReserved = $pdo->prepare("
     SELECT b.*, r.room_number, r.room_type,
+           rt.room_type_name_la, rt.room_type_name_en, rt.room_type_name_cn,
     (SELECT COUNT(*) FROM bookings b2 
      WHERE ((b2.customer_phone = b.customer_phone AND b.customer_phone != '' AND b.customer_phone != '-') 
             OR (b2.customer_name = b.customer_name AND b2.customer_phone = b.customer_phone))
@@ -192,12 +249,10 @@ $stmtReserved = $pdo->prepare("
      AND b2.check_out_date > b.check_in_date) as other_bookings
     FROM bookings b 
     JOIN rooms r ON b.room_id = r.id 
+    LEFT JOIN room_types rt ON r.room_type = rt.room_type_name
     $where_clause
     ORDER BY b.check_in_date ASC
-    LIMIT :limit OFFSET :offset
 ");
-$stmtReserved->bindValue(':limit', $limit, PDO::PARAM_INT);
-$stmtReserved->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmtReserved->execute();
 $reservations = $stmtReserved->fetchAll();
 ?>
@@ -210,9 +265,11 @@ $reservations = $stmtReserved->fetchAll();
     <link rel="stylesheet" href="plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="sweetalert/dist/sweetalert2.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        .dataTables_filter { display: none; }
         body { font-family: 'Noto Sans Lao Looped', sans-serif !important; background-color: #f4f6f9; padding: 10px; }
         .room-card { transition: transform 0.2s; border-radius: 10px; }
         .room-card:hover { transform: scale(1.02); cursor: pointer; border-color: #f39c12; }
@@ -329,9 +386,22 @@ $reservations = $stmtReserved->fetchAll();
                             <label><?php echo $lang['room_type']; ?></label>
                             <select name="room_type" class="form-control">
                                 <option value="all">-- <?php echo $lang['all']; ?> --</option>
-                                <?php foreach($room_types as $rt): ?>
+                                <?php foreach($room_types as $rt): 
+                                    $r_type_mapped = $rt[$rt_name_col] ?: $rt['room_type_name'];
+                                    if ($r_type_mapped == 'Standard' || strtolower($r_type_mapped) == 'standard') {
+                                        $r_type_mapped = $lang['room_type_standard'] ?? 'Standard';
+                                    } elseif ($r_type_mapped == 'VIP' || strtolower($r_type_mapped) == 'vip') {
+                                        $r_type_mapped = $lang['room_type_vip'] ?? 'VIP';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຕຽງດ່ຽວ' || strtolower($r_type_mapped) == 'single bed room' || strtolower($r_type_mapped) == 'single room') {
+                                        $r_type_mapped = $lang['room_type_single'] ?? 'Single Bed Room';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຕຽງຄູ່' || strtolower($r_type_mapped) == 'double bed room' || strtolower($r_type_mapped) == 'double room') {
+                                        $r_type_mapped = $lang['room_type_double'] ?? 'Double Bed Room';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຄອບຄົວ' || strtolower($r_type_mapped) == 'family room') {
+                                        $r_type_mapped = $lang['room_type_family'] ?? 'Family Room';
+                                    }
+                                ?>
                                     <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>" <?php echo ($selected_type == $rt['room_type_name']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($rt['room_type_name']); ?>
+                                        <?php echo htmlspecialchars($r_type_mapped); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -364,8 +434,28 @@ $reservations = $stmtReserved->fetchAll();
                                     <h4 class="font-weight-bold"><?php echo $lang['room']; ?> <?php echo htmlspecialchars($room['room_number']); ?></h4>
                                     <p class="text-muted mb-1 small">
                                         <?php 
-                                            $r_type = $room['room_type'];
-                                            $b_type = $room['bed_type'];
+                                            $r_type_mapped = $room[$rt_name_col] ?: $room['room_type'];
+                                            if ($r_type_mapped == 'Standard' || strtolower($r_type_mapped) == 'standard') {
+                                                $r_type_mapped = $lang['room_type_standard'] ?? 'Standard';
+                                            } elseif ($r_type_mapped == 'VIP' || strtolower($r_type_mapped) == 'vip') {
+                                                $r_type_mapped = $lang['room_type_vip'] ?? 'VIP';
+                                            } elseif ($r_type_mapped == 'ຫ້ອງຕຽງດ່ຽວ' || strtolower($r_type_mapped) == 'single bed room' || strtolower($r_type_mapped) == 'single room') {
+                                                $r_type_mapped = $lang['room_type_single'] ?? 'Single Bed Room';
+                                            } elseif ($r_type_mapped == 'ຫ້ອງຕຽງຄູ່' || strtolower($r_type_mapped) == 'double bed room' || strtolower($r_type_mapped) == 'double room') {
+                                                $r_type_mapped = $lang['room_type_double'] ?? 'Double Bed Room';
+                                            } elseif ($r_type_mapped == 'ຫ້ອງຄອບຄົວ' || strtolower($r_type_mapped) == 'family room') {
+                                                $r_type_mapped = $lang['room_type_family'] ?? 'Family Room';
+                                            }
+                                            $r_type = $r_type_mapped;
+
+                                            $b_type_val = $room['bed_type'];
+                                            if ($b_type_val == 'ຕຽງດ່ຽວ' || strtolower($b_type_val) == 'single' || strtolower($b_type_val) == 'single bed') {
+                                                $b_type = $lang['single_bed'] ?? 'Single Bed';
+                                            } elseif ($b_type_val == 'ຕຽງຄູ່' || strtolower($b_type_val) == 'double' || strtolower($b_type_val) == 'double bed') {
+                                                $b_type = $lang['double_bed'] ?? 'Double Bed';
+                                            } else {
+                                                $b_type = $b_type_val;
+                                            }
                                             echo htmlspecialchars($r_type);
                                             if (strpos(strtoupper($r_type), 'VIP') !== false || (strpos($r_type, 'ຕຽງ') === false && strpos(strtolower($r_type), 'bed') === false)) {
                                                 echo " (" . htmlspecialchars($b_type) . ")";
@@ -431,7 +521,7 @@ $reservations = $stmtReserved->fetchAll();
         </div>
         <div class="card-body p-2 p-md-3">
             <div class="table-responsive">
-            <table class="table table-bordered table-striped text-center mb-0" style="min-width: 600px;">
+            <table id="resTable" class="table table-bordered table-striped text-center mb-0" style="min-width: 600px;">
                 <thead class="bg-warning text-white">
                     <tr>
                         <th><?php echo $lang['room']; ?></th>
@@ -448,7 +538,23 @@ $reservations = $stmtReserved->fetchAll();
                 <tbody id="res_table_body">
                     <?php foreach($reservations as $res): ?>
                     <tr class="res-row">
-                        <td><strong><?php echo htmlspecialchars($res['room_number']); ?></strong><br><small class="text-muted"><?php echo htmlspecialchars($res['room_type']); ?></small></td>
+                        <td><strong><?php echo htmlspecialchars($res['room_number']); ?></strong><br><small class="text-muted">
+                            <?php 
+                                $r_type_mapped = $res[$rt_name_col] ?: $res['room_type'];
+                                if ($r_type_mapped == 'Standard' || strtolower($r_type_mapped) == 'standard') {
+                                    $r_type_mapped = $lang['room_type_standard'] ?? 'Standard';
+                                } elseif ($r_type_mapped == 'VIP' || strtolower($r_type_mapped) == 'vip') {
+                                    $r_type_mapped = $lang['room_type_vip'] ?? 'VIP';
+                                } elseif ($r_type_mapped == 'ຫ້ອງຕຽງດ່ຽວ' || strtolower($r_type_mapped) == 'single bed room' || strtolower($r_type_mapped) == 'single room') {
+                                    $r_type_mapped = $lang['room_type_single'] ?? 'Single Bed Room';
+                                } elseif ($r_type_mapped == 'ຫ້ອງຕຽງຄູ່' || strtolower($r_type_mapped) == 'double bed room' || strtolower($r_type_mapped) == 'double room') {
+                                    $r_type_mapped = $lang['room_type_double'] ?? 'Double Bed Room';
+                                } elseif ($r_type_mapped == 'ຫ້ອງຄອບຄົວ' || strtolower($r_type_mapped) == 'family room') {
+                                    $r_type_mapped = $lang['room_type_family'] ?? 'Family Room';
+                                }
+                                echo htmlspecialchars($r_type_mapped);
+                            ?>
+                        </small></td>
                         <td class="text-left">
                             <div class="font-weight-bold customer-name-text"><?php echo htmlspecialchars($res['customer_name']); ?></div>
                             <div class="small text-muted"><i class="fas fa-users mr-1"></i> <?php echo $lang['guests']; ?>: <strong><?php echo $res['guest_count']; ?></strong> <?php echo $lang['person_unit']; ?></div>
@@ -472,7 +578,7 @@ $reservations = $stmtReserved->fetchAll();
                                 <button class="btn btn-sm btn-primary btn-view-reserve" 
                                     data-id="<?php echo $res['id']; ?>"
                                     data-room="<?php echo htmlspecialchars($res['room_number']); ?>"
-                                    data-type="<?php echo htmlspecialchars($res['room_type']); ?>"
+                                    data-type="<?php echo htmlspecialchars($res[$rt_name_col] ?: $res['room_type']); ?>"
                                     data-name="<?php echo htmlspecialchars($res['customer_name']); ?>"
                                     data-phone="<?php echo htmlspecialchars($res['customer_phone']); ?>"
                                     data-passport="<?php echo htmlspecialchars($res['passport_number'] ?? '-'); ?>"
@@ -509,35 +615,7 @@ $reservations = $stmtReserved->fetchAll();
             </table>
             </div>
 
-            <!-- Pagination UI -->
-            <?php 
-                if ($total_pages > 1): 
-                $params = $_GET;
-                unset($params['page']);
-                $query_str = http_build_query($params);
-                if ($query_str) $query_str = '&' . $query_str;
-            ?>
-            <div class="mt-3 d-flex justify-content-between align-items-center">
-                <div class="text-muted small">
-                    <?php echo $lang['dt_info'] ?? 'ສະແດງ _START_ ຫາ _END_ ຈາກທັງໝົດ _TOTAL_ ລາຍການ'; ?>
-                </div>
-                <nav>
-                    <ul class="pagination pagination-sm m-0">
-                        <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?page=<?php echo $page - 1 . $query_str; ?>"><i class="fas fa-chevron-left"></i></a>
-                        </li>
-                        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                            <li class="page-item <?php echo ($page == $i) ? 'active' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $i . $query_str; ?>"><?php echo $i; ?></a>
-                            </li>
-                        <?php endfor; ?>
-                        <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?page=<?php echo $page + 1 . $query_str; ?>"><i class="fas fa-chevron-right"></i></a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-            <?php endif; ?>
+
         </div>
     </div>
     <?php endif; ?>
@@ -560,9 +638,9 @@ $reservations = $stmtReserved->fetchAll();
                     <div class="alert alert-info py-2 mb-3">
                         <strong><i class="fas fa-info-circle"></i> <?php echo $lang['booking_info']; ?>:</strong> 
                         <?php echo $lang['room']; ?> <span id="info_room" class="font-weight-bold"></span> | 
-                        <?php echo $lang['date_label']; ?>: <span id="info_date" class="text-success"></span> | 
+                        <?php echo $lang['date_label']; ?>: <span id="info_date" class="text-white font-weight-bold"></span> | 
                         <span id="info_nights"></span> <?php echo $lang['nights']; ?> | 
-                        <?php echo $lang['subtotal']; ?>: <?php echo formatCurrency($room['price'] * $nights); ?>
+                        <?php echo $lang['subtotal']; ?>: <span id="info_total" class="font-weight-bold text-dark bg-warning"></span> ₭
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -726,6 +804,8 @@ $reservations = $stmtReserved->fetchAll();
 <script src="plugins/jquery/jquery.min.js"></script>
 <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="sweetalert/dist/sweetalert2.all.min.js"></script>
+<script src="plugins/datatables/jquery.dataTables.min.js"></script>
+<script src="plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -859,22 +939,26 @@ $(document).ready(function() {
         }
     });
 
-    // Reservation Table Live Search
-    $('#res_search_input').on('keyup', function() {
-        var value = $(this).val().toLowerCase();
-        var visibleRows = 0;
-        
-        $("#res_table_body tr.res-row").each(function() {
-            var isVisible = $(this).text().toLowerCase().indexOf(value) > -1;
-            $(this).toggle(isVisible);
-            if (isVisible) visibleRows++;
-        });
+    // Initialize DataTable
+    var table = $('#resTable').DataTable({
+        "language": {
+            "sLengthMenu":   "<?php echo $lang['dt_length'] ?? 'แสดง _MENU_ รายการ'; ?>",
+            "sZeroRecords":  "<?php echo $lang['dt_zeroRecords'] ?? 'ไม่พบข้อมูล'; ?>",
+            "sInfo":         "<?php echo $lang['dt_info'] ?? 'แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ'; ?>",
+            "sSearch":       "<?php echo $lang['dt_search'] ?? 'ค้นหา:'; ?>",
+            "oPaginate": { 
+                "sPrevious": "<?php echo $lang['dt_paginate_previous'] ?? 'ก่อนหน้า'; ?>", 
+                "sNext": "<?php echo $lang['dt_paginate_next'] ?? 'ถัดไป'; ?>" 
+            }
+        },
+        "responsive": true,
+        "autoWidth": false,
+        "order": [[ 3, "asc" ]] // Sort by check-in date by default
+    });
 
-        // Show/Hide "No results" message
-        $('#no_res_row').remove();
-        if (visibleRows === 0) {
-            $("#res_table_body").append('<tr id="no_res_row"><td colspan="8" class="py-4 text-center text-muted"><strong><i class="fas fa-search-minus"></i> ບໍ່ມີຂໍ້ມູນທີ່ທ່ານຄົ້ນຫາ!</strong></td></tr>');
-        }
+    // Custom Live Search linked to DataTable
+    $('#res_search_input').on('keyup', function() {
+        table.search(this.value).draw();
     });
 });
 </script>

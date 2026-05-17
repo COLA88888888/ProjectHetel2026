@@ -3,7 +3,8 @@ session_start();
 require_once 'config/session_check.php';
 require_once 'config/db.php';
 
-// Language Selection Logic
+// --- 1. ສ່ວນໂຫຼດໄຟລ໌ພາສາ ແລະ ຕັ້ງຄ່າ Session (Checkout Language Loader) ---
+// ກວດສອບ ແລະ ດຶງພາສາປັດຈຸບັນຂອງລະບົບຈາກ Session, ຫາກບໍ່ມີໃຫ້ເລືອກພາສາລາວ 'la' ເປັນພາສາເລີ່ມຕົ້ນ
 $current_lang = $_SESSION['lang'] ?? 'la';
 $lang_file = "lang/{$current_lang}.php";
 if (file_exists($lang_file)) {
@@ -268,7 +269,7 @@ if (isset($_GET['booking_id'])) {
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3 class="card-title text-success font-weight-bold" style="font-size: 1.5rem;">
-                                <i class="fas fa-file-invoice-dollar mr-2"></i> ສະຫຼຸບການຊຳລະເງິນ (Summary)
+                                <i class="fas fa-file-invoice-dollar mr-2"></i> <?php echo $lang['payment_info'] ?? 'ສະຫຼຸບການຊຳລະເງິນ'; ?>
                             </h3>
                             <span class="text-muted small"><?php echo $lang['date_label']; ?>: <?php echo date('d/m/Y'); ?></span>
                         </div>
@@ -350,19 +351,12 @@ if (isset($_GET['booking_id'])) {
                                         $subtotal = $selected_booking['total_price'] + $selected_booking['food_charge'];
                                         $tax_amount = round($subtotal * ($tax_percent / 100));
                                         $total_after_tax = $subtotal + $tax_amount;
-                                        $grand_total = $total_after_tax - $selected_booking['deposit_amount'];
+                                        $grand_total = $total_after_tax;
                                     ?>
                                     <tr style="border-top: 2px solid #dee2e6;">
                                         <td colspan="3" class="text-right"><?php echo $lang['subtotal'] ?? 'ລວມຍ່ອຍ'; ?>:</td>
                                         <td class="text-right"><strong><?php echo formatCurrency($subtotal); ?></strong></td>
                                     </tr>
-
-                                    <?php if($selected_booking['deposit_amount'] > 0): ?>
-                                        <tr class="text-success">
-                                            <td colspan="3" class="text-right"><?php echo $lang['deduct_deposit']; ?>:</td>
-                                            <td class="text-right"><strong>- <?php echo formatCurrency($selected_booking['deposit_amount']); ?></strong></td>
-                                        </tr>
-                                    <?php endif; ?>
                                     
                                     <?php if($tax_percent > 0): ?>
                                     <tr class="text-muted" style="font-size: 0.8rem;">
@@ -429,7 +423,7 @@ if (isset($_GET['booking_id'])) {
                                 <div class="col-12 text-right">
                                     <a href="print_room_receipt.php?booking_id=<?php echo $selected_booking['id']; ?>" target="_blank" class="btn btn-default mr-2"><i class="fas fa-print"></i> <?php echo $lang['print_bill']; ?></a>
                                     <button type="submit" name="confirm_checkout" class="btn btn-success btn-lg">
-                                        <i class="fas fa-check-double"></i> Check-out
+                                        <i class="fas fa-check-double"></i> <?php echo $lang['checkout'] ?? 'Check-out'; ?>
                                     </button>
                                 </div>
                             </div>

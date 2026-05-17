@@ -37,6 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_expense'])) {
 // Handle Edit Expense
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_expense'])) {
     $id = (int)$_POST['expense_id'];
+    
+    // Fetch old details before update to compare what was edited
+    $stmtOld = $pdo->prepare("SELECT * FROM expenses WHERE id = ?");
+    $stmtOld->execute([$id]);
+    $old = $stmtOld->fetch();
+
     $expense_title = trim($_POST['expense_title']);
     $category = $_POST['category'] ?? 'Other';
     $amount = (float)str_replace(',', '', $_POST['amount']);
@@ -45,7 +51,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_expense'])) {
     if ($id > 0 && $amount > 0 && !empty($expense_title)) {
         $stmt = $pdo->prepare("UPDATE expenses SET expense_title = ?, category = ?, amount = ?, expense_date = ? WHERE id = ?");
         if ($stmt->execute([$expense_title, $category, $amount, $expense_date, $id])) {
-            logActivity($pdo, "ແກ້ໄຂລາຍຈ່າຍ", "ID: $id, $expense_title, " . $lang['qty_label'] . ": $amount");
+            $changes = [];
+            if ($old['expense_title'] !== $expense_title) {
+                $changes[] = "ຫົວຂໍ້: '{$old['expense_title']}' -> '{$expense_title}'";
+            }
+            if ($old['category'] !== $category) {
+                $changes[] = "ໝວດໝູ່: '{$old['category']}' -> '{$category}'";
+            }
+            if ((float)$old['amount'] !== $amount) {
+                $changes[] = "ມູນຄ່າ: '" . number_format($old['amount']) . "' -> '" . number_format($amount) . "'";
+            }
+            if ($old['expense_date'] !== $expense_date) {
+                $changes[] = "ວັນທີ: '{$old['expense_date']}' -> '{$expense_date}'";
+            }
+
+            $details = "ແກ້ໄຂລາຍຈ່າຍ '{$old['expense_title']}'";
+            if (!empty($changes)) {
+                $details .= " (" . implode(', ', $changes) . ")";
+            } else {
+                $details .= " (ບໍ່ມີການປ່ຽນແປງຂໍ້ມູນ)";
+            }
+
+            logActivity($pdo, "ແກ້ໄຂລາຍຈ່າຍ", $details);
             $_SESSION['success'] = $lang['save_success'];
         } else {
             $_SESSION['error'] = $lang['error_occurred'];

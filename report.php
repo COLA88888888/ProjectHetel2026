@@ -43,32 +43,38 @@ $stmtTransferPos = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE (DATE(o_d
 $stmtTransferPos->execute([$start_date, $end_date]);
 $period_transfer_pos = $stmtTransferPos->fetchColumn() ?: 0;
 
+// --- 1. ຄຳນວນລາຍຮັບ ແລະ ກຳໄລສຸດທິ (Revenue & Net Profit Calculations) ---
+// ຄຳນວນຫາລາຍຮັບລວມຂອງເງິນສົດ (Cash) ແລະ ເງິນໂອນ (Transfer) ຂອງທັງລະບົບຫ້ອງພັກ ແລະ POS
 $period_cash_total = $period_cash_room + $period_cash_pos;
 $period_transfer_total = $period_transfer_room + $period_transfer_pos;
 
-// Total Revenue is the sum of Cash and Transfer as requested
+// ລາຍຮັບທັງໝົດ (Total Revenue) ແມ່ນຜົນລວມຂອງ ເງິນສົດ + ເງິນໂອນ
 $period_revenue = $period_cash_total + $period_transfer_total;
 
-// Period Expenses
+// ດຶງຂໍ້ມູນລາຍຈ່າຍທັງໝົດ (Period Expenses) ໃນຊ່ວງວັນທີທີ່ເລືອກ
 $stmtExp = $pdo->prepare("SELECT SUM(amount) FROM expenses WHERE DATE(expense_date) BETWEEN ? AND ?");
 $stmtExp->execute([$start_date, $end_date]);
 $period_expenses = $stmtExp->fetchColumn() ?: 0;
 
-// Net Profit = Total Revenue - Total Expenses
+// ກຳໄລສຸດທິ (Net Profit) = ລາຍຮັບທັງໝົດ - ລາຍຈ່າຍທັງໝົດ
 $period_profit = $period_revenue - $period_expenses;
 
-// 2. Monthly Revenue (Bookings + POS)
+// --- 2. ຄຳນວນລາຍຮັບປະຈຳເດືອນ (Monthly Revenue - Bookings & POS) ---
+// ດຶງລາຍຮັບຂອງການຈອງຫ້ອງພັກ (Bookings) ພາຍໃນເດືອນປັດຈຸບັນ (ຄິດໄລ່ຄ່າພາສີ Tax ຕາມທີ່ຕັ້ງຄ່າ)
 $stmtMonth = $pdo->prepare("SELECT SUM((total_price + food_charge) * $tax_mult) as monthly_revenue FROM bookings WHERE status IN ('Completed', 'Occupied', 'Checked In') AND MONTH(check_in_date) = MONTH(CURDATE()) AND YEAR(check_in_date) = YEAR(CURDATE())");
 $stmtMonth->execute();
 $monthly_revenue_bookings = $stmtMonth->fetch()['monthly_revenue'] ?? 0;
 
+// ດຶງລາຍຮັບຈາກການຂາຍອາຫານ/ເຄື່ອງດື່ມ (POS Orders) ພາຍໃນເດືອນປັດຈຸບັນ
 $stmtPosMonth = $pdo->prepare("SELECT SUM(amount) as monthly_pos FROM orders WHERE MONTH(o_date) = MONTH(CURDATE()) AND YEAR(o_date) = YEAR(CURDATE())");
 $stmtPosMonth->execute();
 $monthly_pos = $stmtPosMonth->fetch()['monthly_pos'] ?? 0;
 
+// ລາຍຮັບລວມປະຈຳເດືອນ (Monthly Revenue Total)
 $monthly_revenue = $monthly_revenue_bookings + $monthly_pos;
 
-// 3. Number of Customers (Bookings in period)
+// --- 3. ນັບຈຳນວນລູກຄ້າທີ່ເຂົ້າພັກ (Number of Customers in Period) ---
+// ນັບຈຳນວນລາຍການການຈອງທີ່ມີການເຂົ້າພັກ ຫຼື ສຳເລັດແລ້ວ ໃນຊ່ວງວັນທີທີ່ກຳນົດ
 $stmtCust = $pdo->prepare("
     SELECT COUNT(id) as period_customers 
     FROM bookings 

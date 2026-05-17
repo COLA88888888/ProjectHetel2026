@@ -187,10 +187,6 @@ $final_payable = $grand_total - $booking['deposit_amount'];
     <div class="divider"></div>
 
     <div class="total-section">
-        <div class="info-row" style="font-weight: normal; font-size: 12px;">
-            <span>ລວມຍ່ອຍ:</span>
-            <span><?php echo formatCurrency($subtotal); ?></span>
-        </div>
         <?php if($tax_percent > 0): ?>
         <div class="info-row" style="font-weight: normal; font-size: 12px;">
             <span>ພາສີ (<?php echo $tax_percent; ?>%):</span>
@@ -201,31 +197,38 @@ $final_payable = $grand_total - $booking['deposit_amount'];
             <span>ລວມທັງໝົດ:</span>
             <span><?php echo formatCurrency($grand_total); ?></span>
         </div>
-        <?php if($booking['deposit_amount'] > 0): ?>
-        <div class="info-row" style="font-weight: normal; font-size: 12px; color: green;">
-            <span>ຫັກມັດຈຳແລ້ວ:</span>
-            <span>- <?php echo formatCurrency($booking['deposit_amount']); ?></span>
-        </div>
-        <?php endif; ?>
         <div class="info-row" style="border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; font-size: 16px; color: red;">
             <span>ຍອດຈ່າຍຕົວຈິງ:</span>
-            <span><?php echo number_format($final_payable); ?> <?php echo $currency_symbol; ?></span>
+            <span><?php echo number_format($grand_total); ?> <?php echo $currency_symbol; ?></span>
         </div>
     </div>
 
     <div class="divider"></div>
 
+    <?php 
+        $pm = $booking['payment_method'] ?? 'ເງິນສົດ';
+        if (stripos($pm, 'Cash') !== false || stripos($pm, 'ເງິນສົດ') !== false) {
+            $payment_method_la = 'ເງິນສົດ';
+        } elseif (stripos($pm, 'Transfer') !== false || stripos($pm, 'ເງິນໂອນ') !== false) {
+            $payment_method_la = 'ເງິນໂອນ';
+        } else {
+            $payment_method_la = $pm;
+        }
+
+        $received_val = ($booking['amount_received'] > 0) ? $booking['amount_received'] : $grand_total;
+        $change_val = ($booking['amount_received'] > 0) ? $booking['change_amount'] : 0;
+    ?>
     <div class="info-row">
         <span>ວິທີຊຳລະ:</span>
-        <span><?php echo htmlspecialchars($booking['payment_method'] ?? 'ເງິນສົດ'); ?></span>
+        <span><?php echo htmlspecialchars($payment_method_la); ?></span>
     </div>
     <div class="info-row">
         <span>ຮັບເງິນມາ:</span>
-        <span><?php echo number_format($booking['amount_received']); ?> <?php echo $currency_symbol; ?></span>
+        <span><?php echo number_format($received_val); ?> <?php echo $currency_symbol; ?></span>
     </div>
     <div class="info-row">
         <span>ເງິນທອນ:</span>
-        <span style="color: #d9534f; font-size: 14px;"><?php echo number_format($booking['change_amount']); ?> <?php echo $currency_symbol; ?></span>
+        <span style="color: #d9534f; font-size: 14px;"><?php echo number_format($change_val); ?> <?php echo $currency_symbol; ?></span>
     </div>
 
     <div class="footer">

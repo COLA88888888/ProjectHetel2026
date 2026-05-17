@@ -37,9 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save'])) {
 // Handle delete
 if (isset($_GET['delete'])) {
     $id = $_GET['delete'];
+    
+    // Fetch details before delete
+    $stmtOld = $pdo->prepare("SELECT room_number, room_type FROM rooms WHERE id = ?");
+    $stmtOld->execute([$id]);
+    $room = $stmtOld->fetch();
+    $roomNum = $room['room_number'] ?? '';
+    $roomType = $room['room_type'] ?? '';
+
     $stmt = $pdo->prepare("DELETE FROM rooms WHERE id = ?");
     if ($stmt->execute([$id])) {
-        logActivity($pdo, "ລົບຂໍ້ມູນຫ້ອງ", "ID: $id");
+        logActivity($pdo, "ລົບຂໍ້ມູນຫ້ອງ", "ລົບຫ້ອງ $roomNum (ປະເພດ: $roomType)");
         $_SESSION['success'] = $lang['delete_success'];
     } else {
         $_SESSION['error'] = $lang['error_occurred'] ?? "ເກີດຂໍ້ຜິດພາດໃນການລົບ";
@@ -52,10 +60,16 @@ if (isset($_GET['delete'])) {
 if (isset($_POST['update_housekeeping'])) {
     $id = (int)$_POST['room_id'];
     $hk_status = $_POST['hk_status'];
+    
+    // Fetch room number first
+    $stmtRoom = $pdo->prepare("SELECT room_number FROM rooms WHERE id = ?");
+    $stmtRoom->execute([$id]);
+    $roomNum = $stmtRoom->fetchColumn() ?: '';
+
     $stmt = $pdo->prepare("UPDATE rooms SET housekeeping_status = ? WHERE id = ?");
     $ok = $stmt->execute([$hk_status, $id]);
     if ($ok) {
-        logActivity($pdo, "ອັບເດດສະຖານະຄວາມພ້ອມ", "ID: $id, ສະຖານະໃໝ່: $hk_status");
+        logActivity($pdo, "ອັບເດດສະຖານະຄວາມພ້ອມ", "ອັບເດດສະຖານະຄວາມພ້ອມຂອງຫ້ອງ $roomNum ເປັນ: $hk_status");
     }
     header('Content-Type: application/json');
     echo json_encode(['success' => $ok]);
@@ -185,8 +199,21 @@ $room_types = $stmtTypes->fetchAll();
                             <label><?php echo $lang['room_type_label']; ?></label>
                             <select name="room_type" id="room_type" class="form-control">
                                 <option value=""><?php echo $lang['select_type']; ?></option>
-                                <?php foreach($room_types as $rt): ?>
-                                    <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>"><?php echo htmlspecialchars($rt[$rt_name_col] ?: $rt['room_type_name']); ?></option>
+                                <?php foreach($room_types as $rt): 
+                                    $r_type_mapped = $rt[$rt_name_col] ?: $rt['room_type_name'];
+                                    if ($r_type_mapped == 'Standard' || strtolower($r_type_mapped) == 'standard') {
+                                        $r_type_mapped = $lang['room_type_standard'] ?? 'Standard';
+                                    } elseif ($r_type_mapped == 'VIP' || strtolower($r_type_mapped) == 'vip') {
+                                        $r_type_mapped = $lang['room_type_vip'] ?? 'VIP';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຕຽງດ່ຽວ' || strtolower($r_type_mapped) == 'single bed room' || strtolower($r_type_mapped) == 'single room') {
+                                        $r_type_mapped = $lang['room_type_single'] ?? 'Single Bed Room';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຕຽງຄູ່' || strtolower($r_type_mapped) == 'double bed room' || strtolower($r_type_mapped) == 'double room') {
+                                        $r_type_mapped = $lang['room_type_double'] ?? 'Double Bed Room';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຄອບຄົວ' || strtolower($r_type_mapped) == 'family room') {
+                                        $r_type_mapped = $lang['room_type_family'] ?? 'Family Room';
+                                    }
+                                ?>
+                                    <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>"><?php echo htmlspecialchars($r_type_mapped); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -244,8 +271,33 @@ $room_types = $stmtTypes->fetchAll();
                                     <tr>
                                         <td><?php echo $i++; ?></td>
                                         <td class="room-number-cell"><?php echo htmlspecialchars($row['room_number']); ?></td>
-                                        <td><?php echo htmlspecialchars($row[$rt_name_col] ?: $row['room_type']); ?></td>
-                                        <td><?php echo htmlspecialchars($row[$bed_name_col] ?: $row['bed_type']); ?></td>
+                                        <td><?php 
+                                             $r_type_mapped = $row[$rt_name_col] ?: $row['room_type'];
+                                             if ($r_type_mapped == 'Standard' || strtolower($r_type_mapped) == 'standard') {
+                                                 $r_type_mapped = $lang['room_type_standard'] ?? 'Standard';
+                                             } elseif ($r_type_mapped == 'VIP' || strtolower($r_type_mapped) == 'vip') {
+                                                 $r_type_mapped = $lang['room_type_vip'] ?? 'VIP';
+                                             } elseif ($r_type_mapped == 'ຫ້ອງຕຽງດ່ຽວ' || strtolower($r_type_mapped) == 'single bed room' || strtolower($r_type_mapped) == 'single room') {
+                                                 $r_type_mapped = $lang['room_type_single'] ?? 'Single Bed Room';
+                                             } elseif ($r_type_mapped == 'ຫ້ອງຕຽງຄູ່' || strtolower($r_type_mapped) == 'double bed room' || strtolower($r_type_mapped) == 'double room') {
+                                                 $r_type_mapped = $lang['room_type_double'] ?? 'Double Bed Room';
+                                             } elseif ($r_type_mapped == 'ຫ້ອງຄອບຄົວ' || strtolower($r_type_mapped) == 'family room') {
+                                                 $r_type_mapped = $lang['room_type_family'] ?? 'Family Room';
+                                             }
+                                             echo htmlspecialchars($r_type_mapped);
+                                         ?></td>
+                                        <td>
+                                            <?php 
+                                                $b_type = $row['bed_type'];
+                                                if ($b_type == 'ຕຽງດ່ຽວ' || strtolower($b_type) == 'single' || strtolower($b_type) == 'single bed') {
+                                                    echo htmlspecialchars($lang['single_bed'] ?? 'Single Bed');
+                                                } elseif ($b_type == 'ຕຽງຄູ່' || strtolower($b_type) == 'double' || strtolower($b_type) == 'double bed') {
+                                                    echo htmlspecialchars($lang['double_bed'] ?? 'Double Bed');
+                                                } else {
+                                                    echo htmlspecialchars($b_type);
+                                                }
+                                            ?>
+                                        </td>
                                         <td class="price-cell">
                                             <?php echo number_format($row['price']); ?>
                                             <span class="currency-label"><?php echo $lang['currency_symbol'] ?? '₭'; ?></span>

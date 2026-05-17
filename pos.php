@@ -307,7 +307,16 @@ foreach ($products as $p) {
                     ?>
                         <button class="cat-btn" data-cat="<?php echo htmlspecialchars($catName); ?>">
                             <i class="fas <?php echo $icon; ?> mr-1"></i>
-                            <?php echo htmlspecialchars($cat[$cat_name_col] ?: $catName); ?>
+                            <?php 
+                                $catDisp = $cat[$cat_name_col];
+                                if (empty($catDisp)) {
+                                    if ($catName == 'ອາຫານ') $catDisp = $lang['cat_food_label'] ?? 'Food';
+                                    elseif ($catName == 'ເຄື່ອງດື່ມ') $catDisp = $lang['cat_drinks_label'] ?? 'Drinks';
+                                    elseif ($catName == 'ເຂົ້າໜົມ' || $catName == 'ຂະໜົມ') $catDisp = $lang['cat_snacks_label'] ?? 'Snacks';
+                                    else $catDisp = $catName;
+                                }
+                                echo htmlspecialchars($catDisp); 
+                            ?>
                             <span class="badge badge-danger ml-1"><?php echo $count; ?></span>
                         </button>
                     <?php endforeach; ?>
@@ -327,7 +336,19 @@ foreach ($products as $p) {
                                 <div class="card product-card shadow-sm h-100" id="prod-card-<?php echo $p['prod_id']; ?>" onclick="addToCart(<?php echo $p['prod_id']; ?>, '<?php echo htmlspecialchars(addslashes($p[$prod_name_col] ?: $p['prod_name'])); ?>', <?php echo $p['sprice']; ?>, <?php echo $p['qty']; ?>, '<?php echo $p['image']; ?>', '<?php echo htmlspecialchars($p['prod_code']); ?>')">
                                     <span class="qty-badge" id="qty-badge-<?php echo $p['prod_id']; ?>" style="display: none;">0</span>
                                     <!-- Category Label -->
-                                    <span class="cat-label"><?php echo htmlspecialchars($p['cat_'.$current_lang] ?? $p['category'] ?? 'ອື່ນໆ'); ?></span>
+                                    <span class="cat-label">
+                                        <?php 
+                                            $pCatDisp = $p['cat_'.$current_lang];
+                                            if (empty($pCatDisp)) {
+                                                $pCatRaw = $p['category'];
+                                                if ($pCatRaw == 'ອາຫານ') $pCatDisp = $lang['cat_food_label'] ?? 'Food';
+                                                elseif ($pCatRaw == 'ເຄື່ອງດື່ມ') $pCatDisp = $lang['cat_drinks_label'] ?? 'Drinks';
+                                                elseif ($pCatRaw == 'ເຂົ້າໜົມ' || $pCatRaw == 'ຂະໜົມ') $pCatDisp = $lang['cat_snacks_label'] ?? 'Snacks';
+                                                else $pCatDisp = $pCatRaw ?? 'ອື່ນໆ';
+                                            }
+                                            echo htmlspecialchars($pCatDisp);
+                                        ?>
+                                    </span>
                                     <!-- Stock Badge -->
                                     <?php if($p['qty'] <= 10): ?>
                                         <span class="stock-badge badge badge-danger"><?php echo $lang['low_stock']; ?></span>

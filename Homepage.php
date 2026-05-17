@@ -109,7 +109,7 @@ try {
     $activity_logs = $stmt_history->fetchAll();
 
     // 1. Today's Bookings (Made today)
-    $stmtBookToday = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE DATE(created_at) = ?");
+    $stmtBookToday = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE DATE(created_at) = ? AND status = 'Booked'");
     $stmtBookToday->execute([$current_date]);
     $today_bookings = $stmtBookToday->fetchColumn() ?: 0;
 
@@ -453,7 +453,8 @@ try {
             if (lineChart) lineChart.destroy();
             if (donutChart) donutChart.destroy();
 
-            // ===== LINE CHART =====
+            // ===== ສ້າງກຣາຟເສັ້ນສະແດງລາຍຮັບ (LINE CHART - ROOM vs POS) =====
+            // ໜ້າທີ່: ສະແດງແນວໂນ້ມລາຍຮັບຫ້ອງພັກ ແລະ ຍອດຂາຍ POS ແຕ່ລະວັນ ແບບແຍກສີ ແລະ ມີລະບົບແປພາສາປ້າຍຊື່/ສະກຸນເງິນ
             var lineCtx = $('#lineChart').get(0).getContext('2d');
             lineChart = new Chart(lineCtx, {
               type: 'line',
@@ -461,7 +462,8 @@ try {
                 labels: data.labels,
                 datasets: [
                   {
-                    label: 'ລາຍຮັບຫ້ອງພັກ',
+                    // ດຶງຊື່ລາຍຮັບຫ້ອງພັກຕາມພາສາທີ່ເລືອກ
+                    label: '<?php echo $lang['revenue_room'] ?? 'ລາຍຮັບຫ້ອງພັກ'; ?>',
                     backgroundColor: 'rgba(52, 152, 219, 0.1)',
                     borderColor: '#3498DB',
                     pointBorderColor: '#3498DB',
@@ -475,7 +477,8 @@ try {
                     data: data.roomData
                   },
                   {
-                    label: 'ລາຍຮັບ POS',
+                    // ດຶງຊື່ລາຍຮັບ POS ຕາມພາສາທີ່ເລືອກ
+                    label: '<?php echo $lang['revenue_pos'] ?? 'ລາຍຮັບ POS'; ?>',
                     backgroundColor: 'rgba(231, 76, 60, 0.1)',
                     borderColor: '#E74C3C',
                     pointBorderColor: '#E74C3C',
@@ -504,26 +507,30 @@ try {
                     gridLines: { color: 'rgba(0,0,0,0.05)' },
                     ticks: { 
                       beginAtZero: true,
-                      callback: function(v) { return v.toLocaleString('en-US') + ' ₭'; } 
+                      // ສະແດງຕົວເລກເງິນໃນແກນ Y ພ້ອມສັນຍາລັກສະກຸນເງິນທີ່ແປແລ້ວ
+                      callback: function(v) { return v.toLocaleString('en-US') + ' <?php echo $lang['currency_symbol'] ?? 'ກີບ'; ?>'; } 
                     }
                   }]
                 },
                 tooltips: {
                   callbacks: {
                     label: function(t, d) {
-                      return d.datasets[t.datasetIndex].label + ': ' + Number(t.yLabel).toLocaleString('en-US') + ' ກີບ';
+                      // ຈັດຮູບແບບການສະແດງຜົນຕົວເລກເມື່ອເອົາເມົ້າໄປຊີ້ (Tooltip) ພ້ອມສະກຸນເງິນ
+                      return d.datasets[t.datasetIndex].label + ': ' + Number(t.yLabel).toLocaleString('en-US') + ' <?php echo $lang['currency_symbol'] ?? 'ກີບ'; ?>';
                     }
                   }
                 }
               }
             });
 
-            // ===== DONUT CHART =====
+            // ===== ສ້າງກຣາຟວົງມົນແບ່ງສ່ວນລາຍຮັບ (DONUT CHART) =====
+            // ໜ້າທີ່: ສະແດງສັດສ່ວນປຽບທຽບລາຍຮັບລະຫວ່າງ ຫ້ອງພັກ ແລະ POS ເປັນເປີເຊັນ (%) ພ້ອມແປພາສາອັດຕະໂນມັດ
             var donutCtx = $('#donutChart').get(0).getContext('2d');
             donutChart = new Chart(donutCtx, {
               type: 'doughnut',
               data: {
-                labels: ['ລາຍຮັບຫ້ອງພັກ', 'ລາຍຮັບ POS'],
+                // ດຶງປ້າຍຊື່ຂອງລາຍຮັບແຕ່ລະປະເພດຕາມພາສາທີ່ເລືອກ
+                labels: ['<?php echo $lang['revenue_room'] ?? 'ລາຍຮັບຫ້ອງພັກ'; ?>', '<?php echo $lang['revenue_pos'] ?? 'ລາຍຮັບ POS'; ?>'],
                 datasets: [{
                   data: [roomTotal, posTotal],
                   backgroundColor: ['#3498DB', '#E74C3C'],
@@ -544,10 +551,12 @@ try {
                 tooltips: {
                   callbacks: {
                     label: function(t, d) {
+                      // ຄຳນວນຫາເປີເຊັນ (%) ຂອງແຕ່ລະສ່ວນແບບ Realtime
                       var val = d.datasets[0].data[t.index];
                       var total = d.datasets[0].data.reduce(function(a,b){ return a+b; }, 0);
                       var pct = total > 0 ? ((val/total)*100).toFixed(1) : 0;
-                      return d.labels[t.index] + ': ' + Number(val).toLocaleString('en-US') + ' ກີບ (' + pct + '%)';
+                      // ສົ່ງຄ່າຂໍ້ຄວາມສະແດງຜົນ Tooltip ພ້ອມສະກຸນເງິນ ແລະ ເປີເຊັນ (%)
+                      return d.labels[t.index] + ': ' + Number(val).toLocaleString('en-US') + ' <?php echo $lang['currency_symbol'] ?? 'ກີບ'; ?> (' + pct + '%)';
                     }
                   }
                 }

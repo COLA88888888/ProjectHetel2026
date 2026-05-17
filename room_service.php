@@ -2,7 +2,8 @@
 session_start();
 require_once 'config/db.php';
 
-// Language Selection Logic
+// --- 1. ສ່ວນໂຫຼດໄຟລ໌ພາສາ ແລະ ຕັ້ງຄ່າ Session (POS Language Loader) ---
+// ກວດສອບ ແລະ ດຶງພາສາປັດຈຸບັນຂອງລະບົບ POS ຈາກ Session, ຫາກບໍ່ມີໃຫ້ເລືອກພາສາລາວ 'la'
 $current_lang = $_SESSION['lang'] ?? 'la';
 $lang_file = "lang/{$current_lang}.php";
 if (file_exists($lang_file)) {
@@ -340,6 +341,17 @@ if ($selected_booking_id > 0) {
             border-radius: 50%;
             box-shadow: 0 4px 10px rgba(255, 71, 87, 0.4);
             border: 2px solid white;
+        }
+        .cat-label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 10;
         }
         .product-card:active {
             transform: scale(0.98);
@@ -716,7 +728,16 @@ if ($selected_booking_id > 0) {
         <div class="category-bar">
             <div class="cate-pill active" data-cate="all"><?php echo $lang['all_categories']; ?></div>
             <?php foreach($categories as $c): ?>
-                <div class="cate-pill" data-cate="<?php echo htmlspecialchars($c['name']); ?>"><?php echo htmlspecialchars($c[$cat_name_col] ?: $c['name']); ?></div>
+                <?php
+                    $c_disp = $c[$cat_name_col];
+                    if (empty($c_disp)) {
+                        if ($c['name'] == 'ອາຫານ') $c_disp = $lang['cat_food_label'] ?? 'Food';
+                        elseif ($c['name'] == 'ເຄື່ອງດື່ມ') $c_disp = $lang['cat_drinks_label'] ?? 'Drinks';
+                        elseif ($c['name'] == 'ເຂົ້າໜົມ' || $c['name'] == 'ຂະໜົມ') $c_disp = $lang['cat_snacks_label'] ?? 'Snacks';
+                        else $c_disp = $c['name'];
+                    }
+                ?>
+                <div class="cate-pill" data-cate="<?php echo htmlspecialchars($c['name']); ?>"><?php echo htmlspecialchars($c_disp); ?></div>
             <?php endforeach; ?>
         </div>
 
@@ -733,6 +754,20 @@ if ($selected_booking_id > 0) {
                      data-cate="<?php echo htmlspecialchars($p['category']); ?>">
                     
                     <span class="qty-badge" id="qty-badge-<?php echo $p['prod_id']; ?>" style="display: none;">0</span>
+                    <!-- Category Label Badge -->
+                    <span class="cat-label">
+                        <?php 
+                            $pCatDisp = $p['cat_'.$current_lang];
+                            if (empty($pCatDisp)) {
+                                $pCatRaw = $p['category'];
+                                if ($pCatRaw == 'ອາຫານ') $pCatDisp = $lang['cat_food_label'] ?? 'Food';
+                                elseif ($pCatRaw == 'ເຄື່ອງດື່ມ') $pCatDisp = $lang['cat_drinks_label'] ?? 'Drinks';
+                                elseif ($pCatRaw == 'ເຂົ້າໜົມ' || $pCatRaw == 'ຂະໜົມ') $pCatDisp = $lang['cat_snacks_label'] ?? 'Snacks';
+                                else $pCatDisp = $pCatRaw ?? 'ອື່ນໆ';
+                            }
+                            echo htmlspecialchars($pCatDisp);
+                        ?>
+                    </span>
                     <div class="product-img-wrapper">
                         <?php if(!empty($p['image']) && file_exists('assets/img/products/'.$p['image'])): ?>
                             <img src="assets/img/products/<?php echo $p['image']; ?>" alt="<?php echo htmlspecialchars($p[$prod_name_col] ?: $p['prod_name']); ?>">

@@ -46,6 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
 // Edit User
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
     $id = (int)$_POST['id'];
+    
+    // Fetch old user details before updating
+    $stmtOld = $pdo->prepare("SELECT * FROM users WHERE user_id = ?");
+    $stmtOld->execute([$id]);
+    $old = $stmtOld->fetch();
+
     $username = trim($_POST['username']);
     $fname = trim($_POST['fname']);
     $lname = trim($_POST['lname']);
@@ -79,7 +85,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
 
     $stmt = $pdo->prepare($sql);
     if ($stmt->execute($params)) {
-        logActivity($pdo, "ແກ້ໄຂຂໍ້ມູນຜູ້ໃຊ້", "Username: $username");
+        $changes = [];
+        if ($old['username'] !== $username) {
+            $changes[] = "Username: '{$old['username']}' -> '{$username}'";
+        }
+        if ($old['fname'] !== $fname) {
+            $changes[] = "ຊື່: '{$old['fname']}' -> '{$fname}'";
+        }
+        if ($old['lname'] !== $lname) {
+            $changes[] = "ນາມສະກຸນ: '{$old['lname']}' -> '{$lname}'";
+        }
+        if ($old['phone'] !== $phone) {
+            $changes[] = "ເບີໂທ: '{$old['phone']}' -> '{$phone}'";
+        }
+        if ($old['email'] !== $email) {
+            $changes[] = "ອີເມວ: '{$old['email']}' -> '{$email}'";
+        }
+        if ($old['address'] !== $address) {
+            $changes[] = "ທີ່ຢູ່: '{$old['address']}' -> '{$address}'";
+        }
+        if ($old['status'] !== $status) {
+            $changes[] = "ບົດບາດ: '{$old['status']}' -> '{$status}'";
+        }
+        if ($old['permissions'] !== $permissions) {
+            $changes[] = "ສິດເຂົ້າເຖິງ: '{$old['permissions']}' -> '{$permissions}'";
+        }
+        if (!empty($_POST['password'])) {
+            $changes[] = "ລະຫັດຜ່ານ: ຖືກປ່ຽນແປງ";
+        }
+
+        $details = "ແກ້ໄຂຂໍ້ມູນຜູ້ໃຊ້ '$username'";
+        if (!empty($changes)) {
+            $details .= " (" . implode(', ', $changes) . ")";
+        } else {
+            $details .= " (ບໍ່ມີການປ່ຽນແປງຂໍ້ມູນ)";
+        }
+
+        logActivity($pdo, "ແກ້ໄຂຂໍ້ມູນຜູ້ໃຊ້", $details);
         $_SESSION['success'] = "ແກ້ໄຂຂໍ້ມູນສຳເລັດ!";
     }
     header("Location: manage_users.php");
@@ -94,9 +136,16 @@ if (isset($_GET['delete'])) {
     if ($id == 1) {
         $_SESSION['error'] = "ບໍ່ສາມາດລຶບຜູ້ບໍລິຫານຫຼັກໄດ້!";
     } else {
+        // Fetch details before delete
+        $stmtOld = $pdo->prepare("SELECT username, fname FROM users WHERE user_id = ?");
+        $stmtOld->execute([$id]);
+        $u = $stmtOld->fetch();
+        $old_user = $u['username'] ?? '';
+        $old_fname = $u['fname'] ?? '';
+
         $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
         if ($stmt->execute([$id])) {
-            logActivity($pdo, "ລຶບຜູ້ໃຊ້", "User ID: $id");
+            logActivity($pdo, "ລຶບຜູ້ໃຊ້", "ລຶບຜູ້ໃຊ້ '@$old_user' (ຊື່: $old_fname)");
             $_SESSION['success'] = "ລຶບຜູ້ໃຊ້ສຳເລັດ!";
         }
     }

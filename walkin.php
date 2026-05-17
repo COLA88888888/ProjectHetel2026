@@ -27,11 +27,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
 
     if ($selected_type === 'all' || empty($selected_type)) {
         // Find all available rooms
-        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້ງານ' OR housekeeping_status = 'Ready')");
+        $stmt = $pdo->prepare("SELECT r.*, rt.room_type_name_la, rt.room_type_name_en, rt.room_type_name_cn 
+                               FROM rooms r 
+                               LEFT JOIN room_types rt ON r.room_type = rt.room_type_name
+                               WHERE r.status = 'Available' AND (r.housekeeping_status = 'ພ້ອມໃຊ້ງານ' OR r.housekeeping_status = 'Ready')");
         $stmt->execute();
     } else {
         // Find available rooms by type
-        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE room_type = ? AND status = 'Available' AND (housekeeping_status = 'ພ້ອມໃຊ້ງານ' OR housekeeping_status = 'Ready')");
+        $stmt = $pdo->prepare("SELECT r.*, rt.room_type_name_la, rt.room_type_name_en, rt.room_type_name_cn 
+                               FROM rooms r 
+                               LEFT JOIN room_types rt ON r.room_type = rt.room_type_name
+                               WHERE r.room_type = ? AND r.status = 'Available' AND (r.housekeeping_status = 'ພ້ອມໃຊ້ງານ' OR r.housekeeping_status = 'Ready')");
         $stmt->execute([$selected_type]);
     }
     
@@ -184,9 +190,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
                             <label><?php echo $lang['what_room_type']; ?></label>
                             <select name="room_type" class="form-control">
                                 <option value="all"><?php echo $lang['view_all_types']; ?></option>
-                                <?php foreach($room_types as $rt): ?>
+                                <?php foreach($room_types as $rt): 
+                                    $r_type_mapped = $rt[$rt_name_col] ?: $rt['room_type_name'];
+                                    if ($r_type_mapped == 'Standard' || strtolower($r_type_mapped) == 'standard') {
+                                        $r_type_mapped = $lang['room_type_standard'] ?? 'Standard';
+                                    } elseif ($r_type_mapped == 'VIP' || strtolower($r_type_mapped) == 'vip') {
+                                        $r_type_mapped = $lang['room_type_vip'] ?? 'VIP';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຕຽງດ່ຽວ' || strtolower($r_type_mapped) == 'single bed room' || strtolower($r_type_mapped) == 'single room') {
+                                        $r_type_mapped = $lang['room_type_single'] ?? 'Single Bed Room';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຕຽງຄູ່' || strtolower($r_type_mapped) == 'double bed room' || strtolower($r_type_mapped) == 'double room') {
+                                        $r_type_mapped = $lang['room_type_double'] ?? 'Double Bed Room';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຄອບຄົວ' || strtolower($r_type_mapped) == 'family room') {
+                                        $r_type_mapped = $lang['room_type_family'] ?? 'Family Room';
+                                    }
+                                ?>
                                     <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>" <?php echo ($selected_type == $rt['room_type_name']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($rt[$rt_name_col] ?: $rt['room_type_name']); ?>
+                                        <?php echo htmlspecialchars($r_type_mapped); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -223,8 +242,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['search'])) {
                                     <div class="room-number"><?php echo $lang['room']; ?> <?php echo htmlspecialchars($room['room_number']); ?></div>
                                     <div class="room-type">
                                         <?php 
-                                            $r_type = $room['room_type'];
-                                            $b_type = $room['bed_type'];
+                                            // --- 1. ສ່ວນແປພາສາປະເພດຫ້ອງ (Room Type Translation) ---
+                                            // ດຶງຊື່ປະເພດຫ້ອງຕາມຄໍລຳພາສາທີ່ເລືອກ ຫຼື ຖ້າບໍ່ມີໃຫ້ດຶງຄ່າເລີ່ມຕົ້ນ
+                                            $r_type_mapped = $room[$rt_name_col] ?: $room['room_type'];
+                                            
+                                            // ສ້າງເງື່ອນໄຂ Map ກວດສອບຊື່ປະເພດຫ້ອງຫຼັກ ເພື່ອດຶງຄຳແປຈາກ Dictionary ພາສາ ($lang)
+                                            if ($r_type_mapped == 'Standard' || strtolower($r_type_mapped) == 'standard') {
+                                                $r_type_mapped = $lang['room_type_standard'] ?? 'Standard';
+                                            } elseif ($r_type_mapped == 'VIP' || strtolower($r_type_mapped) == 'vip') {
+                                                $r_type_mapped = $lang['room_type_vip'] ?? 'VIP';
+                                            } elseif ($r_type_mapped == 'ຫ້ອງຕຽງດ່ຽວ' || strtolower($r_type_mapped) == 'single bed room' || strtolower($r_type_mapped) == 'single room') {
+                                                $r_type_mapped = $lang['room_type_single'] ?? 'Single Bed Room';
+                                            } elseif ($r_type_mapped == 'ຫ້ອງຕຽງຄູ່' || strtolower($r_type_mapped) == 'double bed room' || strtolower($r_type_mapped) == 'double room') {
+                                                $r_type_mapped = $lang['room_type_double'] ?? 'Double Bed Room';
+                                            } elseif ($r_type_mapped == 'ຫ້ອງຄອບຄົວ' || strtolower($r_type_mapped) == 'family room') {
+                                                $r_type_mapped = $lang['room_type_family'] ?? 'Family Room';
+                                            }
+                                            $r_type = $r_type_mapped;
+
+                                            // --- 2. ສ່ວນແປພາສາປະເພດຕຽງ (Bed Type Translation) ---
+                                            // ກວດສອບຄ່າປະເພດຕຽງໃນຖານຂໍ້ມູນ ແລະ Map ແປພາສາໃຫ້ຖືກຕ້ອງຕາມທີ່ກຳນົດໃນ Dictionary
+                                            $b_type_val = $room['bed_type'];
+                                            if ($b_type_val == 'ຕຽງດ່ຽວ' || strtolower($b_type_val) == 'single' || strtolower($b_type_val) == 'single bed') {
+                                                $b_type = $lang['single_bed'] ?? 'Single Bed';
+                                            } elseif ($b_type_val == 'ຕຽງຄູ່' || strtolower($b_type_val) == 'double' || strtolower($b_type_val) == 'double bed') {
+                                                $b_type = $lang['double_bed'] ?? 'Double Bed';
+                                            } else {
+                                                $b_type = $b_type_val;
+                                            }
+                                            
+                                            // --- 3. ສ່ວນສະແດງຜົນຊື່ປະເພດຫ້ອງ ແລະ ປະເພດຕຽງ ---
                                             echo htmlspecialchars($r_type);
                                             if (strpos(strtoupper($r_type), 'VIP') !== false || (strpos($r_type, 'ຕຽງ') === false && strpos(strtolower($r_type), 'bed') === false)) {
                                                 echo " (" . htmlspecialchars($b_type) . ")";

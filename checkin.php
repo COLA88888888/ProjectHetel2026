@@ -15,9 +15,14 @@ if (file_exists($lang_file)) {
 $room_id = isset($_GET['room_id']) ? (int)$_GET['room_id'] : 0;
 $nights = isset($_GET['nights']) ? (int)$_GET['nights'] : 1;
 
+$rt_name_col = "room_type_name_" . $current_lang;
+
 if ($room_id > 0) {
     // Check if room is still available
-    $stmt = $pdo->prepare("SELECT * FROM rooms WHERE id = ? AND status = 'Available'");
+    $stmt = $pdo->prepare("SELECT r.*, rt.room_type_name_la, rt.room_type_name_en, rt.room_type_name_cn 
+                           FROM rooms r 
+                           LEFT JOIN room_types rt ON r.room_type = rt.room_type_name 
+                           WHERE r.id = ? AND r.status = 'Available'");
     $stmt->execute([$room_id]);
     $room = $stmt->fetch();
 
@@ -127,7 +132,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['checkin'])) {
                         <i class="fas fa-door-open"></i>
                     </div>
                     <h3 class="profile-username text-center"><?php echo $lang['room']; ?> <?php echo htmlspecialchars($room['room_number']); ?></h3>
-                    <p class="text-muted text-center"><?php echo htmlspecialchars($room['room_type']); ?> (<?php echo htmlspecialchars($room['bed_type']); ?>)</p>
+                    <p class="text-muted text-center">
+                        <?php 
+                            $r_type = $room[$rt_name_col] ?: $room['room_type'];
+                            $b_type_val = $room['bed_type'];
+                            if ($b_type_val == 'ຕຽງດ່ຽວ' || strtolower($b_type_val) == 'single' || strtolower($b_type_val) == 'single bed') {
+                                $b_type = $lang['single_bed'] ?? 'Single Bed';
+                            } elseif ($b_type_val == 'ຕຽງຄູ່' || strtolower($b_type_val) == 'double' || strtolower($b_type_val) == 'double bed') {
+                                $b_type = $lang['double_bed'] ?? 'Double Bed';
+                            } else {
+                                $b_type = $b_type_val;
+                            }
+                            echo htmlspecialchars($r_type) . " (" . htmlspecialchars($b_type) . ")";
+                        ?>
+                    </p>
                     
                     <ul class="list-group list-group-unbordered mb-3 text-left">
                         <li class="list-group-item">

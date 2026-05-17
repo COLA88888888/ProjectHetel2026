@@ -71,6 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
 // Handle Edit Product
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_product'])) {
     $prod_id = (int)$_POST['prod_id'];
+    
+    // Fetch old details before update to compare what was edited
+    $stmtOld = $pdo->prepare("SELECT * FROM products WHERE prod_id = ?");
+    $stmtOld->execute([$prod_id]);
+    $old = $stmtOld->fetch();
     $prod_code = trim($_POST['prod_code']);
     $prod_name_la = trim($_POST['prod_name_la']);
     $prod_name_en = trim($_POST['prod_name_en']);
@@ -119,7 +124,40 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_product'])) {
     $params[] = $prod_id;
     $stmt = $pdo->prepare("UPDATE products SET prod_code = ?, prod_name = ?, prod_name_la = ?, prod_name_en = ?, prod_name_cn = ?, category = ?, unit = ?, bprice = ?, sprice = ? $image_query WHERE prod_id = ?");
     if ($stmt->execute($params)) {
-        logActivity($pdo, "ແກ້ໄຂສິນຄ້າ", "ຊື່: $prod_name_la");
+        $changes = [];
+        if ($old['prod_code'] !== $prod_code) {
+            $changes[] = "ລະຫັດ: '{$old['prod_code']}' -> '{$prod_code}'";
+        }
+        if ($old['prod_name_la'] !== $prod_name_la) {
+            $changes[] = "ຊື່ (LA): '{$old['prod_name_la']}' -> '{$prod_name_la}'";
+        }
+        if ($old['prod_name_en'] !== $prod_name_en) {
+            $changes[] = "ຊື່ (EN): '{$old['prod_name_en']}' -> '{$prod_name_en}'";
+        }
+        if ($old['prod_name_cn'] !== $prod_name_cn) {
+            $changes[] = "ຊື່ (CN): '{$old['prod_name_cn']}' -> '{$prod_name_cn}'";
+        }
+        if ($old['category'] !== $category) {
+            $changes[] = "ໝວດໝູ່: '{$old['category']}' -> '{$category}'";
+        }
+        if ($old['unit'] !== $unit) {
+            $changes[] = "ຫົວໜ່ວຍ: '{$old['unit']}' -> '{$unit}'";
+        }
+        if ((float)$old['bprice'] !== $bprice) {
+            $changes[] = "ລາຄາຊື້: '" . number_format($old['bprice']) . "' -> '" . number_format($bprice) . "'";
+        }
+        if ((float)$old['sprice'] !== $sprice) {
+            $changes[] = "ລາຄາຂາຍ: '" . number_format($old['sprice']) . "' -> '" . number_format($sprice) . "'";
+        }
+
+        $details = "ແກ້ໄຂສິນຄ້າ '{$old['prod_name_la']}'";
+        if (!empty($changes)) {
+            $details .= " (" . implode(', ', $changes) . ")";
+        } else {
+            $details .= " (ບໍ່ມີການປ່ຽນແປງຂໍ້ມູນ)";
+        }
+
+        logActivity($pdo, "ແກ້ໄຂສິນຄ້າ", $details);
         $_SESSION['success'] = $lang['ok'];
     } else {
         $_SESSION['error'] = "ບໍ່ສາມາດແກ້ໄຂໄດ້!";
@@ -132,10 +170,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_product'])) {
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
     
-    // Delete image file if exists
-    $stmtImg = $pdo->prepare("SELECT image FROM products WHERE prod_id = ?");
-    $stmtImg->execute([$id]);
-    $prod = $stmtImg->fetch();
+    // Fetch details before delete
+    $stmtOld = $pdo->prepare("SELECT prod_name_la, qty, unit, image FROM products WHERE prod_id = ?");
+    $stmtOld->execute([$id]);
+    $prod = $stmtOld->fetch();
+    
     if ($prod && !empty($prod['image'])) {
         $imgPath = 'assets/img/products/' . $prod['image'];
         if (file_exists($imgPath)) {
@@ -145,7 +184,10 @@ if (isset($_GET['delete'])) {
     
     $stmt = $pdo->prepare("DELETE FROM products WHERE prod_id = ?");
     if ($stmt->execute([$id])) {
-        logActivity($pdo, "ລຶບສິນຄ້າ", "Product ID: $id");
+        $prod_name = $prod['prod_name_la'] ?? '';
+        $prod_qty = $prod['qty'] ?? 0;
+        $prod_unit = $prod['unit'] ?? '';
+        logActivity($pdo, "ລຶບສິນຄ້າ", "ລຶບສິນຄ້າ '{$prod_name}' (ຈຳນວນເຫຼືອຫຼ້າສຸດ: {$prod_qty} {$prod_unit})");
         $_SESSION['success'] = $lang['ok'];
     } else {
         $_SESSION['error'] = "ບໍ່ສາມາດລຶບໄດ້!";
@@ -181,12 +223,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['restock'])) {
     }
 }
 
-// Fetch all products with localized category and unit
+// --- ສ່ວນດຶງຂໍ້ມູນສິນຄ້າທັງໝົດ ພ້ອມແປພາສາ ໝວດໝູ່ ແລະ ຫົວໜ່ວຍ (Fetch Localized Products) ---
+// 1. ກຳນົດຄຳຕໍ່ທ້າຍຊື່ຄໍລຳ (Column Suffix) ຕາມພາສາທີ່ເລືອກໃນ Session ເພື່ອດຶງຄຳແປຢ່າງຖືກຕ້ອງ
 $current_lang = $_SESSION['lang'] ?? 'la';
-$prod_name_col = "prod_name_" . $current_lang;
-$cat_name_col = "name_" . $current_lang;
-$unit_name_col = "unit_name_" . $current_lang;
+$prod_name_col = "prod_name_" . $current_lang; // ເຊັ່ນ: prod_name_la, prod_name_en, prod_name_cn
+$cat_name_col = "name_" . $current_lang;      // ເຊັ່ນ: name_la, name_en, name_cn
+$unit_name_col = "unit_name_" . $current_lang; // ເຊັ່ນ: unit_name_la, unit_name_en, unit_name_cn
 
+// 2. ສ້າງຄຳສັ່ງ SQL Join ຖານຂໍ້ມູນ ເພື່ອດຶງຂໍ້ມູນສິນຄ້າ ພ້ອມທັງແປພາສາໝວດໝູ່ (Product Categories) ແລະ ຫົວໜ່ວຍ (Units) ທັນທີ
 $stmt = $pdo->query("SELECT p.*, pc.name_la as cat_la, pc.name_en as cat_en, pc.name_cn as cat_cn,
                             pu.unit_name_la as u_la, pu.unit_name_en as u_en, pu.unit_name_cn as u_cn
                      FROM products p 

@@ -11,6 +11,9 @@ if (file_exists($lang_file)) {
     include "../lang/la.php";
 }
 
+$rt_name_col = "room_type_name_" . $current_lang;
+$bed_name_col = "bed_type_" . $current_lang;
+
 if (!isset($_GET['id'])) {
     header("Location: select_rooms.php");
     exit();
@@ -86,9 +89,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
                         <div class="form-group">
                             <label><?php echo $lang['room_type_label']; ?></label>
                             <select name="room_type" id="room_type" class="form-control">
-                                <?php foreach($room_types as $rt): ?>
+                                <?php foreach($room_types as $rt): 
+                                    $r_type_mapped = $rt[$rt_name_col] ?: $rt['room_type_name'];
+                                    if ($r_type_mapped == 'Standard' || strtolower($r_type_mapped) == 'standard') {
+                                        $r_type_mapped = $lang['room_type_standard'] ?? 'Standard';
+                                    } elseif ($r_type_mapped == 'VIP' || strtolower($r_type_mapped) == 'vip') {
+                                        $r_type_mapped = $lang['room_type_vip'] ?? 'VIP';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຕຽງດ່ຽວ' || strtolower($r_type_mapped) == 'single bed room' || strtolower($r_type_mapped) == 'single room') {
+                                        $r_type_mapped = $lang['room_type_single'] ?? 'Single Bed Room';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຕຽງຄູ່' || strtolower($r_type_mapped) == 'double bed room' || strtolower($r_type_mapped) == 'double room') {
+                                        $r_type_mapped = $lang['room_type_double'] ?? 'Double Bed Room';
+                                    } elseif ($r_type_mapped == 'ຫ້ອງຄອບຄົວ' || strtolower($r_type_mapped) == 'family room') {
+                                        $r_type_mapped = $lang['room_type_family'] ?? 'Family Room';
+                                    }
+                                ?>
                                     <option value="<?php echo htmlspecialchars($rt['room_type_name']); ?>" <?php echo ($rt['room_type_name'] == $room['room_type']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($rt['room_type_name']); ?>
+                                        <?php echo htmlspecialchars($r_type_mapped); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -96,16 +112,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
                         <div class="form-group">
                             <label><?php echo $lang['bed_type_label']; ?></label>
                             <select name="bed_type" id="bed_type" class="form-control">
-                                <option value="ຕຽງດ່ຽວ" <?php echo ($room['bed_type'] == 'ຕຽງດ່ຽວ') ? 'selected' : ''; ?>>ຕຽງດ່ຽວ (Single)</option>
-                                <option value="ຕຽງຄູ່" <?php echo ($room['bed_type'] == 'ຕຽງຄູ່') ? 'selected' : ''; ?>>ຕຽງຄູ່ (Double)</option>
+                                <option value="ຕຽງດ່ຽວ" <?php echo ($room['bed_type'] == 'ຕຽງດ່ຽວ') ? 'selected' : ''; ?>><?php echo $lang['single_bed'] ?? 'Single Bed'; ?></option>
+                                <option value="ຕຽງຄູ່" <?php echo ($room['bed_type'] == 'ຕຽງຄູ່') ? 'selected' : ''; ?>><?php echo $lang['double_bed'] ?? 'Double Bed'; ?></option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label><?php echo $lang['price_per_night']; ?> (₭)</label>
+                            <label><?php echo $lang['price_per_night']; ?> (<?php echo $lang['currency_symbol'] ?? '₭'; ?>)</label>
                             <input type="text" name="price" id="price" class="form-control number-format" value="<?php echo number_format((int)$room['price']); ?>">
                         </div>
                         <div class="form-group">
-                            <label><?php echo $lang['status_label'] ?? 'ສະຖານະຫ້ອງ'; ?></label>
+                            <label><?php echo $lang['status_label'] ?? $lang['status'] ?? 'ສະຖານະຫ້ອງ'; ?></label>
                             <select name="status" id="status" class="form-control">
                                 <option value="Available" <?php echo ($room['status'] == 'Available') ? 'selected' : ''; ?>><?php echo $lang['available']; ?></option>
                                 <option value="Booked" <?php echo ($room['status'] == 'Booked') ? 'selected' : ''; ?>><?php echo $lang['booked']; ?></option>
@@ -160,9 +176,9 @@ $(document).ready(function() {
             e.preventDefault();
             Swal.fire({
                 icon: 'warning',
-                title: 'ແຈ້ງເຕືອນ',
-                text: 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນທຸກຊ່ອງ!',
-                confirmButtonText: 'ຕົກລົງ'
+                title: '<?php echo $lang['warning_label'] ?? 'ແຈ້ງເຕືອນ'; ?>',
+                text: '<?php echo $lang['form_required_msg'] ?? 'ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນທຸກຊ່ອງ!'; ?>',
+                confirmButtonText: '<?php echo $lang['ok'] ?? 'ຕົກລົງ'; ?>'
             });
             return false;
         }
